@@ -89,10 +89,10 @@ void CQuickSpriteSystem::Flush(void)
 	{ //enable hardware fog when we draw this thing if applicable -rww
 		fog_t *fog = tr.world->fogs + mFogIndex;
 
-		qglFogf(GL_FOG_MODE, GL_EXP2);
-		qglFogf(GL_FOG_DENSITY, logtestExp2 / fog->parms.depthForOpaque);
-		qglFogfv(GL_FOG_COLOR, fog->parms.color);
-		qglEnable(GL_FOG);
+		glFogf(GL_FOG_MODE, GL_EXP2);
+		glFogf(GL_FOG_DENSITY, logtestExp2 / fog->parms.depthForOpaque);
+		glFogfv(GL_FOG_COLOR, fog->parms.color);
+		glEnable(GL_FOG);
 	}
 	*/
 	//this should not be needed, since I just wait to disable fog for the surface til after surface sprites are done
@@ -106,21 +106,21 @@ void CQuickSpriteSystem::Flush(void)
 	//
 	// set arrays and lock
 	//
-	qglTexCoordPointer( 2, GL_FLOAT, 0, mTextureCoords );
-	qglEnableClientState( GL_TEXTURE_COORD_ARRAY);
+	glTexCoordPointer( 2, GL_FLOAT, 0, mTextureCoords );
+	glEnableClientState( GL_TEXTURE_COORD_ARRAY);
 
-	qglEnableClientState( GL_COLOR_ARRAY);
-	qglColorPointer( 4, GL_UNSIGNED_BYTE, 0, mColors );
+	glEnableClientState( GL_COLOR_ARRAY);
+	glColorPointer( 4, GL_UNSIGNED_BYTE, 0, mColors );
 
-	qglVertexPointer (3, GL_FLOAT, 16, mVerts);
+	glVertexPointer (3, GL_FLOAT, 16, mVerts);
 
-	if ( qglLockArraysEXT )
+	if ( glLockArraysEXT )
 	{
-		qglLockArraysEXT(0, mNextVert);
+		glLockArraysEXT(0, mNextVert);
 		GLimp_LogComment( "glLockArraysEXT\n" );
 	}
 
-	qglDrawArrays(GL_QUADS, 0, mNextVert);
+	glDrawArrays(GL_QUADS, 0, mNextVert);
 
 	backEnd.pc.c_vertexes += mNextVert;
 	backEnd.pc.c_indexes += mNextVert;
@@ -140,15 +140,15 @@ void CQuickSpriteSystem::Flush(void)
 		//
 		// set arrays and lock
 		//
-		qglTexCoordPointer( 2, GL_FLOAT, 0, mFogTextureCoords);
-//		qglEnableClientState( GL_TEXTURE_COORD_ARRAY);	// Done above
+		glTexCoordPointer( 2, GL_FLOAT, 0, mFogTextureCoords);
+//		glEnableClientState( GL_TEXTURE_COORD_ARRAY);	// Done above
 
-		qglDisableClientState( GL_COLOR_ARRAY );
-		qglColor4ubv((GLubyte *)&fog->colorInt);
+		glDisableClientState( GL_COLOR_ARRAY );
+		glColor4ubv((GLubyte *)&fog->colorInt);
 
-//		qglVertexPointer (3, GL_FLOAT, 16, mVerts);	// Done above
+//		glVertexPointer (3, GL_FLOAT, 16, mVerts);	// Done above
 
-		qglDrawArrays(GL_QUADS, 0, mNextVert);
+		glDrawArrays(GL_QUADS, 0, mNextVert);
 
 		// Second pass from fog
 		backEnd.pc.c_totalIndexes += mNextVert;
@@ -157,9 +157,9 @@ void CQuickSpriteSystem::Flush(void)
 	//
 	// unlock arrays
 	//
-	if (qglUnlockArraysEXT)
+	if (glUnlockArraysEXT)
 	{
-		qglUnlockArraysEXT();
+		glUnlockArraysEXT();
 		GLimp_LogComment( "glUnlockArraysEXT\n" );
 	}
 
@@ -183,7 +183,7 @@ void CQuickSpriteSystem::StartGroup(textureBundle_t *bundle, uint32_t glbits, in
 		mUseFog = qfalse;
 	}
 
-	qglDisable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE);
 }
 
 
@@ -191,8 +191,8 @@ void CQuickSpriteSystem::EndGroup(void)
 {
 	Flush();
 
-	qglColor4ub(255,255,255,255);
-	qglEnable(GL_CULL_FACE);
+	glColor4ub(255,255,255,255);
+	glEnable(GL_CULL_FACE);
 }
 
 

@@ -427,14 +427,14 @@ static void RB_SurfaceBeam( void )
 
 	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ONE );
 
-	qglColor3f( 1, 0, 0 );
+	glColor3f( 1, 0, 0 );
 
-	qglBegin( GL_TRIANGLE_STRIP );
+	glBegin( GL_TRIANGLE_STRIP );
 	for ( i = 0; i <= NUM_BEAM_SEGS; i++ ) {
-		qglVertex3fv( start_points[ i % NUM_BEAM_SEGS] );
-		qglVertex3fv( end_points[ i % NUM_BEAM_SEGS] );
+		glVertex3fv( start_points[ i % NUM_BEAM_SEGS] );
+		glVertex3fv( end_points[ i % NUM_BEAM_SEGS] );
 	}
-	qglEnd();
+	glEnd();
 }
 
 //------------------
@@ -1570,19 +1570,19 @@ Draws x/y/z lines from the origin for orientation debugging
 static void RB_SurfaceAxis( void ) {
 	GL_Bind( tr.whiteImage );
 	GL_State( GLS_DEFAULT );
-	qglLineWidth( 3 );
-	qglBegin( GL_LINES );
-	qglColor3f( 1,0,0 );
-	qglVertex3f( 0,0,0 );
-	qglVertex3f( 16,0,0 );
-	qglColor3f( 0,1,0 );
-	qglVertex3f( 0,0,0 );
-	qglVertex3f( 0,16,0 );
-	qglColor3f( 0,0,1 );
-	qglVertex3f( 0,0,0 );
-	qglVertex3f( 0,0,16 );
-	qglEnd();
-	qglLineWidth( 1 );
+	glLineWidth( 3 );
+	glBegin( GL_LINES );
+	glColor3f( 1,0,0 );
+	glVertex3f( 0,0,0 );
+	glVertex3f( 16,0,0 );
+	glColor3f( 0,1,0 );
+	glVertex3f( 0,0,0 );
+	glVertex3f( 0,16,0 );
+	glColor3f( 0,0,1 );
+	glVertex3f( 0,0,0 );
+	glVertex3f( 0,0,16 );
+	glEnd();
+	glLineWidth( 1 );
 }
 
 //===========================================================================
@@ -1698,7 +1698,7 @@ static bool RB_TestZFlare( vec3_t point) {
 	// doing a readpixels is as good as doing a glFinish(), so
 	// don't bother with another sync
 	glState.finishCalled = qfalse;
-	qglReadPixels( backEnd.viewParms.viewportX + window[0],backEnd.viewParms.viewportY + window[1], 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth );
+	glReadPixels( backEnd.viewParms.viewportX + window[0],backEnd.viewParms.viewportY + window[1], 1, 1, GL_DEPTH_COMPONENT, GL_FLOAT, &depth );
 
 	screenZ = backEnd.viewParms.projectionMatrix[14] /
 		( ( 2*depth - 1 ) * backEnd.viewParms.projectionMatrix[11] - backEnd.viewParms.projectionMatrix[10] );
@@ -1764,7 +1764,7 @@ void RB_SurfaceFlare( srfFlare_t *surf ) {
 void RB_SurfaceDisplayList( srfDisplayList_t *surf ) {
 	// all appropriate state must be set in RB_BeginSurface
 	// this isn't implemented yet...
-	qglCallList( surf->listNum );
+	glCallList( surf->listNum );
 }
 
 void RB_SurfaceSkip( void *surf ) {

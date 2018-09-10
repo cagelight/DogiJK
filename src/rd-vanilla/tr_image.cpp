@@ -24,7 +24,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // tr_image.c
 #include "tr_local.h"
 #include "../rd-common/tr_common.h"
-#include "glext.h"
 
 #include <map>
 
@@ -100,14 +99,14 @@ void GL_TextureMode( const char *string ) {
 	{
 		if ( glt->mipmap ) {
 			GL_Bind (glt);
-			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 
 			if(glConfig.maxTextureFilterAnisotropy>0) {
 				if(r_ext_texture_filter_anisotropic->integer>1) {
-					qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value);
+					glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value);
 				} else {
-					qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f);
+					glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, 1.0f);
 				}
 			}
 		}
@@ -555,7 +554,7 @@ static void R_Images_DeleteImageContents( image_t *pImage )
 	assert(pImage);	// should never be called with NULL
 	if (pImage)
 	{
-		qglDeleteTextures( 1, &pImage->texnum );
+		glDeleteTextures( 1, &pImage->texnum );
 		Z_Free(pImage);
 	}
 }
@@ -714,58 +713,31 @@ static void Upload32( unsigned *data,
 		// copy or resample data as appropriate for first MIP level
 		if (!mipmap)
 		{
-			qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+			glTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
 			goto done;
 		}
 
 		R_LightScaleTexture (data, width, height, (qboolean)!mipmap );
 
-		qglTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-
-		if (mipmap)
-		{
-			int		miplevel;
-
-			miplevel = 0;
-			while (width > 1 || height > 1)
-			{
-				R_MipMap( (byte *)data, width, height );
-				width >>= 1;
-				height >>= 1;
-				if (width < 1)
-					width = 1;
-				if (height < 1)
-					height = 1;
-				miplevel++;
-
-				if ( r_colorMipLevels->integer )
-				{
-					R_BlendOverTexture( (byte *)data, width * height, mipBlendColors[miplevel] );
-				}
-
-				qglTexImage2D( uiTarget, miplevel, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
-			}
-		}
-	}
-	else
-	{
+		glTexImage2D( uiTarget, 0, *pformat, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data );
+		if (mipmap) glGenerateMipmap( uiTarget );
 	}
 
 done:
 
 	if (mipmap)
 	{
-		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+		glTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+		glTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, gl_filter_max);
 		if(r_ext_texture_filter_anisotropic->integer>1 && glConfig.maxTextureFilterAnisotropy>0)
 		{
-			qglTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
+			glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
 		}
 	}
 	else
 	{
-		qglTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-		qglTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+		glTexParameterf(uiTarget, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+		glTexParameterf(uiTarget, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
 	}
 
 	GL_CheckErrors();
@@ -774,13 +746,13 @@ done:
 static void GL_ResetBinds(void)
 {
 	memset( glState.currenttextures, 0, sizeof( glState.currenttextures ) );
-	if ( qglActiveTextureARB ) {
+	if ( glActiveTextureARB ) {
 		GL_SelectTexture( 1 );
-		qglBindTexture( GL_TEXTURE_2D, 0 );
+		glBindTexture( GL_TEXTURE_2D, 0 );
 		GL_SelectTexture( 0 );
-		qglBindTexture( GL_TEXTURE_2D, 0 );
+		glBindTexture( GL_TEXTURE_2D, 0 );
 	} else {
-		qglBindTexture( GL_TEXTURE_2D, 0 );
+		glBindTexture( GL_TEXTURE_2D, 0 );
 	}
 }
 
@@ -998,11 +970,6 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 		}
 	}
 
-	if ( (width&(width-1)) || (height&(height-1)) )
-	{
-		Com_Error( ERR_FATAL, "R_CreateImage: %s dimensions (%i x %i) not power of 2!\n",name,width,height);
-	}
-
 	image = R_FindImageFile_NoLoad(name, mipmap, allowPicmip, allowTC, glWrapClampMode );
 	if (image) {
 		return image;
@@ -1026,18 +993,18 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	image->height = height;
 	image->wrapClampMode = glWrapClampMode;
 
-	if ( qglActiveTextureARB ) {
+	if ( glActiveTextureARB ) {
 		GL_SelectTexture( 0 );
 	}
 
 	GLuint uiTarget = GL_TEXTURE_2D;
 	if ( bRectangle )
 	{
-		qglDisable( uiTarget );
+		glDisable( uiTarget );
 		uiTarget = GL_TEXTURE_RECTANGLE_ARB;
-		qglEnable( uiTarget );
+		glEnable( uiTarget );
 		glWrapClampMode = GL_CLAMP_TO_EDGE;	// default mode supported by rectangle.
-		qglBindTexture( uiTarget, image->texnum );
+		glBindTexture( uiTarget, image->texnum );
 	}
 	else
 	{
@@ -1053,10 +1020,10 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 								&image->width,
 								&image->height, bRectangle );
 
-	qglTexParameterf( uiTarget, GL_TEXTURE_WRAP_S, glWrapClampMode );
-	qglTexParameterf( uiTarget, GL_TEXTURE_WRAP_T, glWrapClampMode );
+	glTexParameterf( uiTarget, GL_TEXTURE_WRAP_S, glWrapClampMode );
+	glTexParameterf( uiTarget, GL_TEXTURE_WRAP_T, glWrapClampMode );
 
-	qglBindTexture( uiTarget, 0 );	//jfm: i don't know why this is here, but it breaks lightmaps when there's only 1
+	glBindTexture( uiTarget, 0 );	//jfm: i don't know why this is here, but it breaks lightmaps when there's only 1
 	glState.currenttextures[glState.currenttmu] = 0;	//mark it not bound
 
 	const char *psNewName = GenerateImageMappingName(name);
@@ -1065,8 +1032,8 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 
 	if ( bRectangle )
 	{
-		qglDisable( uiTarget );
-		qglEnable( GL_TEXTURE_2D );
+		glDisable( uiTarget );
+		glEnable( GL_TEXTURE_2D );
 	}
 
 	return image;
@@ -1108,15 +1075,6 @@ image_t	*R_FindImageFile( const char *name, qboolean mipmap, qboolean allowPicmi
 	R_LoadImage( name, &pic, &width, &height );
 	if ( pic == NULL ) {                                    // if we dont get a successful load
 		return NULL;                                        // bail
-	}
-
-
-	// refuse to find any files not power of 2 dims...
-	//
-	if ( (width&(width-1)) || (height&(height-1)) )
-	{
-		ri.Printf( PRINT_ALL, "Refusing to load non-power-2-dims(%d,%d) pic \"%s\"...\n", width,height,name );
-		return NULL;
 	}
 
 	image = R_CreateImage( ( char * ) name, pic, width, height, GL_RGBA, mipmap, allowPicmip, allowTC, glWrapClampMode );
@@ -1263,7 +1221,7 @@ static void R_CreateFogImage( void ) {
 	borderColor[2] = 1.0;
 	borderColor[3] = 1;
 
-	qglTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
+	glTexParameterfv( GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor );
 }
 
 /*
@@ -1321,23 +1279,23 @@ void R_CreateBuiltinImages( void ) {
 
 	// Create the scene glow image. - AReis
 	tr.screenGlow = 1024 + giTextureBindNum++;
-	qglDisable( GL_TEXTURE_2D );
-	qglEnable( GL_TEXTURE_RECTANGLE_ARB );
-	qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenGlow );
-	qglTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
+	glDisable( GL_TEXTURE_2D );
+	glEnable( GL_TEXTURE_RECTANGLE_ARB );
+	glBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenGlow );
+	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
 	// Create the scene image. - AReis
 	tr.sceneImage = 1024 + giTextureBindNum++;
-	qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
-	qglTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
+	glBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
+	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
 	// Create the minimized scene blur image.
 	if ( r_DynamicGlowWidth->integer > glConfig.vidWidth  )
@@ -1349,29 +1307,29 @@ void R_CreateBuiltinImages( void ) {
 		r_DynamicGlowHeight->integer = glConfig.vidHeight;
 	}
 	tr.blurImage = 1024 + giTextureBindNum++;
-	qglBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.blurImage );
-	qglTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, r_DynamicGlowWidth->integer, r_DynamicGlowHeight->integer, 0, GL_RGB, GL_FLOAT, 0 );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
-	qglTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
-	qglDisable( GL_TEXTURE_RECTANGLE_ARB );
+	glBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.blurImage );
+	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, r_DynamicGlowWidth->integer, r_DynamicGlowHeight->integer, 0, GL_RGB, GL_FLOAT, 0 );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP );
+	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
+	glDisable( GL_TEXTURE_RECTANGLE_ARB );
 
 	if ( glConfigExt.doGammaCorrectionWithShaders )
 	{
-		qglEnable( GL_TEXTURE_3D );
+		glEnable( GL_TEXTURE_3D );
 		tr.gammaCorrectLUTImage = 1024 + giTextureBindNum++;
-		qglBindTexture(GL_TEXTURE_3D, tr.gammaCorrectLUTImage);
-		qglTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, 64, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-		qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		qglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		qglDisable(GL_TEXTURE_3D);
+		glBindTexture(GL_TEXTURE_3D, tr.gammaCorrectLUTImage);
+		glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, 64, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glDisable(GL_TEXTURE_3D);
 	}
 
-	qglEnable(GL_TEXTURE_2D);
+	glEnable(GL_TEXTURE_2D);
 
 	// with overbright bits active, we need an image which is some fraction of full color,
 	// for default lightmaps, etc
@@ -1517,9 +1475,9 @@ void R_SetGammaCorrectionLUT()
 			}
 		}
 
-		qglBindTexture(GL_TEXTURE_3D, tr.gammaCorrectLUTImage);
-		qglPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		qglTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, 64, 64, 64, GL_RGB, GL_UNSIGNED_BYTE, lutTable);
+		glBindTexture(GL_TEXTURE_3D, tr.gammaCorrectLUTImage);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, 64, 64, 64, GL_RGB, GL_UNSIGNED_BYTE, lutTable);
 
 		ri.Hunk_FreeTempMemory(lutTable);
 	}

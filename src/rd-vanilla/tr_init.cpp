@@ -216,52 +216,6 @@ cvar_t *se_language;
 cvar_t *r_aviMotionJpegQuality;
 cvar_t *r_screenshotJpegQuality;
 
-PFNGLACTIVETEXTUREARBPROC qglActiveTextureARB;
-PFNGLCLIENTACTIVETEXTUREARBPROC qglClientActiveTextureARB;
-PFNGLMULTITEXCOORD2FARBPROC qglMultiTexCoord2fARB;
-#if !defined(__APPLE__)
-PFNGLTEXIMAGE3DPROC qglTexImage3D;
-PFNGLTEXSUBIMAGE3DPROC qglTexSubImage3D;
-#endif
-
-PFNGLCOMBINERPARAMETERFVNVPROC qglCombinerParameterfvNV;
-PFNGLCOMBINERPARAMETERIVNVPROC qglCombinerParameterivNV;
-PFNGLCOMBINERPARAMETERFNVPROC qglCombinerParameterfNV;
-PFNGLCOMBINERPARAMETERINVPROC qglCombinerParameteriNV;
-PFNGLCOMBINERINPUTNVPROC qglCombinerInputNV;
-PFNGLCOMBINEROUTPUTNVPROC qglCombinerOutputNV;
-
-PFNGLFINALCOMBINERINPUTNVPROC qglFinalCombinerInputNV;
-PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC qglGetCombinerInputParameterfvNV;
-PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC qglGetCombinerInputParameterivNV;
-PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC qglGetCombinerOutputParameterfvNV;
-PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC qglGetCombinerOutputParameterivNV;
-PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC qglGetFinalCombinerInputParameterfvNV;
-PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC qglGetFinalCombinerInputParameterivNV;
-
-PFNGLPROGRAMSTRINGARBPROC qglProgramStringARB;
-PFNGLBINDPROGRAMARBPROC qglBindProgramARB;
-PFNGLDELETEPROGRAMSARBPROC qglDeleteProgramsARB;
-PFNGLGENPROGRAMSARBPROC qglGenProgramsARB;
-PFNGLPROGRAMENVPARAMETER4DARBPROC qglProgramEnvParameter4dARB;
-PFNGLPROGRAMENVPARAMETER4DVARBPROC qglProgramEnvParameter4dvARB;
-PFNGLPROGRAMENVPARAMETER4FARBPROC qglProgramEnvParameter4fARB;
-PFNGLPROGRAMENVPARAMETER4FVARBPROC qglProgramEnvParameter4fvARB;
-PFNGLPROGRAMLOCALPARAMETER4DARBPROC qglProgramLocalParameter4dARB;
-PFNGLPROGRAMLOCALPARAMETER4DVARBPROC qglProgramLocalParameter4dvARB;
-PFNGLPROGRAMLOCALPARAMETER4FARBPROC qglProgramLocalParameter4fARB;
-PFNGLPROGRAMLOCALPARAMETER4FVARBPROC qglProgramLocalParameter4fvARB;
-PFNGLGETPROGRAMENVPARAMETERDVARBPROC qglGetProgramEnvParameterdvARB;
-PFNGLGETPROGRAMENVPARAMETERFVARBPROC qglGetProgramEnvParameterfvARB;
-PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC qglGetProgramLocalParameterdvARB;
-PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC qglGetProgramLocalParameterfvARB;
-PFNGLGETPROGRAMIVARBPROC qglGetProgramivARB;
-PFNGLGETPROGRAMSTRINGARBPROC qglGetProgramStringARB;
-PFNGLISPROGRAMARBPROC qglIsProgramARB;
-
-PFNGLLOCKARRAYSEXTPROC qglLockArraysEXT;
-PFNGLUNLOCKARRAYSEXTPROC qglUnlockArraysEXT;
-
 bool g_bTextureRectangleHack = false;
 
 void RE_SetLightStyle(int style, int color);
@@ -297,16 +251,16 @@ void R_Splash()
 	const float y2 = 240 + height / 2;
 
 
-	qglBegin (GL_TRIANGLE_STRIP);
-		qglTexCoord2f( 0,  0 );
-		qglVertex2f(x1, y1);
-		qglTexCoord2f( 1 ,  0 );
-		qglVertex2f(x2, y1);
-		qglTexCoord2f( 0, 1 );
-		qglVertex2f(x1, y2);
-		qglTexCoord2f( 1, 1 );
-		qglVertex2f(x2, y2);
-	qglEnd();
+	glBegin (GL_TRIANGLE_STRIP);
+		glTexCoord2f( 0,  0 );
+		glVertex2f(x1, y1);
+		glTexCoord2f( 1 ,  0 );
+		glVertex2f(x2, y1);
+		glTexCoord2f( 0, 1 );
+		glVertex2f(x1, y2);
+		glTexCoord2f( 1, 1 );
+		glVertex2f(x2, y2);
+	glEnd();
 
 	ri.WIN_Present(&window);
 }
@@ -470,7 +424,7 @@ static void GLimp_InitExtensions( void )
 	glConfig.maxTextureFilterAnisotropy = 0;
 	if ( ri.GL_ExtensionSupported( "GL_EXT_texture_filter_anisotropic" ) )
 	{
-		qglGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.maxTextureFilterAnisotropy );
+		glGetFloatv( GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.maxTextureFilterAnisotropy );
 		Com_Printf ("...GL_EXT_texture_filter_anisotropic available\n" );
 
 		if ( r_ext_texture_filter_anisotropic->integer > 1 )
@@ -498,20 +452,20 @@ static void GLimp_InitExtensions( void )
 	Com_Printf ("...using GL_EXT_texture_edge_clamp\n" );
 
 	// GL_ARB_multitexture
-	qglMultiTexCoord2fARB = NULL;
-	qglActiveTextureARB = NULL;
-	qglClientActiveTextureARB = NULL;
+	glMultiTexCoord2fARB = NULL;
+	glActiveTextureARB = NULL;
+	glClientActiveTextureARB = NULL;
 	if ( ri.GL_ExtensionSupported( "GL_ARB_multitexture" ) )
 	{
 		if ( r_ext_multitexture->integer )
 		{
-			qglMultiTexCoord2fARB = ( PFNGLMULTITEXCOORD2FARBPROC ) ri.GL_GetProcAddress( "glMultiTexCoord2fARB" );
-			qglActiveTextureARB = ( PFNGLACTIVETEXTUREARBPROC ) ri.GL_GetProcAddress( "glActiveTextureARB" );
-			qglClientActiveTextureARB = ( PFNGLCLIENTACTIVETEXTUREARBPROC ) ri.GL_GetProcAddress( "glClientActiveTextureARB" );
+			glMultiTexCoord2fARB = ( PFNGLMULTITEXCOORD2FARBPROC ) ri.GL_GetProcAddress( "glMultiTexCoord2fARB" );
+			glActiveTextureARB = ( PFNGLACTIVETEXTUREARBPROC ) ri.GL_GetProcAddress( "glActiveTextureARB" );
+			glClientActiveTextureARB = ( PFNGLCLIENTACTIVETEXTUREARBPROC ) ri.GL_GetProcAddress( "glClientActiveTextureARB" );
 
-			if ( qglActiveTextureARB )
+			if ( glActiveTextureARB )
 			{
-				qglGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glConfig.maxActiveTextures );
+				glGetIntegerv( GL_MAX_TEXTURE_UNITS_ARB, &glConfig.maxActiveTextures );
 
 				if ( glConfig.maxActiveTextures > 1 )
 				{
@@ -519,9 +473,9 @@ static void GLimp_InitExtensions( void )
 				}
 				else
 				{
-					qglMultiTexCoord2fARB = NULL;
-					qglActiveTextureARB = NULL;
-					qglClientActiveTextureARB = NULL;
+					glMultiTexCoord2fARB = NULL;
+					glActiveTextureARB = NULL;
+					glClientActiveTextureARB = NULL;
 					Com_Printf ("...not using GL_ARB_multitexture, < 2 texture units\n" );
 				}
 			}
@@ -537,16 +491,16 @@ static void GLimp_InitExtensions( void )
 	}
 
 	// GL_EXT_compiled_vertex_array
-	qglLockArraysEXT = NULL;
-	qglUnlockArraysEXT = NULL;
+	glLockArraysEXT = NULL;
+	glUnlockArraysEXT = NULL;
 	if ( ri.GL_ExtensionSupported( "GL_EXT_compiled_vertex_array" ) )
 	{
 		if ( r_ext_compiled_vertex_array->integer )
 		{
 			Com_Printf ("...using GL_EXT_compiled_vertex_array\n" );
-			qglLockArraysEXT = ( PFNGLLOCKARRAYSEXTPROC ) ri.GL_GetProcAddress( "glLockArraysEXT" );
-			qglUnlockArraysEXT = ( PFNGLUNLOCKARRAYSEXTPROC ) ri.GL_GetProcAddress( "glUnlockArraysEXT" );
-			if (!qglLockArraysEXT || !qglUnlockArraysEXT) {
+			glLockArraysEXT = ( PFNGLLOCKARRAYSEXTPROC ) ri.GL_GetProcAddress( "glLockArraysEXT" );
+			glUnlockArraysEXT = ( PFNGLUNLOCKARRAYSEXTPROC ) ri.GL_GetProcAddress( "glUnlockArraysEXT" );
+			if (!glLockArraysEXT || !glUnlockArraysEXT) {
 				Com_Error (ERR_FATAL, "bad getprocaddress");
 			}
 		}
@@ -572,28 +526,28 @@ static void GLimp_InitExtensions( void )
 			// NOTE: VV guys will _definetly_ not be able to use regcoms. Pixel Shaders are just as good though :-)
 			// NOTE: Also, this is an nVidia specific extension (of course), so fragment shaders would serve the same purpose
 			// if we needed some kind of fragment/pixel manipulation support.
-			qglCombinerParameterfvNV = (PFNGLCOMBINERPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glCombinerParameterfvNV" );
-			qglCombinerParameterivNV = (PFNGLCOMBINERPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glCombinerParameterivNV" );
-			qglCombinerParameterfNV = (PFNGLCOMBINERPARAMETERFNVPROC)ri.GL_GetProcAddress( "glCombinerParameterfNV" );
-			qglCombinerParameteriNV = (PFNGLCOMBINERPARAMETERINVPROC)ri.GL_GetProcAddress( "glCombinerParameteriNV" );
-			qglCombinerInputNV = (PFNGLCOMBINERINPUTNVPROC)ri.GL_GetProcAddress( "glCombinerInputNV" );
-			qglCombinerOutputNV = (PFNGLCOMBINEROUTPUTNVPROC)ri.GL_GetProcAddress( "glCombinerOutputNV" );
-			qglFinalCombinerInputNV = (PFNGLFINALCOMBINERINPUTNVPROC)ri.GL_GetProcAddress( "glFinalCombinerInputNV" );
-			qglGetCombinerInputParameterfvNV	= (PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glGetCombinerInputParameterfvNV" );
-			qglGetCombinerInputParameterivNV	= (PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glGetCombinerInputParameterivNV" );
-			qglGetCombinerOutputParameterfvNV = (PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glGetCombinerOutputParameterfvNV" );
-			qglGetCombinerOutputParameterivNV = (PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glGetCombinerOutputParameterivNV" );
-			qglGetFinalCombinerInputParameterfvNV = (PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glGetFinalCombinerInputParameterfvNV" );
-			qglGetFinalCombinerInputParameterivNV = (PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glGetFinalCombinerInputParameterivNV" );
+			glCombinerParameterfvNV = (PFNGLCOMBINERPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glCombinerParameterfvNV" );
+			glCombinerParameterivNV = (PFNGLCOMBINERPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glCombinerParameterivNV" );
+			glCombinerParameterfNV = (PFNGLCOMBINERPARAMETERFNVPROC)ri.GL_GetProcAddress( "glCombinerParameterfNV" );
+			glCombinerParameteriNV = (PFNGLCOMBINERPARAMETERINVPROC)ri.GL_GetProcAddress( "glCombinerParameteriNV" );
+			glCombinerInputNV = (PFNGLCOMBINERINPUTNVPROC)ri.GL_GetProcAddress( "glCombinerInputNV" );
+			glCombinerOutputNV = (PFNGLCOMBINEROUTPUTNVPROC)ri.GL_GetProcAddress( "glCombinerOutputNV" );
+			glFinalCombinerInputNV = (PFNGLFINALCOMBINERINPUTNVPROC)ri.GL_GetProcAddress( "glFinalCombinerInputNV" );
+			glGetCombinerInputParameterfvNV	= (PFNGLGETCOMBINERINPUTPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glGetCombinerInputParameterfvNV" );
+			glGetCombinerInputParameterivNV	= (PFNGLGETCOMBINERINPUTPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glGetCombinerInputParameterivNV" );
+			glGetCombinerOutputParameterfvNV = (PFNGLGETCOMBINEROUTPUTPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glGetCombinerOutputParameterfvNV" );
+			glGetCombinerOutputParameterivNV = (PFNGLGETCOMBINEROUTPUTPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glGetCombinerOutputParameterivNV" );
+			glGetFinalCombinerInputParameterfvNV = (PFNGLGETFINALCOMBINERINPUTPARAMETERFVNVPROC)ri.GL_GetProcAddress( "glGetFinalCombinerInputParameterfvNV" );
+			glGetFinalCombinerInputParameterivNV = (PFNGLGETFINALCOMBINERINPUTPARAMETERIVNVPROC)ri.GL_GetProcAddress( "glGetFinalCombinerInputParameterivNV" );
 
 			// Validate the functions we need.
-			if ( !qglCombinerParameterfvNV || !qglCombinerParameterivNV || !qglCombinerParameterfNV || !qglCombinerParameteriNV || !qglCombinerInputNV ||
-				 !qglCombinerOutputNV || !qglFinalCombinerInputNV || !qglGetCombinerInputParameterfvNV || !qglGetCombinerInputParameterivNV ||
-				 !qglGetCombinerOutputParameterfvNV || !qglGetCombinerOutputParameterivNV || !qglGetFinalCombinerInputParameterfvNV || !qglGetFinalCombinerInputParameterivNV )
+			if ( !glCombinerParameterfvNV || !glCombinerParameterivNV || !glCombinerParameterfNV || !glCombinerParameteriNV || !glCombinerInputNV ||
+				 !glCombinerOutputNV || !glFinalCombinerInputNV || !glGetCombinerInputParameterfvNV || !glGetCombinerInputParameterivNV ||
+				 !glGetCombinerOutputParameterfvNV || !glGetCombinerOutputParameterivNV || !glGetFinalCombinerInputParameterfvNV || !glGetFinalCombinerInputParameterivNV )
 			{
 				bNVRegisterCombiners = false;
-				qglCombinerParameterfvNV = NULL;
-				qglCombinerParameteriNV = NULL;
+				glCombinerParameterfvNV = NULL;
+				glCombinerParameteriNV = NULL;
 				Com_Printf ("...GL_NV_register_combiners failed\n" );
 			}
 		}
@@ -640,38 +594,38 @@ static void GLimp_InitExtensions( void )
 	// If we support one or the other, load the shared function pointers.
 	if ( bARBVertexProgram || bARBFragmentProgram )
 	{
-		qglProgramStringARB					= (PFNGLPROGRAMSTRINGARBPROC)  ri.GL_GetProcAddress("glProgramStringARB");
-		qglBindProgramARB					= (PFNGLBINDPROGRAMARBPROC)    ri.GL_GetProcAddress("glBindProgramARB");
-		qglDeleteProgramsARB				= (PFNGLDELETEPROGRAMSARBPROC) ri.GL_GetProcAddress("glDeleteProgramsARB");
-		qglGenProgramsARB					= (PFNGLGENPROGRAMSARBPROC)    ri.GL_GetProcAddress("glGenProgramsARB");
-		qglProgramEnvParameter4dARB			= (PFNGLPROGRAMENVPARAMETER4DARBPROC)    ri.GL_GetProcAddress("glProgramEnvParameter4dARB");
-		qglProgramEnvParameter4dvARB		= (PFNGLPROGRAMENVPARAMETER4DVARBPROC)   ri.GL_GetProcAddress("glProgramEnvParameter4dvARB");
-		qglProgramEnvParameter4fARB			= (PFNGLPROGRAMENVPARAMETER4FARBPROC)    ri.GL_GetProcAddress("glProgramEnvParameter4fARB");
-		qglProgramEnvParameter4fvARB		= (PFNGLPROGRAMENVPARAMETER4FVARBPROC)   ri.GL_GetProcAddress("glProgramEnvParameter4fvARB");
-		qglProgramLocalParameter4dARB		= (PFNGLPROGRAMLOCALPARAMETER4DARBPROC)  ri.GL_GetProcAddress("glProgramLocalParameter4dARB");
-		qglProgramLocalParameter4dvARB		= (PFNGLPROGRAMLOCALPARAMETER4DVARBPROC) ri.GL_GetProcAddress("glProgramLocalParameter4dvARB");
-		qglProgramLocalParameter4fARB		= (PFNGLPROGRAMLOCALPARAMETER4FARBPROC)  ri.GL_GetProcAddress("glProgramLocalParameter4fARB");
-		qglProgramLocalParameter4fvARB		= (PFNGLPROGRAMLOCALPARAMETER4FVARBPROC) ri.GL_GetProcAddress("glProgramLocalParameter4fvARB");
-		qglGetProgramEnvParameterdvARB		= (PFNGLGETPROGRAMENVPARAMETERDVARBPROC) ri.GL_GetProcAddress("glGetProgramEnvParameterdvARB");
-		qglGetProgramEnvParameterfvARB		= (PFNGLGETPROGRAMENVPARAMETERFVARBPROC) ri.GL_GetProcAddress("glGetProgramEnvParameterfvARB");
-		qglGetProgramLocalParameterdvARB	= (PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC) ri.GL_GetProcAddress("glGetProgramLocalParameterdvARB");
-		qglGetProgramLocalParameterfvARB	= (PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC) ri.GL_GetProcAddress("glGetProgramLocalParameterfvARB");
-		qglGetProgramivARB					= (PFNGLGETPROGRAMIVARBPROC)     ri.GL_GetProcAddress("glGetProgramivARB");
-		qglGetProgramStringARB				= (PFNGLGETPROGRAMSTRINGARBPROC) ri.GL_GetProcAddress("glGetProgramStringARB");
-		qglIsProgramARB						= (PFNGLISPROGRAMARBPROC)        ri.GL_GetProcAddress("glIsProgramARB");
+		glProgramStringARB					= (PFNGLPROGRAMSTRINGARBPROC)  ri.GL_GetProcAddress("glProgramStringARB");
+		glBindProgramARB					= (PFNGLBINDPROGRAMARBPROC)    ri.GL_GetProcAddress("glBindProgramARB");
+		glDeleteProgramsARB				= (PFNGLDELETEPROGRAMSARBPROC) ri.GL_GetProcAddress("glDeleteProgramsARB");
+		glGenProgramsARB					= (PFNGLGENPROGRAMSARBPROC)    ri.GL_GetProcAddress("glGenProgramsARB");
+		glProgramEnvParameter4dARB			= (PFNGLPROGRAMENVPARAMETER4DARBPROC)    ri.GL_GetProcAddress("glProgramEnvParameter4dARB");
+		glProgramEnvParameter4dvARB		= (PFNGLPROGRAMENVPARAMETER4DVARBPROC)   ri.GL_GetProcAddress("glProgramEnvParameter4dvARB");
+		glProgramEnvParameter4fARB			= (PFNGLPROGRAMENVPARAMETER4FARBPROC)    ri.GL_GetProcAddress("glProgramEnvParameter4fARB");
+		glProgramEnvParameter4fvARB		= (PFNGLPROGRAMENVPARAMETER4FVARBPROC)   ri.GL_GetProcAddress("glProgramEnvParameter4fvARB");
+		glProgramLocalParameter4dARB		= (PFNGLPROGRAMLOCALPARAMETER4DARBPROC)  ri.GL_GetProcAddress("glProgramLocalParameter4dARB");
+		glProgramLocalParameter4dvARB		= (PFNGLPROGRAMLOCALPARAMETER4DVARBPROC) ri.GL_GetProcAddress("glProgramLocalParameter4dvARB");
+		glProgramLocalParameter4fARB		= (PFNGLPROGRAMLOCALPARAMETER4FARBPROC)  ri.GL_GetProcAddress("glProgramLocalParameter4fARB");
+		glProgramLocalParameter4fvARB		= (PFNGLPROGRAMLOCALPARAMETER4FVARBPROC) ri.GL_GetProcAddress("glProgramLocalParameter4fvARB");
+		glGetProgramEnvParameterdvARB		= (PFNGLGETPROGRAMENVPARAMETERDVARBPROC) ri.GL_GetProcAddress("glGetProgramEnvParameterdvARB");
+		glGetProgramEnvParameterfvARB		= (PFNGLGETPROGRAMENVPARAMETERFVARBPROC) ri.GL_GetProcAddress("glGetProgramEnvParameterfvARB");
+		glGetProgramLocalParameterdvARB	= (PFNGLGETPROGRAMLOCALPARAMETERDVARBPROC) ri.GL_GetProcAddress("glGetProgramLocalParameterdvARB");
+		glGetProgramLocalParameterfvARB	= (PFNGLGETPROGRAMLOCALPARAMETERFVARBPROC) ri.GL_GetProcAddress("glGetProgramLocalParameterfvARB");
+		glGetProgramivARB					= (PFNGLGETPROGRAMIVARBPROC)     ri.GL_GetProcAddress("glGetProgramivARB");
+		glGetProgramStringARB				= (PFNGLGETPROGRAMSTRINGARBPROC) ri.GL_GetProcAddress("glGetProgramStringARB");
+		glIsProgramARB						= (PFNGLISPROGRAMARBPROC)        ri.GL_GetProcAddress("glIsProgramARB");
 
 		// Validate the functions we need.
-		if ( !qglProgramStringARB || !qglBindProgramARB || !qglDeleteProgramsARB || !qglGenProgramsARB ||
-			 !qglProgramEnvParameter4dARB || !qglProgramEnvParameter4dvARB || !qglProgramEnvParameter4fARB ||
-             !qglProgramEnvParameter4fvARB || !qglProgramLocalParameter4dARB || !qglProgramLocalParameter4dvARB ||
-             !qglProgramLocalParameter4fARB || !qglProgramLocalParameter4fvARB || !qglGetProgramEnvParameterdvARB ||
-             !qglGetProgramEnvParameterfvARB || !qglGetProgramLocalParameterdvARB || !qglGetProgramLocalParameterfvARB ||
-             !qglGetProgramivARB || !qglGetProgramStringARB || !qglIsProgramARB )
+		if ( !glProgramStringARB || !glBindProgramARB || !glDeleteProgramsARB || !glGenProgramsARB ||
+			 !glProgramEnvParameter4dARB || !glProgramEnvParameter4dvARB || !glProgramEnvParameter4fARB ||
+             !glProgramEnvParameter4fvARB || !glProgramLocalParameter4dARB || !glProgramLocalParameter4dvARB ||
+             !glProgramLocalParameter4fARB || !glProgramLocalParameter4fvARB || !glGetProgramEnvParameterdvARB ||
+             !glGetProgramEnvParameterfvARB || !glGetProgramLocalParameterdvARB || !glGetProgramLocalParameterfvARB ||
+             !glGetProgramivARB || !glGetProgramStringARB || !glIsProgramARB )
 		{
 			bARBVertexProgram = false;
 			bARBFragmentProgram = false;
-			qglGenProgramsARB = NULL;	//clear ptrs that get checked
-			qglProgramEnvParameter4fARB = NULL;
+			glGenProgramsARB = NULL;	//clear ptrs that get checked
+			glProgramEnvParameter4fARB = NULL;
 			Com_Printf ("...ignoring GL_ARB_vertex_program\n" );
 			Com_Printf ("...ignoring GL_ARB_fragment_program\n" );
 		}
@@ -695,15 +649,15 @@ static void GLimp_InitExtensions( void )
 	#define GL_MAX_GENERAL_COMBINERS_NV       0x854D
 	GLint iNumGeneralCombiners = 0;
 	if(bNVRegisterCombiners)
-		qglGetIntegerv( GL_MAX_GENERAL_COMBINERS_NV, &iNumGeneralCombiners );
+		glGetIntegerv( GL_MAX_GENERAL_COMBINERS_NV, &iNumGeneralCombiners );
 
 	glConfigExt.doGammaCorrectionWithShaders = qfalse;
-	if ( r_gammaShaders->integer && qglActiveTextureARB && bTexRectSupported && bARBVertexProgram && bARBFragmentProgram )
+	if ( r_gammaShaders->integer && glActiveTextureARB && bTexRectSupported && bARBVertexProgram && bARBFragmentProgram )
 	{
 #if !defined(__APPLE__)
-		qglTexImage3D = (PFNGLTEXIMAGE3DPROC)ri.GL_GetProcAddress("glTexImage3D");
-		qglTexSubImage3D = (PFNGLTEXSUBIMAGE3DPROC)ri.GL_GetProcAddress("glTexSubImage3D");
-		if ( qglTexImage3D && qglTexSubImage3D )
+		glTexImage3D = (PFNGLTEXIMAGE3DPROC)ri.GL_GetProcAddress("glTexImage3D");
+		glTexSubImage3D = (PFNGLTEXSUBIMAGE3DPROC)ri.GL_GetProcAddress("glTexSubImage3D");
+		if ( glTexImage3D && glTexSubImage3D )
 		{
 			glConfigExt.doGammaCorrectionWithShaders = qtrue;
 		}
@@ -713,7 +667,7 @@ static void GLimp_InitExtensions( void )
 	}
 
 	// Only allow dynamic glows/flares if they have the hardware
-	if ( bTexRectSupported && bARBVertexProgram && qglActiveTextureARB && glConfig.maxActiveTextures >= 4 &&
+	if ( bTexRectSupported && bARBVertexProgram && glActiveTextureARB && glConfig.maxActiveTextures >= 4 &&
 		( ( bNVRegisterCombiners && iNumGeneralCombiners >= 2 ) || bARBFragmentProgram ) )
 	{
 		g_bDynamicGlowSupported = true;
@@ -784,20 +738,21 @@ static void InitOpenGL( void )
 		memset(&glConfigExt, 0, sizeof(glConfigExt));
 
 		window = ri.WIN_Init(&windowDesc, &glConfig);
+		gladLoadGLLoader(ri.GL_GetProcAddress);
 
-		Com_Printf( "GL_RENDERER: %s\n", (char *)qglGetString (GL_RENDERER) );
+		Com_Printf( "GL_RENDERER: %s\n", (char *)glGetString (GL_RENDERER) );
 
 		// get our config strings
-		glConfig.vendor_string = (const char *)qglGetString (GL_VENDOR);
-		glConfig.renderer_string = (const char *)qglGetString (GL_RENDERER);
-		glConfig.version_string = (const char *)qglGetString (GL_VERSION);
-		glConfig.extensions_string = (const char *)qglGetString (GL_EXTENSIONS);
+		glConfig.vendor_string = (const char *)glGetString (GL_VENDOR);
+		glConfig.renderer_string = (const char *)glGetString (GL_RENDERER);
+		glConfig.version_string = (const char *)glGetString (GL_VERSION);
+		glConfig.extensions_string = (const char *)glGetString (GL_EXTENSIONS);
 
 		glConfigExt.originalExtensionString = glConfig.extensions_string;
 		glConfig.extensions_string = TruncateGLExtensionsString(glConfigExt.originalExtensionString, 128);
 
 		// OpenGL driver constants
-		qglGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
+		glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 
 		// stubbed or broken drivers may have reported 0...
 		glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
@@ -826,7 +781,7 @@ void GL_CheckErrors( void ) {
     GLenum	err;
     char	s[64];
 
-    err = qglGetError();
+    err = glGetError();
     if ( err == GL_NO_ERROR ) {
         return;
     }
@@ -892,7 +847,7 @@ byte *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *pa
 	int padwidth, linelen;
 	GLint packAlign;
 
-	qglGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
+	glGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
 
 	linelen = width * 3;
 	padwidth = PAD(linelen, packAlign);
@@ -901,7 +856,7 @@ byte *RB_ReadPixels(int x, int y, int width, int height, size_t *offset, int *pa
 	buffer = (byte *)Hunk_AllocateTempMemory(padwidth * height + *offset + packAlign - 1);
 
 	bufstart = (byte *)PADP((intptr_t) buffer + *offset, packAlign);
-	qglReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, bufstart);
+	glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, bufstart);
 
 	*offset = bufstart - buffer;
 	*padlen = padwidth - linelen;
@@ -1223,7 +1178,7 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 
 	cmd = (const videoFrameCommand_t *)data;
 
-	qglGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
+	glGetIntegerv(GL_PACK_ALIGNMENT, &packAlign);
 
 	linelen = cmd->width * 3;
 
@@ -1236,7 +1191,7 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 
 	cBuf = (byte *)PADP(cmd->captureBuffer, packAlign);
 
-	qglReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
+	glReadPixels(0, 0, cmd->width, cmd->height, GL_RGB,
 		GL_UNSIGNED_BYTE, cBuf);
 
 	memcount = padwidth * cmd->height;
@@ -1292,44 +1247,44 @@ const void *RB_TakeVideoFrameCmd( const void *data )
 */
 void GL_SetDefaultState( void )
 {
-	qglClearDepth( 1.0f );
+	glClearDepth( 1.0f );
 
-	qglCullFace(GL_FRONT);
+	glCullFace(GL_FRONT);
 
-	qglColor4f (1,1,1,1);
+	glColor4f (1,1,1,1);
 
 	// initialize downstream texture unit if we're running
 	// in a multitexture environment
-	if ( qglActiveTextureARB ) {
+	if ( glActiveTextureARB ) {
 		GL_SelectTexture( 1 );
 		GL_TextureMode( r_textureMode->string );
 		GL_TexEnv( GL_MODULATE );
-		qglDisable( GL_TEXTURE_2D );
+		glDisable( GL_TEXTURE_2D );
 		GL_SelectTexture( 0 );
 	}
 
-	qglEnable(GL_TEXTURE_2D);
+	glEnable(GL_TEXTURE_2D);
 	GL_TextureMode( r_textureMode->string );
 	GL_TexEnv( GL_MODULATE );
 
-	qglShadeModel( GL_SMOOTH );
-	qglDepthFunc( GL_LEQUAL );
+	glShadeModel( GL_SMOOTH );
+	glDepthFunc( GL_LEQUAL );
 
 	// the vertex array is always enabled, but the color and texture
 	// arrays are enabled and disabled around the compiled vertex array call
-	qglEnableClientState (GL_VERTEX_ARRAY);
+	glEnableClientState (GL_VERTEX_ARRAY);
 
 	//
 	// make sure our GL state vector is set correctly
 	//
 	glState.glStateBits = GLS_DEPTHTEST_DISABLE | GLS_DEPTHMASK_TRUE;
 
-	qglPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
-	qglDepthMask( GL_TRUE );
-	qglDisable( GL_DEPTH_TEST );
-	qglEnable( GL_SCISSOR_TEST );
-	qglDisable( GL_CULL_FACE );
-	qglDisable( GL_BLEND );
+	glPolygonMode (GL_FRONT_AND_BACK, GL_FILL);
+	glDepthMask( GL_TRUE );
+	glDisable( GL_DEPTH_TEST );
+	glEnable( GL_SCISSOR_TEST );
+	glDisable( GL_CULL_FACE );
+	glDisable( GL_BLEND );
 }
 
 /*
@@ -1442,7 +1397,7 @@ void GfxInfo_f( void )
 		ri.Printf( PRINT_ALL, "rendering primitives: " );
 		primitives = r_primitives->integer;
 		if ( primitives == 0 ) {
-			if ( qglLockArraysEXT ) {
+			if ( glLockArraysEXT ) {
 				primitives = 2;
 			} else {
 				primitives = 1;
@@ -1464,8 +1419,8 @@ void GfxInfo_f( void )
 	ri.Printf( PRINT_ALL, "texture bits: %d\n", r_texturebits->integer );
 	if ( r_texturebitslm->integer > 0 )
 		ri.Printf( PRINT_ALL, "lightmap texture bits: %d\n", r_texturebitslm->integer );
-	ri.Printf( PRINT_ALL, "multitexture: %s\n", enablestrings[qglActiveTextureARB != 0] );
-	ri.Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[qglLockArraysEXT != 0 ] );
+	ri.Printf( PRINT_ALL, "multitexture: %s\n", enablestrings[glActiveTextureARB != 0] );
+	ri.Printf( PRINT_ALL, "compiled vertex arrays: %s\n", enablestrings[glLockArraysEXT != 0 ] );
 	ri.Printf( PRINT_ALL, "texenv add: %s\n", enablestrings[glConfig.textureEnvAddAvailable != 0] );
 	ri.Printf( PRINT_ALL, "compressed textures: %s\n", enablestrings[glConfig.textureCompression != TC_NONE] );
 	ri.Printf( PRINT_ALL, "compressed lightmaps: %s\n", enablestrings[(r_ext_compressed_lightmaps->integer != 0 && glConfig.textureCompression != TC_NONE)] );
@@ -1780,7 +1735,7 @@ void R_Init( void ) {
 	R_InitWorldEffects();
 
 #if defined(_DEBUG)
-	int	err = qglGetError();
+	int	err = glGetError();
 	if ( err != GL_NO_ERROR )
 		ri.Printf( PRINT_ALL,  "glGetError() = 0x%x\n", err);
 #endif
@@ -1809,44 +1764,44 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		// Release the Glow Vertex Shader.
 		if ( tr.glowVShader )
 		{
-			qglDeleteProgramsARB( 1, &tr.glowVShader );
+			glDeleteProgramsARB( 1, &tr.glowVShader );
 		}
 
 		// Release Pixel Shader.
 		if ( tr.glowPShader )
 		{
-			if ( qglCombinerParameteriNV  )
+			if ( glCombinerParameteriNV  )
 			{
 				// Release the Glow Regcom call list.
-				qglDeleteLists( tr.glowPShader, 1 );
+				glDeleteLists( tr.glowPShader, 1 );
 			}
-			else if ( qglGenProgramsARB )
+			else if ( glGenProgramsARB )
 			{
 				// Release the Glow Fragment Shader.
-				qglDeleteProgramsARB( 1, &tr.glowPShader );
+				glDeleteProgramsARB( 1, &tr.glowPShader );
 			}
 		}
 
 		if ( tr.gammaCorrectVtxShader )
 		{
-			qglDeleteProgramsARB(1, &tr.gammaCorrectVtxShader);
+			glDeleteProgramsARB(1, &tr.gammaCorrectVtxShader);
 		}
 
 		if ( tr.gammaCorrectPxShader )
 		{
-			qglDeleteProgramsARB(1, &tr.gammaCorrectPxShader);
+			glDeleteProgramsARB(1, &tr.gammaCorrectPxShader);
 		}
 
 		// Release the scene glow texture.
-		qglDeleteTextures( 1, &tr.screenGlow );
+		glDeleteTextures( 1, &tr.screenGlow );
 
 		// Release the scene texture.
-		qglDeleteTextures( 1, &tr.sceneImage );
+		glDeleteTextures( 1, &tr.sceneImage );
 
-		qglDeleteTextures(1, &tr.gammaCorrectLUTImage);
+		glDeleteTextures(1, &tr.gammaCorrectLUTImage);
 
 		// Release the blur texture.
-		qglDeleteTextures( 1, &tr.blurImage );
+		glDeleteTextures( 1, &tr.blurImage );
 	}
 
 	R_ShutdownWorldEffects();

@@ -99,12 +99,12 @@ void R_RenderShadowEdges( void ) {
 			//we are going to render all edges even though it is a tiny bit slower. -rww
 #if 1
 			i2 = edgeDefs[ i ][ j ].i2;
-			qglBegin( GL_TRIANGLE_STRIP );
-				qglVertex3fv( tess.xyz[ i ] );
-				qglVertex3fv( shadowXyz[ i ] );
-				qglVertex3fv( tess.xyz[ i2 ] );
-				qglVertex3fv( shadowXyz[ i2 ] );
-			qglEnd();
+			glBegin( GL_TRIANGLE_STRIP );
+				glVertex3fv( tess.xyz[ i ] );
+				glVertex3fv( shadowXyz[ i ] );
+				glVertex3fv( tess.xyz[ i2 ] );
+				glVertex3fv( shadowXyz[ i2 ] );
+			glEnd();
 #else
 			hit[0] = 0;
 			hit[1] = 0;
@@ -121,12 +121,12 @@ void R_RenderShadowEdges( void ) {
 			// triangle, it is a sil edge
 			if (hit[1] != 1)
 			{
-				qglBegin( GL_TRIANGLE_STRIP );
-				qglVertex3fv( tess.xyz[ i ] );
-				qglVertex3fv( shadowXyz[ i ] );
-				qglVertex3fv( tess.xyz[ i2 ] );
-				qglVertex3fv( shadowXyz[ i2 ] );
-				qglEnd();
+				glBegin( GL_TRIANGLE_STRIP );
+				glVertex3fv( tess.xyz[ i ] );
+				glVertex3fv( shadowXyz[ i ] );
+				glVertex3fv( tess.xyz[ i2 ] );
+				glVertex3fv( shadowXyz[ i2 ] );
+				glEnd();
 				c_edges++;
 			} else {
 				c_rejected++;
@@ -151,16 +151,16 @@ void R_RenderShadowEdges( void ) {
 		o2 = tess.indexes[ i*3 + 1 ];
 		o3 = tess.indexes[ i*3 + 2 ];
 
-		qglBegin(GL_TRIANGLES);
-			qglVertex3fv(tess.xyz[o1]);
-			qglVertex3fv(tess.xyz[o2]);
-			qglVertex3fv(tess.xyz[o3]);
-		qglEnd();
-		qglBegin(GL_TRIANGLES);
-			qglVertex3fv(shadowXyz[o3]);
-			qglVertex3fv(shadowXyz[o2]);
-			qglVertex3fv(shadowXyz[o1]);
-		qglEnd();
+		glBegin(GL_TRIANGLES);
+			glVertex3fv(tess.xyz[o1]);
+			glVertex3fv(tess.xyz[o2]);
+			glVertex3fv(tess.xyz[o3]);
+		glEnd();
+		glBegin(GL_TRIANGLES);
+			glVertex3fv(shadowXyz[o3]);
+			glVertex3fv(shadowXyz[o2]);
+			glVertex3fv(shadowXyz[o1]);
+		glEnd();
 	}
 #endif
 }
@@ -329,84 +329,84 @@ void RB_DoShadowTessEnd( vec3_t lightPos )
 	}
 
 	GL_Bind( tr.whiteImage );
-	//qglEnable( GL_CULL_FACE );
+	//glEnable( GL_CULL_FACE );
 	GL_State( GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO );
 
 #ifndef _DEBUG_STENCIL_SHADOWS
-	qglColor3f( 0.2f, 0.2f, 0.2f );
+	glColor3f( 0.2f, 0.2f, 0.2f );
 
 	// don't write to the color buffer
-	qglColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
+	glColorMask( GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE );
 
-	qglEnable( GL_STENCIL_TEST );
-	qglStencilFunc( GL_ALWAYS, 1, 255 );
+	glEnable( GL_STENCIL_TEST );
+	glStencilFunc( GL_ALWAYS, 1, 255 );
 #else
-	qglColor3f( 1.0f, 0.0f, 0.0f );
-	qglPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//qglDisable(GL_DEPTH_TEST);
+	glColor3f( 1.0f, 0.0f, 0.0f );
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glDisable(GL_DEPTH_TEST);
 #endif
 
 #ifdef _STENCIL_REVERSE
-	qglDepthFunc(GL_LESS);
+	glDepthFunc(GL_LESS);
 
 	//now using the Carmack Reverse<tm> -rww
 	if ( backEnd.viewParms.isMirror ) {
-		//qglCullFace( GL_BACK );
+		//glCullFace( GL_BACK );
 		GL_Cull(CT_BACK_SIDED);
-		qglStencilOp( GL_KEEP, GL_INCR, GL_KEEP );
+		glStencilOp( GL_KEEP, GL_INCR, GL_KEEP );
 
 		R_RenderShadowEdges();
 
-		//qglCullFace( GL_FRONT );
+		//glCullFace( GL_FRONT );
 		GL_Cull(CT_FRONT_SIDED);
-		qglStencilOp( GL_KEEP, GL_DECR, GL_KEEP );
+		glStencilOp( GL_KEEP, GL_DECR, GL_KEEP );
 
 		R_RenderShadowEdges();
 	} else {
-		//qglCullFace( GL_FRONT );
+		//glCullFace( GL_FRONT );
 		GL_Cull(CT_FRONT_SIDED);
-		qglStencilOp( GL_KEEP, GL_INCR, GL_KEEP );
+		glStencilOp( GL_KEEP, GL_INCR, GL_KEEP );
 
 		R_RenderShadowEdges();
 
-		//qglCullFace( GL_BACK );
+		//glCullFace( GL_BACK );
 		GL_Cull(CT_BACK_SIDED);
-		qglStencilOp( GL_KEEP, GL_DECR, GL_KEEP );
+		glStencilOp( GL_KEEP, GL_DECR, GL_KEEP );
 
 		R_RenderShadowEdges();
 	}
 
-	qglDepthFunc(GL_LEQUAL);
+	glDepthFunc(GL_LEQUAL);
 #else
 	// mirrors have the culling order reversed
 	if ( backEnd.viewParms.isMirror ) {
-		qglCullFace( GL_FRONT );
-		qglStencilOp( GL_KEEP, GL_KEEP, GL_INCR );
+		glCullFace( GL_FRONT );
+		glStencilOp( GL_KEEP, GL_KEEP, GL_INCR );
 
 		R_RenderShadowEdges();
 
-		qglCullFace( GL_BACK );
-		qglStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
+		glCullFace( GL_BACK );
+		glStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
 
 		R_RenderShadowEdges();
 	} else {
-		qglCullFace( GL_BACK );
-		qglStencilOp( GL_KEEP, GL_KEEP, GL_INCR );
+		glCullFace( GL_BACK );
+		glStencilOp( GL_KEEP, GL_KEEP, GL_INCR );
 
 		R_RenderShadowEdges();
 
-		qglCullFace( GL_FRONT );
-		qglStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
+		glCullFace( GL_FRONT );
+		glStencilOp( GL_KEEP, GL_KEEP, GL_DECR );
 
 		R_RenderShadowEdges();
 	}
 #endif
 
 	// reenable writing to the color buffer
-	qglColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
+	glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
 
 #ifdef _DEBUG_STENCIL_SHADOWS
-	qglPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
 }
 
@@ -433,49 +433,49 @@ void RB_ShadowFinish( void ) {
 	return;
 #endif
 
-	qglEnable( GL_STENCIL_TEST );
-	qglStencilFunc( GL_NOTEQUAL, 0, 255 );
+	glEnable( GL_STENCIL_TEST );
+	glStencilFunc( GL_NOTEQUAL, 0, 255 );
 
-	qglStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
+	glStencilOp( GL_KEEP, GL_KEEP, GL_KEEP );
 
 	bool planeZeroBack = false;
-	if (qglIsEnabled(GL_CLIP_PLANE0))
+	if (glIsEnabled(GL_CLIP_PLANE0))
 	{
 		planeZeroBack = true;
-		qglDisable (GL_CLIP_PLANE0);
+		glDisable (GL_CLIP_PLANE0);
 	}
 	GL_Cull(CT_TWO_SIDED);
-	//qglDisable (GL_CULL_FACE);
+	//glDisable (GL_CULL_FACE);
 
 	GL_Bind( tr.whiteImage );
 
-	qglPushMatrix();
-    qglLoadIdentity ();
+	glPushMatrix();
+    glLoadIdentity ();
 
-//	qglColor3f( 0.6f, 0.6f, 0.6f );
+//	glColor3f( 0.6f, 0.6f, 0.6f );
 //	GL_State( GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_DST_COLOR | GLS_DSTBLEND_ZERO );
 
-//	qglColor3f( 1, 0, 0 );
+//	glColor3f( 1, 0, 0 );
 //	GL_State( GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_ONE | GLS_DSTBLEND_ZERO );
 
-	qglColor4f( 0.0f, 0.0f, 0.0f, 0.5f );
+	glColor4f( 0.0f, 0.0f, 0.0f, 0.5f );
 	//GL_State( GLS_DEPTHMASK_TRUE | GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
 	GL_State( GLS_SRCBLEND_SRC_ALPHA | GLS_DSTBLEND_ONE_MINUS_SRC_ALPHA );
 
-	qglBegin( GL_QUADS );
-	qglVertex3f( -100, 100, -10 );
-	qglVertex3f( 100, 100, -10 );
-	qglVertex3f( 100, -100, -10 );
-	qglVertex3f( -100, -100, -10 );
-	qglEnd ();
+	glBegin( GL_QUADS );
+	glVertex3f( -100, 100, -10 );
+	glVertex3f( 100, 100, -10 );
+	glVertex3f( 100, -100, -10 );
+	glVertex3f( -100, -100, -10 );
+	glEnd ();
 
-	qglColor4f(1,1,1,1);
-	qglDisable( GL_STENCIL_TEST );
+	glColor4f(1,1,1,1);
+	glDisable( GL_STENCIL_TEST );
 	if (planeZeroBack)
 	{
-		qglEnable (GL_CLIP_PLANE0);
+		glEnable (GL_CLIP_PLANE0);
 	}
-	qglPopMatrix();
+	glPopMatrix();
 }
 
 
@@ -543,8 +543,8 @@ void RB_CaptureScreenImage(void)
 	{
 		tmp = (byte *)Z_Malloc((sizeof(byte)*4)*(glConfig.vidWidth*glConfig.vidHeight), TAG_ICARUS, qtrue);
 	}
-	qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
-	qglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+	glReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 512, 512, 0, GL_RGBA, GL_UNSIGNED_BYTE, tmp);
 	*/
 
 	if (radX > glConfig.maxTextureSize)
@@ -586,7 +586,7 @@ void RB_CaptureScreenImage(void)
 		cY = 0;
 	}
 
-	qglCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, cX, cY, radX, radY, 0);
+	glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16, cX, cY, radX, radY, 0);
 }
 
 //yeah.. not really shadow-related.. but it's stencil-related. -rww
@@ -611,21 +611,21 @@ void RB_DistortionFill(void)
 		RB_CaptureScreenImage();
 	}
 
-	qglEnable(GL_STENCIL_TEST);
-	qglStencilFunc(GL_NOTEQUAL, 0, 0xFFFFFFFF);
-	qglStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_NOTEQUAL, 0, 0xFFFFFFFF);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-	qglDisable (GL_CLIP_PLANE0);
+	glDisable (GL_CLIP_PLANE0);
 	GL_Cull( CT_TWO_SIDED );
 
 	//reset the view matrices and go into ortho mode
-	qglMatrixMode(GL_PROJECTION);
-	qglPushMatrix();
-	qglLoadIdentity();
-	qglOrtho(0, glConfig.vidWidth, glConfig.vidHeight, 32, -1, 1);
-	qglMatrixMode(GL_MODELVIEW);
-	qglPushMatrix();
-	qglLoadIdentity();
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	glOrtho(0, glConfig.vidWidth, glConfig.vidHeight, 32, -1, 1);
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
 
 	if (tr_distortionStretch)
 	{ //override
@@ -658,20 +658,20 @@ void RB_DistortionFill(void)
 		GL_State(0);
 	}
 
-	qglBegin(GL_QUADS);
-		qglColor4f(1.0f, 1.0f, 1.0f, alpha);
-		qglTexCoord2f(0+spost2, 1-spost);
-		qglVertex2f(0, 0);
+	glBegin(GL_QUADS);
+		glColor4f(1.0f, 1.0f, 1.0f, alpha);
+		glTexCoord2f(0+spost2, 1-spost);
+		glVertex2f(0, 0);
 
-		qglTexCoord2f(0+spost2, 0+spost);
-		qglVertex2f(0, glConfig.vidHeight);
+		glTexCoord2f(0+spost2, 0+spost);
+		glVertex2f(0, glConfig.vidHeight);
 
-		qglTexCoord2f(1-spost2, 0+spost);
-		qglVertex2f(glConfig.vidWidth, glConfig.vidHeight);
+		glTexCoord2f(1-spost2, 0+spost);
+		glVertex2f(glConfig.vidWidth, glConfig.vidHeight);
 
-		qglTexCoord2f(1-spost2, 1-spost);
-		qglVertex2f(glConfig.vidWidth, 0);
-	qglEnd();
+		glTexCoord2f(1-spost2, 1-spost);
+		glVertex2f(glConfig.vidWidth, 0);
+	glEnd();
 
 	if (tr_distortionAlpha == 1.0f && tr_distortionStretch == 0.0f)
 	{ //no overrides
@@ -700,28 +700,28 @@ void RB_DistortionFill(void)
 		}
 		spost2 *= 0.2f;
 
-		qglBegin(GL_QUADS);
-			qglColor4f(1.0f, 1.0f, 1.0f, alpha);
-			qglTexCoord2f(0+spost2, 1-spost);
-			qglVertex2f(0, 0);
+		glBegin(GL_QUADS);
+			glColor4f(1.0f, 1.0f, 1.0f, alpha);
+			glTexCoord2f(0+spost2, 1-spost);
+			glVertex2f(0, 0);
 
-			qglTexCoord2f(0+spost2, 0+spost);
-			qglVertex2f(0, glConfig.vidHeight);
+			glTexCoord2f(0+spost2, 0+spost);
+			glVertex2f(0, glConfig.vidHeight);
 
-			qglTexCoord2f(1-spost2, 0+spost);
-			qglVertex2f(glConfig.vidWidth, glConfig.vidHeight);
+			glTexCoord2f(1-spost2, 0+spost);
+			glVertex2f(glConfig.vidWidth, glConfig.vidHeight);
 
-			qglTexCoord2f(1-spost2, 1-spost);
-			qglVertex2f(glConfig.vidWidth, 0);
-		qglEnd();
+			glTexCoord2f(1-spost2, 1-spost);
+			glVertex2f(glConfig.vidWidth, 0);
+		glEnd();
 	}
 
 	//pop the view matrices back
-	qglMatrixMode(GL_PROJECTION);
-	qglPopMatrix();
-	qglMatrixMode(GL_MODELVIEW);
-	qglPopMatrix();
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glMatrixMode(GL_MODELVIEW);
+	glPopMatrix();
 
-	qglDisable( GL_STENCIL_TEST );
+	glDisable( GL_STENCIL_TEST );
 }
 

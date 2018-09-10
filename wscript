@@ -47,7 +47,6 @@ def configure(ctx):
 		ctx.check(features='c cprogram', lib='jpeg', uselib_store='JPEG')
 		ctx.check(features='c cprogram', lib='png', uselib_store='PNG')
 	ctx.check(features='c cprogram', lib='pthread', uselib_store='PTHREAD')
-	ctx.check(features='c cprogram', lib='GL', uselib_store='GL')
 	ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
 	btup = ctx.options.build_type.upper()
@@ -62,6 +61,7 @@ def configure(ctx):
 			ctx.define('_DEBUG', 1)
 		else:
 			ctx.define('NDEBUG', 1)
+			ctx.define('FINAL_BUILD', 1)
 		ctx.define('ARCH_STRING', 'x86_64')
 	else:
 		Logs.error('UNKNOWN BUILD TYPE: ' + btup)
@@ -222,7 +222,7 @@ def build(bld):
 	### RD-VANILLA ###
 	
 		rdvan_files = bld.path.ant_glob('src/rd-vanilla/*.cpp')
-		#rdvan_files += bld.path.ant_glob('src/rd-vanilla/glad.c')
+		rdvan_files += bld.path.ant_glob('src/rd-vanilla/glad.c')
 		rdvan_files += bld.path.ant_glob('src/rd-common/*.cpp')
 		rdvan_files += bld.path.ant_glob('src/ghoul2/*.cpp')
 		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cpp')

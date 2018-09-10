@@ -39,8 +39,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "Ratl/vector_vs.h"
 #include "Ratl/bits_vs.h"
 
-#include "glext.h"
-
 ////////////////////////////////////////////////////////////////////////////////////////
 // Defines
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -1223,24 +1221,24 @@ public:
 
 		// Enable And Disable Things
 		//---------------------------
-		qglEnable(GL_TEXTURE_2D);
-		//qglDisable(GL_CULL_FACE);
+		glEnable(GL_TEXTURE_2D);
+		//glDisable(GL_CULL_FACE);
 		//naughty, you are making the assumption that culling is on when you get here. -rww
 		GL_Cull(CT_TWO_SIDED);
 
-		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
-		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (mFilterMode==0)?(GL_LINEAR):(GL_NEAREST));
 
 
 		// Setup Matrix Mode And Translation
 		//-----------------------------------
-		qglMatrixMode(GL_MODELVIEW);
-		qglPushMatrix();
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
 
 
 		// Begin
 		//-------
-		qglBegin(mGLModeEnum);
+		glBegin(mGLModeEnum);
 		for (particleNum=0; particleNum<mParticleCount; particleNum++)
 		{
 			part = &(mParticles[particleNum]);
@@ -1253,32 +1251,32 @@ public:
 			//------------------------------------------------------
 			if (mBlendMode==0)
 			{
-				qglColor4f(mColor[0], mColor[1], mColor[2], part->mAlpha);
+				glColor4f(mColor[0], mColor[1], mColor[2], part->mAlpha);
 			}
 
 			// Otherwise Apply Alpha To All Channels
 			//---------------------------------------
 			else
 			{
-				qglColor4f(mColor[0]*part->mAlpha, mColor[1]*part->mAlpha, mColor[2]*part->mAlpha, mColor[3]*part->mAlpha);
+				glColor4f(mColor[0]*part->mAlpha, mColor[1]*part->mAlpha, mColor[2]*part->mAlpha, mColor[3]*part->mAlpha);
 			}
 
 			// Render A Triangle
 			//-------------------
 			if (mVertexCount==3)
 			{
- 				qglTexCoord2f(1.0, 0.0);
-				qglVertex3f(part->mPosition[0],
+ 				glTexCoord2f(1.0, 0.0);
+				glVertex3f(part->mPosition[0],
 							part->mPosition[1],
 							part->mPosition[2]);
 
-				qglTexCoord2f(0.0, 1.0);
-				qglVertex3f(part->mPosition[0] + mCameraLeft[0],
+				glTexCoord2f(0.0, 1.0);
+				glVertex3f(part->mPosition[0] + mCameraLeft[0],
 							part->mPosition[1] + mCameraLeft[1],
 							part->mPosition[2] + mCameraLeft[2]);
 
-				qglTexCoord2f(0.0, 0.0);
-				qglVertex3f(part->mPosition[0] + mCameraLeftPlusUp[0],
+				glTexCoord2f(0.0, 0.0);
+				glVertex3f(part->mPosition[0] + mCameraLeftPlusUp[0],
 							part->mPosition[1] + mCameraLeftPlusUp[1],
 							part->mPosition[2] + mCameraLeftPlusUp[2]);
 			}
@@ -1288,35 +1286,35 @@ public:
 			else
 			{
 				// Left bottom.
-				qglTexCoord2f( 0.0, 0.0 );
-				qglVertex3f(part->mPosition[0] - mCameraLeftMinusUp[0],
+				glTexCoord2f( 0.0, 0.0 );
+				glVertex3f(part->mPosition[0] - mCameraLeftMinusUp[0],
 							part->mPosition[1] - mCameraLeftMinusUp[1],
 							part->mPosition[2] - mCameraLeftMinusUp[2] );
 
 				// Right bottom.
-				qglTexCoord2f( 1.0, 0.0 );
-				qglVertex3f(part->mPosition[0] - mCameraLeftPlusUp[0],
+				glTexCoord2f( 1.0, 0.0 );
+				glVertex3f(part->mPosition[0] - mCameraLeftPlusUp[0],
 							part->mPosition[1] - mCameraLeftPlusUp[1],
 							part->mPosition[2] - mCameraLeftPlusUp[2] );
 
 				// Right top.
-				qglTexCoord2f( 1.0, 1.0 );
-				qglVertex3f(part->mPosition[0] + mCameraLeftMinusUp[0],
+				glTexCoord2f( 1.0, 1.0 );
+				glVertex3f(part->mPosition[0] + mCameraLeftMinusUp[0],
 							part->mPosition[1] + mCameraLeftMinusUp[1],
 							part->mPosition[2] + mCameraLeftMinusUp[2] );
 
 				// Left top.
-				qglTexCoord2f( 0.0, 1.0 );
-				qglVertex3f(part->mPosition[0] + mCameraLeftPlusUp[0],
+				glTexCoord2f( 0.0, 1.0 );
+				glVertex3f(part->mPosition[0] + mCameraLeftPlusUp[0],
 							part->mPosition[1] + mCameraLeftPlusUp[1],
 							part->mPosition[2] + mCameraLeftPlusUp[2] );
 			}
 		}
-		qglEnd();
+		glEnd();
 
-		//qglEnable(GL_CULL_FACE);
+		//glEnable(GL_CULL_FACE);
 		//you don't need to do this when you are properly setting cull state.
-		qglPopMatrix();
+		glPopMatrix();
 
 		mParticlesRendered += mParticleCountRender;
 	}
@@ -1363,8 +1361,8 @@ void RB_RenderWorldEffects(void)
 	}
 
 	SetViewportAndScissor();
-	qglMatrixMode(GL_MODELVIEW);
-	qglLoadMatrixf(backEnd.viewParms.world.modelMatrix);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadMatrixf(backEnd.viewParms.world.modelMatrix);
 
 
 	// Calculate Elapsed Time For Scale Purposes

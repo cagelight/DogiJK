@@ -496,12 +496,12 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 				{
 					if (!polyStarted)
 					{
-						qglBegin(GL_POLYGON);
+						glBegin(GL_POLYGON);
 						polyStarted = true;
 					}
 
-					qglColor4f(color[0], color[1], color[2], 1.0f-alpha);
-					qglVertex3f(point[i], point[i], point[2]);
+					glColor4f(color[0], color[1], color[2], 1.0f-alpha);
+					glVertex3f(point[i], point[i], point[2]);
 				}
 
 				i++;
@@ -509,7 +509,7 @@ static void R_AddWorldSurface( msurface_t *surf, int dlightBits, qboolean noView
 
 			if (polyStarted)
 			{
-				qglEnd();
+				glEnd();
 			}
 		}
 	}
@@ -1133,22 +1133,22 @@ const void *R_DrawWireframeAutomap(const void *data)
 
 #if 0 //instead of this method, just do the automap as a new "scene"
 	//projection matrix mode
-	qglMatrixMode(GL_PROJECTION);
+	glMatrixMode(GL_PROJECTION);
 
 	//store the current matrix
-	qglPushMatrix();
+	glPushMatrix();
 	//translate to our proper pos/angles from identity
-	qglLoadIdentity();
-	qglTranslatef(pos[0], pos[1], pos[2]);
+	glLoadIdentity();
+	glTranslatef(pos[0], pos[1], pos[2]);
 	//presumeably this is correct for compensating for quake's
 	//crazy angle system.
-	qglRotatef(angles[1], 0.0f, 0.0f, 1.0f);
-	qglRotatef(-angles[0], 0.0f, 1.0f, 0.0f);
-	qglRotatef(angles[2], 1.0f, 0.0f, 0.0f);
+	glRotatef(angles[1], 0.0f, 0.0f, 1.0f);
+	glRotatef(-angles[0], 0.0f, 1.0f, 0.0f);
+	glRotatef(angles[2], 1.0f, 0.0f, 0.0f);
 #endif
 
 	//disable 2d texturing
-	qglDisable( GL_TEXTURE_2D );
+	glDisable( GL_TEXTURE_2D );
 
 	//now draw the backdrop
 #if 0 //this does no good sadly, because of the issue of having to clear with a second scene
@@ -1175,21 +1175,21 @@ const void *R_DrawWireframeAutomap(const void *data)
 		GL_State(0);
 	}
 	//black
-	qglColor4f(0.0f, 0.0f, 0.0f, alpha);
+	glColor4f(0.0f, 0.0f, 0.0f, alpha);
 
 	//draw a black backdrop
-	qglPushMatrix();
-	qglLoadIdentity(); //get the ident matrix
+	glPushMatrix();
+	glLoadIdentity(); //get the ident matrix
 
-	qglBegin( GL_QUADS );
-	qglVertex3f( -QUADINFINITY, QUADINFINITY, -(backEnd.viewParms.zFar-1) );
-	qglVertex3f( QUADINFINITY, QUADINFINITY, -(backEnd.viewParms.zFar-1) );
-	qglVertex3f( QUADINFINITY, -QUADINFINITY, -(backEnd.viewParms.zFar-1) );
-	qglVertex3f( -QUADINFINITY, -QUADINFINITY, -(backEnd.viewParms.zFar-1) );
-	qglEnd ();
+	glBegin( GL_QUADS );
+	glVertex3f( -QUADINFINITY, QUADINFINITY, -(backEnd.viewParms.zFar-1) );
+	glVertex3f( QUADINFINITY, QUADINFINITY, -(backEnd.viewParms.zFar-1) );
+	glVertex3f( QUADINFINITY, -QUADINFINITY, -(backEnd.viewParms.zFar-1) );
+	glVertex3f( -QUADINFINITY, -QUADINFINITY, -(backEnd.viewParms.zFar-1) );
+	glEnd ();
 
 	//pop back the viewmatrix
-	qglPopMatrix();
+	glPopMatrix();
 
 
 	//set the mode to line draw
@@ -1289,12 +1289,12 @@ const void *R_DrawWireframeAutomap(const void *data)
 		}
 
 		i = 0;
-		qglBegin(GL_TRIANGLES);
+		glBegin(GL_TRIANGLES);
 		while (i < s->numPoints)
 		{
 			if (r_autoMap->integer == 2 || s->numPoints < 3)
 			{ //line mode or not enough verts on surface
-				qglColor4f(s->points[i].color[0], s->points[i].color[1], s->points[i].color[2], s->points[i].alpha);
+				glColor4f(s->points[i].color[0], s->points[i].color[1], s->points[i].color[2], s->points[i].alpha);
 			}
 			else
 			{ //fill mode
@@ -1316,13 +1316,13 @@ const void *R_DrawWireframeAutomap(const void *data)
 				}
 				*/
 
-				//qglColor4f(planeNormal[0], planeNormal[1], planeNormal[2], fAlpha);
-				qglColor4f(s->points[i].color[0], s->points[i].color[1], 1.0f-planeNormal[2], fAlpha);
+				//glColor4f(planeNormal[0], planeNormal[1], planeNormal[2], fAlpha);
+				glColor4f(s->points[i].color[0], s->points[i].color[1], 1.0f-planeNormal[2], fAlpha);
 			}
-			qglVertex3f(s->points[i].xyz[0], s->points[i].xyz[1], s->points[i].xyz[2]);
+			glVertex3f(s->points[i].xyz[0], s->points[i].xyz[1], s->points[i].xyz[2]);
 			i++;
 		}
-		qglEnd();
+		glEnd();
 		s = s->next;
 	}
 #else
@@ -1336,14 +1336,14 @@ const void *R_DrawWireframeAutomap(const void *data)
 
 #if 0 //instead of this method, just do the automap as a new "scene"
 	//pop back the view matrix
-	qglPopMatrix();
+	glPopMatrix();
 #endif
 
 	//reenable 2d texturing
-	qglEnable( GL_TEXTURE_2D );
+	glEnable( GL_TEXTURE_2D );
 
 	//white color/full alpha
-	qglColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+	glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
 	return (const void *)(cmd + 1);
 }
