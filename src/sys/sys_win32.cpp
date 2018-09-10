@@ -205,8 +205,6 @@ void Sys_SetProcessorAffinity( void ) {
 	if ( !GetProcessAffinityMask( handle, &processAffinityMask, &systemAffinityMask ) )
 		return;
 
-	if ( sscanf( com_affinity->string, "%X", &processMask ) != 1 )
-		processMask = 1; // set to first core only
 
 	if ( !processMask )
 		processMask = systemAffinityMask; // use all the cores available to the system

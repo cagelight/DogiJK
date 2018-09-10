@@ -447,84 +447,14 @@ bool Sys_PathCmp( const char *path1, const char *path2 )
 Sys_DefaultHomePath
 ==================
 */
-#ifdef MACOS_X
-char *Sys_DefaultHomePath(void)
-{
-	char *p;
 
-	if ( !homePath[0] )
-	{
-		if ( (p = getenv( "HOME" )) != NULL )
-		{
-			Com_sprintf( homePath, sizeof( homePath ), "%s%c", p, PATH_SEP );
-			Q_strcat( homePath, sizeof( homePath ), "Library/Application Support/" );
+char const * Sys_DefaultHomePath(void) {
 
-			if ( com_homepath && com_homepath->string[0] )
-				Q_strcat( homePath, sizeof( homePath ), com_homepath->string );
-			else
-				Q_strcat( homePath, sizeof( homePath ), HOMEPATH_NAME_MACOSX );
-		}
+	if ( !homePath[0] ) {
+		Com_sprintf( homePath, sizeof( homePath ), "%s%cvolatile", Sys_Cwd(), PATH_SEP );
 	}
 
 	return homePath;
-}
-#else
-char *Sys_DefaultHomePath(void)
-{
-	char *p;
-
-	if ( !homePath[0] )
-	{
-		if ( (p = getenv( "XDG_DATA_HOME" )) != NULL )
-		{
-			Com_sprintf( homePath, sizeof( homePath ), "%s%c", p, PATH_SEP );
-			if ( com_homepath && com_homepath->string[0] )
-				Q_strcat( homePath, sizeof( homePath ), com_homepath->string );
-			else
-				Q_strcat( homePath, sizeof( homePath ), HOMEPATH_NAME_UNIX );
-
-			return homePath;
-		}
-
-		if ( (p = getenv( "HOME" )) != NULL )
-		{
-			Com_sprintf( homePath, sizeof( homePath ), "%s%c.local%cshare%c", p, PATH_SEP, PATH_SEP, PATH_SEP );
-			if ( com_homepath && com_homepath->string[0] )
-				Q_strcat( homePath, sizeof( homePath ), com_homepath->string );
-			else
-				Q_strcat( homePath, sizeof( homePath ), HOMEPATH_NAME_UNIX );
-
-			return homePath;
-		}
-	}
-
-	return homePath;
-}
-#endif
-
-void Sys_SetProcessorAffinity( void ) {
-#if defined(__linux__)
-	uint32_t cores;
-
-	if ( sscanf( com_affinity->string, "%X", &cores ) != 1 )
-		cores = 1; // set to first core only
-
-	const long numCores = sysconf( _SC_NPROCESSORS_ONLN );
-	if ( !cores )
-		cores = (1 << numCores) - 1; // use all cores
-
-	cpu_set_t set;
-	CPU_ZERO( &set );
-	for ( int i = 0; i < numCores; i++ ) {
-		if ( cores & (1<<i) ) {
-			CPU_SET( i, &set );
-		}
-	}
-
-	sched_setaffinity( 0, sizeof( set ), &set );
-#elif defined(MACOS_X)
-	//TODO: Apple's APIs for this are weird but exist on a per-thread level. Good enough for us.
-#endif
 }
 
 UnpackDLLResult Sys_UnpackDLL(const char *name)

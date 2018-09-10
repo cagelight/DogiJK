@@ -780,7 +780,6 @@ extern	cvar_t	*com_version;
 extern	cvar_t	*com_buildScript;		// for building release pak files
 extern	cvar_t	*com_journal;
 extern	cvar_t	*com_cameraMode;
-extern	cvar_t	*com_homepath;
 #ifndef _WIN32
 extern	cvar_t	*com_ansiColor;
 #endif
@@ -791,7 +790,6 @@ extern	cvar_t	*com_optvehtrace;
 extern	cvar_t	*com_G2Report;
 #endif
 
-extern	cvar_t	*com_affinity;
 extern	cvar_t	*com_busyWait;
 
 // both client and server must agree to pause

@@ -138,9 +138,9 @@ char	*Sys_DefaultInstallPath(void);
 char    *Sys_DefaultAppPath(void);
 #endif
 
-char	*Sys_DefaultHomePath(void);
-const char *Sys_Dirname( char *path );
-const char *Sys_Basename( char *path );
+char const * Sys_DefaultHomePath(void);
+char const * Sys_Dirname( char *path );
+char const * Sys_Basename( char *path );
 
 bool Sys_PathCmp( const char *path1, const char *path2 );
 

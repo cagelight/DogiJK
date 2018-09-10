@@ -185,3 +185,8 @@ pip-log.txt
 #############
 _OLD
 install
+
+#############
+## KDevelop
+#############
+*.kdev4

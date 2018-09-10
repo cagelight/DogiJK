@@ -63,13 +63,10 @@ cvar_t	*com_bootlogo;
 cvar_t	*cl_paused;
 cvar_t	*sv_paused;
 cvar_t	*com_cameraMode;
-cvar_t  *com_homepath;
 #ifndef _WIN32
 cvar_t	*com_ansiColor = NULL;
 #endif
 cvar_t	*com_busyWait;
-
-cvar_t *com_affinity;
 
 // com_speeds times
 int		time_game;
@@ -1163,8 +1160,6 @@ void Com_Init( char *commandLine ) {
 		// done early so bind command exists
 		CL_InitKeyCommands();
 
-		com_homepath = Cvar_Get("com_homepath", "", CVAR_INIT);
-
 		FS_InitFilesystem ();
 
 		Com_InitJournaling();
@@ -1236,7 +1231,6 @@ void Com_Init( char *commandLine ) {
 		com_G2Report = Cvar_Get("com_G2Report", "0", 0);
 #endif
 
-		com_affinity = Cvar_Get( "com_affinity", "0", CVAR_ARCHIVE_ND );
 		com_busyWait = Cvar_Get( "com_busyWait", "0", CVAR_ARCHIVE_ND );
 
 		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE_ND, "Show intro movies" );
@@ -1247,8 +1241,6 @@ void Com_Init( char *commandLine ) {
 		SE_Init();
 
 		Sys_Init();
-
-		Sys_SetProcessorAffinity();
 
 		// Pick a random port value
 		Com_RandomBytes( (byte*)&qport, sizeof(int) );
@@ -1627,12 +1619,6 @@ void Com_Frame( void ) {
 			c_brush_traces = 0;
 			c_patch_traces = 0;
 			c_pointcontents = 0;
-		}
-
-		if ( com_affinity->modified )
-		{
-			com_affinity->modified = qfalse;
-			Sys_SetProcessorAffinity();
 		}
 
 		com_frameNumber++;
