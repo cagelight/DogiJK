@@ -159,11 +159,12 @@ def build(bld):
 	
 	# GAME
 	
-	game_files = bld.path.ant_glob('src/game/*.c')
+	game_files = bld.path.ant_glob('src/game/*.cpp')
 	
 	game = bld (
-		features = 'c cshlib',
+		features = 'cxx cxxshlib',
 		target = 'jampgame',
+		cxxflags = ['-fpermissive'],
 		includes = ['src'],
 		source = gcgui_files + game_files,
 		uselib = ['PTHREAD'],
@@ -178,17 +179,18 @@ def build(bld):
 	if bld.env.BUILD_CLIENT:
 		# CGAME
 		
-		cgame_files = bld.path.ant_glob('src/cgame/*.c')
-		cgame_files += bld.path.ant_glob('src/game/bg_*.c')
-		cgame_files += bld.path.ant_glob('src/game/AnimalNPC.c')
-		cgame_files += bld.path.ant_glob('src/game/FighterNPC.c')
-		cgame_files += bld.path.ant_glob('src/game/SpeederNPC.c')
-		cgame_files += bld.path.ant_glob('src/game/WalkerNPC.c')
-		cgame_files += bld.path.ant_glob('src/ui/ui_shared.c')
+		cgame_files = bld.path.ant_glob('src/cgame/*.cpp')
+		cgame_files += bld.path.ant_glob('src/game/bg_*.cpp')
+		cgame_files += bld.path.ant_glob('src/game/AnimalNPC.cpp')
+		cgame_files += bld.path.ant_glob('src/game/FighterNPC.cpp')
+		cgame_files += bld.path.ant_glob('src/game/SpeederNPC.cpp')
+		cgame_files += bld.path.ant_glob('src/game/WalkerNPC.cpp')
+		cgame_files += bld.path.ant_glob('src/ui/ui_shared.cpp')
 		
 		cgame = bld (
-			features = 'c cshlib',
+			features = 'cxx cxxshlib',
 			target = 'cgame',
+			cxxflags = ['-fpermissive'],
 			includes = ['src'],
 			source = gcgui_files + cgame_files,
 			uselib = ['PTHREAD'],
@@ -200,16 +202,17 @@ def build(bld):
 		
 		# UI
 	
-		ui_files = bld.path.ant_glob('src/ui/*.c')
-		ui_files += bld.path.ant_glob('src/game/bg_misc.c')
-		ui_files += bld.path.ant_glob('src/game/bg_saberLoad.c')
-		ui_files += bld.path.ant_glob('src/game/bg_saga.c')
-		ui_files += bld.path.ant_glob('src/game/bg_vehicleLoad.c')
-		ui_files += bld.path.ant_glob('src/game/bg_weapons.c')
+		ui_files = bld.path.ant_glob('src/ui/*.cpp')
+		ui_files += bld.path.ant_glob('src/game/bg_misc.cpp')
+		ui_files += bld.path.ant_glob('src/game/bg_saberLoad.cpp')
+		ui_files += bld.path.ant_glob('src/game/bg_saga.cpp')
+		ui_files += bld.path.ant_glob('src/game/bg_vehicleLoad.cpp')
+		ui_files += bld.path.ant_glob('src/game/bg_weapons.cpp')
 		
 		ui = bld (
-			features = 'c cshlib',
+			features = 'cxx cxxshlib',
 			target = 'ui',
+			cxxflags = ['-fpermissive'],
 			includes = ['src'],
 			source = gcgui_files + ui_files,
 			uselib = ['PTHREAD'],
@@ -229,7 +232,7 @@ def build(bld):
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
 		
 		rdvan = bld (
-			features = 'c cxx cshlib cxxshlib',
+			features = 'cxx cxxshlib',
 			target = 'rd-vanilla',
 			includes = ['src', 'src/rd-vanilla'],
 			source = shared_files + rdvan_files,
