@@ -765,9 +765,9 @@ void SP_misc_skyportal (gentity_t *ent)
 	G_SpawnString ("fov", "80", &fov);
 	fov_x = atof (fov);
 
-	isfog += G_SpawnVector ("fogcolor", "0 0 0", fogv);
-	isfog += G_SpawnInt ("fognear", "0", &fogn);
-	isfog += G_SpawnInt ("fogfar", "300", &fogf);
+	isfog += (int)G_SpawnVector ("fogcolor", "0 0 0", fogv);
+	isfog += (int)G_SpawnInt ("fognear", "0", &fogn);
+	isfog += (int)G_SpawnInt ("fogfar", "300", &fogf);
 
 	trap->SetConfigstring( CS_SKYBOXORG, va("%.2f %.2f %.2f %.1f %i %.2f %.2f %.2f %i %i", ent->s.origin[0], ent->s.origin[1], ent->s.origin[2], fov_x, (int)isfog, fogv[0], fogv[1], fogv[2], fogn, fogf ) );
 

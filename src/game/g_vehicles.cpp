@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 extern gentity_t *NPC_Spawn_Do( gentity_t *ent );
 extern void NPC_SetAnim(gentity_t	*ent,int setAnimParts,int anim,int setAnimFlags);
 
-extern void BG_SetAnim(playerState_t *ps, animation_t *animations, int setAnimParts,int anim,int setAnimFlags, int blendTime);
+extern void BG_SetAnim(playerState_t *ps, animation_t *animations, int setAnimParts,int anim,int setAnimFlags);
 extern void BG_SetLegsAnimTimer(playerState_t *ps, int time );
 extern void BG_SetTorsoAnimTimer(playerState_t *ps, int time );
 void G_VehUpdateShields( gentity_t *targ );
@@ -41,7 +41,7 @@ extern qboolean BG_UnrestrainedPitchRoll( playerState_t *ps, Vehicle_t *pVeh );
 void Vehicle_SetAnim(gentity_t *ent,int setAnimParts,int anim,int setAnimFlags, int iBlend)
 {
 	assert(ent->client);
-	BG_SetAnim(&ent->client->ps, bgAllAnims[ent->localAnimIndex].anims, setAnimParts, anim, setAnimFlags, iBlend);
+	BG_SetAnim(&ent->client->ps, bgAllAnims[ent->localAnimIndex].anims, setAnimParts, anim, setAnimFlags);
 	ent->s.legsAnim = ent->client->ps.legsAnim;
 }
 
@@ -1172,7 +1172,7 @@ qboolean Initialize( Vehicle_t *pVeh )
 		pVeh->m_ulFlags |= VEH_GEARSOPEN;
 		BG_SetAnim(pVeh->m_pParentEntity->playerState,
 			bgAllAnims[pVeh->m_pParentEntity->localAnimIndex].anims,
-			SETANIM_BOTH, BOTH_VS_IDLE, iFlags, iBlend);
+			SETANIM_BOTH, BOTH_VS_IDLE, iFlags);
 	}
 
 	return qtrue;

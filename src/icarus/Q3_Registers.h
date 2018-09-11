@@ -32,6 +32,8 @@ enum
 
 #ifdef __cplusplus
 
+#include <map>
+
 #define	MAX_VARIABLES	32
 
 typedef std::map < std::string, std::string >		varString_m;

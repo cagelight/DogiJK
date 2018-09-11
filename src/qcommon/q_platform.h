@@ -354,7 +354,29 @@ typedef unsigned char byte;
 typedef unsigned short word;
 typedef unsigned long ulong;
 
+#ifdef __cplusplus
+struct qboolean {
+	qboolean() = default;
+	qboolean(bool b) : value(b) {}
+	
+	inline operator bool () const { return value; }
+	inline operator byte () const { return value; }
+	inline operator int () const { return value; }
+	inline operator intptr_t () const { return value; }
+	
+	inline bool operator == (qboolean const & other) const { return value == other.value; }
+	inline bool operator != (qboolean const & other) const { return value != other.value; }
+	inline bool operator == (int other) const { return value == other; }
+	inline bool operator != (int other) const { return value != other; }
+private:
+	int value;
+};
+inline bool operator == (int A, qboolean const & B) { return B == A; }
+static qboolean const qtrue {true};
+static qboolean const qfalse {false};
+#else
 typedef enum { qfalse, qtrue } qboolean;
+#endif
 
 // 32 bit field aliasing
 typedef union byteAlias_u {

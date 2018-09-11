@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "b_local.h"
 #include "icarus/Q3_Interface.h"
 #include "icarus/Q3_Registers.h"
+#include "icarus/tokenizer.h"
 #include "g_nav.h"
 
 qboolean BG_SabersOff( playerState_t *ps );
@@ -47,20 +48,6 @@ extern stringID_table_t BSTable[];
 // so that we only get the C version of the includes (no full Icarus) in that
 // scenario, but I think we'll just try to leave this out instead.
 //#if defined(__linux__) && defined(__GCC__) || !defined(__linux__)
-enum
-{
-	TK_EOF = -1,
-	TK_UNDEFINED,
-	TK_COMMENT,
-	TK_EOL,
-	TK_CHAR,
-	TK_STRING,
-	TK_INT,
-	TK_INTEGER = TK_INT,
-	TK_FLOAT,
-	TK_IDENTIFIER,
-	TK_USERDEF,
-};
 //#endif
 
 #include "icarus/interpreter.h"

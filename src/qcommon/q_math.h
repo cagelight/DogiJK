@@ -230,7 +230,7 @@ void VectorCopy2( const vec2_t vecIn, vec2_t vecOut );
 //      VEC3
 //
 ///////////////////////////////////////////////////////////////////////////
-extern vec3_t vec3_origin;
+static vec3_t vec3_origin = {0, 0, 0};
 
 #define VectorScaleM(v, factor, dst) \
 	(dst)[0] = (v[0]) * (factor), \

@@ -30,7 +30,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #endif
 
 #ifdef XCVAR_LIST
+#ifdef _CGAME
+	#define XCVAR_DEF( name, defVal, update, flags, accounce ) { & name , #name , defVal , update , flags | CVAR_SYSTEMINFO },
+#elif defined(_GAME)
 	#define XCVAR_DEF( name, defVal, update, flags, announce ) { & name , #name , defVal , update , flags | CVAR_SYSTEMINFO , announce },
+#endif
 #endif
 
 XCVAR_DEF( bg_fighterAltControl,		"0",			NULL,				0,										qtrue )

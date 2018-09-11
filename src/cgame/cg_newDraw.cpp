@@ -518,7 +518,7 @@ void CG_DrawMedal(int ownerDraw, rectDef_t *rect, float scale, vec4_t color, qha
 		value = score->impressiveCount;
 		break;
 	case CG_PERFECT:
-		value = score->perfect;
+		value = (int)score->perfect;
 		break;
 	case CG_GAUNTLET:
 		value = score->gauntletCount;

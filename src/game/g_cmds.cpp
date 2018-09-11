@@ -3371,6 +3371,8 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 	int i;
 	qboolean silent = qfalse;
 	
+	Com_Printf( "FECK\n" );
+	
 	trap->Argv(0, cmd, MAX_STRING_CHARS);
 	if (!strcmp(cmd, "teles")) silent = qtrue;
 	

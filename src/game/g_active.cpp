@@ -2842,7 +2842,7 @@ void ClientThink_real( gentity_t *ent ) {
 	pmove.debugLevel = g_debugMove.integer;
 	pmove.noFootsteps = (dmflags.integer & DF_NO_FOOTSTEPS) > 0;
 
-	pmove.pmove_fixed = pmove_fixed.integer | client->pers.pmoveFixed;
+	pmove.pmove_fixed = pmove_fixed.integer | (int)client->pers.pmoveFixed;
 	pmove.pmove_msec = pmove_msec.integer;
 	pmove.pmove_float = pmove_float.integer;
 

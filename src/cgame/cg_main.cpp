@@ -2939,7 +2939,7 @@ GetModuleAPI
 
 cgameImport_t *trap = NULL;
 
-Q_EXPORT cgameExport_t* QDECL GetModuleAPI( int apiVersion, cgameImport_t *import )
+extern "C" Q_EXPORT cgameExport_t* QDECL GetModuleAPI( int apiVersion, cgameImport_t *import )
 {
 	static cgameExport_t cge = {0};
 

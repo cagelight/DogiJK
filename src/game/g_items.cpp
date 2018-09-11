@@ -348,7 +348,7 @@ void CreateShield(gentity_t *ent)
 //	posWidth - 0-255 8 bits
 //  negWidth - 0 - 255 8 bits
 
-	paramData = (xaxis << 24) | (height << 16) | (posWidth << 8) | (negWidth);
+	paramData = ((int)xaxis << 24) | (height << 16) | (posWidth << 8) | (negWidth);
 	ent->s.time2 = paramData;
 
 	if ( level.gametype == GT_SIEGE )

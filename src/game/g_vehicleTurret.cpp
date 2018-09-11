@@ -116,7 +116,7 @@ qboolean VEH_TurretAim( Vehicle_t *pVeh,
 //-----------------------------------------------------
 {
 	vec3_t	curAngles, addAngles, newAngles, yawAngles, pitchAngles;
-	float	aimCorrect = qfalse;
+	qboolean	aimCorrect = qfalse;
 
 	WP_CalcVehMuzzle( parent, curMuzzle );
 	//get the current absolute angles of the turret right now

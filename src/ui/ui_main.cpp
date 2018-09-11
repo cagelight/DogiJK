@@ -5418,8 +5418,8 @@ static void UI_GetSaberCvars ( void )
 	trap->Cvar_Set ( "ui_saber", UI_Cvar_VariableString ( "saber1" ) );
 	trap->Cvar_Set ( "ui_saber2", UI_Cvar_VariableString ( "saber2" ));
 
-	trap->Cvar_Set("g_saber_color", SaberColorToString(trap->Cvar_VariableValue("color1")));
-	trap->Cvar_Set("g_saber2_color", SaberColorToString(trap->Cvar_VariableValue("color2")));
+	trap->Cvar_Set("g_saber_color", SaberColorToString((saber_colors_t)trap->Cvar_VariableValue("color1")));
+	trap->Cvar_Set("g_saber2_color", SaberColorToString((saber_colors_t)trap->Cvar_VariableValue("color2")));
 
 	trap->Cvar_Set ( "ui_saber_color", UI_Cvar_VariableString ( "g_saber_color" ) );
 	trap->Cvar_Set ( "ui_saber2_color", UI_Cvar_VariableString ( "g_saber2_color" ) );
@@ -10549,7 +10549,7 @@ GetModuleAPI
 
 uiImport_t *trap = NULL;
 
-Q_EXPORT uiExport_t* QDECL GetModuleAPI( int apiVersion, uiImport_t *import )
+extern "C" Q_EXPORT uiExport_t* QDECL GetModuleAPI( int apiVersion, uiImport_t *import )
 {
 	static uiExport_t uie = {0};
 

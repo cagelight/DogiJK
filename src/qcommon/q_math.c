@@ -1069,7 +1069,6 @@ void VectorCopy2( const vec2_t vecIn, vec2_t vecOut )
 //      VEC3
 //
 ///////////////////////////////////////////////////////////////////////////
-vec3_t		vec3_origin = {0,0,0};
 
 void VectorAdd( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut )
 {

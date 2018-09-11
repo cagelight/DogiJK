@@ -31,6 +31,10 @@ GetIDForString
 -------------------------
 */
 
+#if defined( _GAME ) || defined( _CGAME ) || defined( UI_BUILD )
+	NORETURN_PTR void (*Com_Error)( int level, const char *error, ... );
+	void (*Com_Printf)( const char *msg, ... );
+#endif
 
 int GetIDForString ( stringID_table_t *table, const char *string )
 {

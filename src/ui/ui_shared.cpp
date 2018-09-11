@@ -4278,7 +4278,7 @@ void Menu_HandleKey(menuDef_t *menu, int key, qboolean down) {
 
 		case A_F11:
 			if (DC->getCVarValue("developer")) {
-				debugMode ^= 1;
+				debugMode = !debugMode;
 			}
 			break;
 

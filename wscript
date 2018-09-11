@@ -68,6 +68,13 @@ def configure(ctx):
 
 def build(bld):
 	
+	build_server = bld.env.BUILD_SERVER
+	build_client = bld.env.BUILD_CLIENT
+	build_game = build_server or build_client
+	build_cgame = build_server or build_client
+	build_ui = build_server or build_client
+	build_rdvan = build_server or build_client
+	
 	### SHARED FILES ###
 	
 	shared_files = []
@@ -75,30 +82,28 @@ def build(bld):
 	shared_files += bld.path.ant_glob('src/qcommon/q_math.c')
 	shared_files += bld.path.ant_glob('src/qcommon/q_string.c')
 	
-	### MINIZIP ###
+	# MINIZIP
+	if build_server or build_client:
+		minizip_files = bld.path.ant_glob('src/minizip/*.c')
+		minizip = bld (
+			features = 'c cstlib',
+			target = 'minizip',
+			includes = 'src/minizip/include/minizip',
+			source = minizip_files,
+		)
 	
-	minizip_files = bld.path.ant_glob('src/minizip/*.c')
-	minizip = bld (
-		features = 'c cstlib',
-		target = 'minizip',
-		includes = 'src/minizip/include/minizip',
-		source = minizip_files,
-	)
-	
-	### BOTLIB ###
-	
-	botlib_files = bld.path.ant_glob('src/botlib/*.cpp')
-	botlib_files += bld.path.ant_glob('src/qcommon/q_shared.c')
-	
-	botlib = bld (
-		features = 'cxx cxxstlib',
-		target = 'botlib',
-		includes = ['src'],
-		source = shared_files + botlib_files,
-		defines = ['BOTLIB'],
-	)
-	
-	### SERVER CLIENT SHARED ###
+	# BOTLIB
+	if build_server or build_client:
+		botlib_files = bld.path.ant_glob('src/botlib/*.cpp')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_shared.c')
+		
+		botlib = bld (
+			features = 'cxx cxxstlib',
+			target = 'botlib',
+			includes = ['src'],
+			source = shared_files + botlib_files,
+			defines = ['BOTLIB'],
+		)
 	
 	clsv_files = []
 	clsv_files += bld.path.ant_glob('src/qcommon/*.cpp')
@@ -114,9 +119,26 @@ def build(bld):
 	clsv_files += bld.path.ant_glob('src/sys/sys_unix.cpp')
 	clsv_files += bld.path.ant_glob('src/sys/con_tty.cpp')
 	
-	### CLIENT ###
+	# SERVER
+	if build_server:
 	
-	if bld.env.BUILD_CLIENT:
+		server_files = bld.path.ant_glob('src/rd-dedicated/*.cpp')
+		server_files += bld.path.ant_glob('src/null/*.cpp')
+		server_files += bld.path.ant_glob('src/ghoul2/*.cpp')
+
+		server = bld (
+			features = 'cxx cxxprogram',
+			target = 'parajkded',
+			includes = ['src', '/usr/include/tirpc'],
+			source = shared_files + clsv_files + server_files,
+			defines = ['_CONSOLE', 'DEDICATED'],
+			uselib = ['ZLIB', 'DL', 'PTHREAD'],
+			use = ['minizip', 'botlib'],
+			install_path = os.path.join(top, 'install')
+		)
+	
+	# CLIENT
+	if build_client:
 	
 		client_files = []
 		client_files += bld.path.ant_glob('src/client/*.cpp')
@@ -133,51 +155,32 @@ def build(bld):
 			use = ['minizip', 'botlib'],
 			install_path = os.path.join(top, 'install')
 		)
-		
-	# SERVER
 	
-	if bld.env.BUILD_SERVER:
-	
-		server_files = bld.path.ant_glob('src/rd-dedicated/*.cpp')
-		server_files += bld.path.ant_glob('src/null/*.cpp')
-		server_files += bld.path.ant_glob('src/ghoul2/*.cpp')
-
-		server = bld (
-			features = 'cxx cxxprogram',
-			target = 'parajkded',
-			includes = ['src', '/usr/include/tirpc'],
-			source = shared_files + clsv_files + server_files,
-			defines = ['_CONSOLE', 'DEDICATED'],
-			uselib = ['ZLIB', 'DL', 'PTHREAD'],
-			use = ['minizip', 'botlib'],
-			install_path = os.path.join(top, 'install')
-		)
-		
-	### GAME/CGAME/UI ###
-	
-	gcgui_files = bld.path.ant_glob('src/qcommon/*.c')
+	gcgui_files = bld.path.ant_glob('src/qcommon/q_math.c')
+	gcgui_files += bld.path.ant_glob('src/qcommon/q_color.c')
+	gcgui_files += bld.path.ant_glob('src/qcommon/q_string.c')
+	gcgui_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
 	
 	# GAME
+	if build_game:
+		game_files = bld.path.ant_glob('src/game/*.cpp')
+		
+		game = bld (
+			features = 'cxx cxxshlib',
+			target = 'jampgame',
+			cxxflags = ['-fpermissive'],
+			includes = ['src'],
+			source = gcgui_files + game_files,
+			uselib = ['PTHREAD'],
+			defines = ['_GAME'],
+			install_path = os.path.join(top, 'install', 'base')
+		)
+		
+		game.env.cxxshlib_PATTERN = '%sx86_64.so'
 	
-	game_files = bld.path.ant_glob('src/game/*.cpp')
 	
-	game = bld (
-		features = 'cxx cxxshlib',
-		target = 'jampgame',
-		cxxflags = ['-fpermissive'],
-		includes = ['src'],
-		source = gcgui_files + game_files,
-		uselib = ['PTHREAD'],
-		defines = ['_GAME'],
-		install_path = os.path.join(top, 'install', 'base')
-	)
-	
-	game.env.cshlib_PATTERN = '%sx86_64.so'
-	
-	
-
-	if bld.env.BUILD_CLIENT:
-		# CGAME
+	# CGAME
+	if build_cgame:
 		
 		cgame_files = bld.path.ant_glob('src/cgame/*.cpp')
 		cgame_files += bld.path.ant_glob('src/game/bg_*.cpp')
@@ -198,9 +201,10 @@ def build(bld):
 			install_path = os.path.join(top, 'install', 'base')
 		)
 		
-		cgame.env.cshlib_PATTERN = '%sx86_64.so'
+		cgame.env.cxxshlib_PATTERN = '%sx86_64.so'
 		
-		# UI
+	# UI
+	if build_ui:
 	
 		ui_files = bld.path.ant_glob('src/ui/*.cpp')
 		ui_files += bld.path.ant_glob('src/game/bg_misc.cpp')
@@ -220,12 +224,12 @@ def build(bld):
 			install_path = os.path.join(top, 'install', 'base')
 		)
 		
-		ui.env.cshlib_PATTERN = '%sx86_64.so'
+		ui.env.cxxshlib_PATTERN = '%sx86_64.so'
 		
-	### RD-VANILLA ###
+	# RD-VANILLA
+	if build_rdvan:
 	
 		rdvan_files = bld.path.ant_glob('src/rd-vanilla/*.cpp')
-		rdvan_files += bld.path.ant_glob('src/rd-vanilla/glad.c')
 		rdvan_files += bld.path.ant_glob('src/rd-common/*.cpp')
 		rdvan_files += bld.path.ant_glob('src/ghoul2/*.cpp')
 		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cpp')

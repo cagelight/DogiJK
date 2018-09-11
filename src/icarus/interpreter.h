@@ -24,6 +24,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // Interpreter.h
 
+#include "tokenizer.h"
+#include "blockstream.h"
+
 #define ICARUS_VERSION	1.33
 
 #define MAX_STRING_SIZE	256
@@ -133,6 +136,8 @@ enum
 };
 
 #ifdef __cplusplus
+
+#include <vector>
 
 typedef struct variable_s
 {
