@@ -75,8 +75,6 @@ def build(bld):
 	build_ui = build_server or build_client
 	build_rdvan = build_server or build_client
 	
-	### SHARED FILES ###
-	
 	shared_files = []
 	shared_files += bld.path.ant_glob('src/qcommon/q_color.c')
 	shared_files += bld.path.ant_glob('src/qcommon/q_math.c')
@@ -240,7 +238,7 @@ def build(bld):
 			target = 'rd-vanilla',
 			includes = ['src', 'src/rd-vanilla'],
 			source = shared_files + rdvan_files,
-			uselib = ['JPEG', 'PNG', 'GL', 'PTHREAD'],
+			uselib = ['JPEG', 'PNG', 'PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)
 		

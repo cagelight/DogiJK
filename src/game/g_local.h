@@ -175,6 +175,9 @@ extern qboolean gEscaping;
 extern int gEscapeTime;
 
 struct gentity_s {
+	
+	void free();
+	
 	//rww - entstate must be first, to correspond with the bg shared entity structure
 	entityState_t	s;				// communicated by server to clients
 	playerState_t	*playerState;	//ptr to playerstate if applicable (for bg ents)
@@ -405,6 +408,8 @@ struct gentity_s {
 	// OpenJK add
 	int			useDebounceTime;	// for cultist_destroyer
 };
+
+inline void	G_FreeEntity( gentity_t *e ) { e->free(); }
 
 #define DAMAGEREDIRECT_HEAD		1
 #define DAMAGEREDIRECT_RLEG		2
@@ -1115,7 +1120,6 @@ void	G_EntitySound( gentity_t *ent, int channel, int soundIndex );
 void	TryUse( gentity_t *ent );
 void	G_SendG2KillQueue(void);
 void	G_KillG2Queue(int entNum);
-void	G_FreeEntity( gentity_t *e );
 qboolean	G_EntitiesFree( void );
 
 qboolean G_ActivateBehavior (gentity_t *self, int bset );

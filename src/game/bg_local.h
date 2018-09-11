@@ -25,6 +25,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // bg_local.h -- local definitions for the bg (both games) files
 
+#include "bg_public.h"
+
 #define	MIN_WALK_NORMAL	0.7f		// can't walk on very steep slopes
 
 #define	TIMER_LAND		130
