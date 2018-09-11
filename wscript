@@ -75,13 +75,6 @@ def build(bld):
 	build_ui = build_server or build_client
 	build_rdvan = build_server or build_client
 	
-	### SHARED FILES ###
-	
-	shared_files = []
-	shared_files += bld.path.ant_glob('src/qcommon/q_color.c')
-	shared_files += bld.path.ant_glob('src/qcommon/q_math.c')
-	shared_files += bld.path.ant_glob('src/qcommon/q_string.c')
-	
 	# MINIZIP
 	if build_server or build_client:
 		minizip_files = bld.path.ant_glob('src/minizip/*.c')
@@ -95,13 +88,15 @@ def build(bld):
 	# BOTLIB
 	if build_server or build_client:
 		botlib_files = bld.path.ant_glob('src/botlib/*.cpp')
-		botlib_files += bld.path.ant_glob('src/qcommon/q_shared.c')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_math.cpp')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_string.cpp')
 		
 		botlib = bld (
 			features = 'cxx cxxstlib',
 			target = 'botlib',
 			includes = ['src'],
-			source = shared_files + botlib_files,
+			source = botlib_files,
 			defines = ['BOTLIB'],
 		)
 	
@@ -130,7 +125,7 @@ def build(bld):
 			features = 'cxx cxxprogram',
 			target = 'parajkded',
 			includes = ['src', '/usr/include/tirpc'],
-			source = shared_files + clsv_files + server_files,
+			source = clsv_files + server_files,
 			defines = ['_CONSOLE', 'DEDICATED'],
 			uselib = ['ZLIB', 'DL', 'PTHREAD'],
 			use = ['minizip', 'botlib'],
@@ -150,15 +145,14 @@ def build(bld):
 			features = 'cxx cxxprogram',
 			target = 'parajk',
 			includes = ['src', '/usr/include/tirpc'],
-			source = shared_files + clsv_files + client_files,
+			source = clsv_files + client_files,
 			uselib = ['SDL', 'ZLIB', 'DL', 'PTHREAD'],
 			use = ['minizip', 'botlib'],
 			install_path = os.path.join(top, 'install')
 		)
 	
-	gcgui_files = bld.path.ant_glob('src/qcommon/q_math.c')
-	gcgui_files += bld.path.ant_glob('src/qcommon/q_color.c')
-	gcgui_files += bld.path.ant_glob('src/qcommon/q_string.c')
+	gcgui_files = bld.path.ant_glob('src/qcommon/q_math.cpp')
+	gcgui_files += bld.path.ant_glob('src/qcommon/q_string.cpp')
 	gcgui_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
 	
 	# GAME
@@ -234,12 +228,14 @@ def build(bld):
 		rdvan_files += bld.path.ant_glob('src/ghoul2/*.cpp')
 		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cpp')
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
-		
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cpp')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cpp')
+			
 		rdvan = bld (
 			features = 'cxx cxxshlib',
 			target = 'rd-vanilla',
 			includes = ['src', 'src/rd-vanilla'],
-			source = shared_files + rdvan_files,
+			source =  rdvan_files,
 			uselib = ['JPEG', 'PNG', 'GL', 'PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)
