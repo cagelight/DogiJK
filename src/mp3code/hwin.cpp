@@ -41,6 +41,13 @@ hybrid window/filter
 
 typedef float ARRAY36[36];
 
+struct ARRAY1832 {
+	ARRAY1832(float * data) : data(data) {}
+	float * operator [] (size_t i) {return data + i * 32;}
+private:
+	float * data;
+};
+
 /*-- windows by block type --*/
 static float win[4][36];	// effectively a constant
 
@@ -57,7 +64,7 @@ ARRAY36 *hwin_init_addr()
 
 
 /*====================================================================*/
-int hybrid(float xin[], float xprev[], float y[18][32],
+int hybrid(void * xini, void * xprevi, float * yi,
 	   int btype, int nlong, int ntot, int nprev)
 {
    int i, j;
@@ -66,7 +73,9 @@ int hybrid(float xin[], float xprev[], float y[18][32],
    int n;
    int nout;
 
-
+   float * xin = (float *)xini;
+    float * xprev = (float *)xprevi;
+	ARRAY1832 y {yi};
 
    if (btype == 2)
       btype = 0;
@@ -162,7 +171,7 @@ int hybrid(float xin[], float xprev[], float y[18][32],
 /*--------------------------------------------------------------------*/
 /*-- convert to mono, add curr result to y,
     window and add next time to current left */
-int hybrid_sum(float xin[], float xin_left[], float y[18][32],
+int hybrid_sum(void * xini, void * xin_lefti, float * yi,
 	       int btype, int nlong, int ntot)
 {
    int i, j;
@@ -171,7 +180,10 @@ int hybrid_sum(float xin[], float xin_left[], float y[18][32],
    int n;
    int nout;
 
-
+	float * xin = (float *)xini;
+	float * xin_left = (float *)xin_lefti;
+	ARRAY1832 y {yi};
+   
 
    if (btype == 2)
       btype = 0;
@@ -239,18 +251,19 @@ int hybrid_sum(float xin[], float xin_left[], float y[18][32],
    return nout;
 }
 /*--------------------------------------------------------------------*/
-void sum_f_bands(float a[], float b[], int n)
+void sum_f_bands(void * a, void * b, int n)
 {
    int i;
 
    for (i = 0; i < n; i++)
-      a[i] += b[i];
+      reinterpret_cast<float *>(a)[i] += reinterpret_cast<float *>(b)[i];
 }
 /*--------------------------------------------------------------------*/
 /*--------------------------------------------------------------------*/
-void FreqInvert(float y[18][32], int n)
+void FreqInvert(float * yi, int n)
 {
    int i, j;
+	ARRAY1832 y {yi};
 
    n = (n + 17) / 18;
    for (j = 0; j < 18; j += 2)

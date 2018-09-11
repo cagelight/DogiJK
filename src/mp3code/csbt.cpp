@@ -350,6 +350,6 @@ void sbt8_dual_right(float *sample, short *pcm, int n)
 /*------------------------------------------------------------*/
 /*------------------------------------------------------------*/
 #define COMPILE_ME
-#include "csbtb.c"		/* 8 bit output */
-#include "csbtl3.c"		/* Layer III */
+#include "csbtb.cpp"		/* 8 bit output */
+#include "csbtl3.cpp"		/* Layer III */
 /*------------------------------------------------------------*/

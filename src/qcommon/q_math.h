@@ -24,11 +24,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "q_platform.h"
 
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
-
 typedef float vec_t;
 typedef float vec2_t[2], vec3_t[3], vec4_t[4], vec5_t[5];
 typedef int	  ivec2_t[2], ivec3_t[3], ivec4_t[4], ivec5_t[5];
@@ -72,7 +67,6 @@ float flrand( float min, float max );
 int   irand( int min, int max );
 
 float erandom( float mean );
-
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -224,7 +218,6 @@ void VectorSet2( vec2_t vec, float x, float y );
 void VectorClear2( vec2_t vec );
 void VectorCopy2( const vec2_t vecIn, vec2_t vecOut );
 
-
 ///////////////////////////////////////////////////////////////////////////
 //
 //      VEC3
@@ -299,8 +292,3 @@ void VectorClear4( vec4_t vec );
 //
 ///////////////////////////////////////////////////////////////////////////
 void VectorSet5( vec5_t vec, float x, float y, float z, float w, float u );
-
-
-#if defined(__cplusplus)
-} // extern "C"
-#endif

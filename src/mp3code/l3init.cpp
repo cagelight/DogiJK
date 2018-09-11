@@ -243,7 +243,7 @@ void imdct_init()
 	   addr = imdct_init_addr_18();
 	   w = addr->w;
 	   w2 = addr->w2;
-	   coef = addr->coef;
+	   coef = (ARRAY4 *)addr->coef;
 	/*----*/
 	   n = 18;
 	   pi = 4.0 * atan(1.0);
@@ -264,7 +264,7 @@ void imdct_init()
 	   addr = imdct_init_addr_6();
 	   v = addr->w;
 	   v2 = addr->w2;
-	   coef87 = addr->coef;
+	   coef87 = (float *)addr->coef;
 	/*----*/
 	   n = 6;
 	   pi = 4.0 * atan(1.0);

@@ -44,6 +44,6 @@ const float wincoef[264] =
 
 /*--------------------------------------------------------*/
 #define COMPILE_ME
-#include "cwin.c"
-#include "cwinb.c"
+#include "cwin.cpp"
+#include "cwinb.cpp"
 /*--------------------------------------------------------*/

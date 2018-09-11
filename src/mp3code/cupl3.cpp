@@ -283,7 +283,7 @@ static void Xform_mono(void *pcm, int igr)
    nsamp[igr][0] = hybrid(pMP3Stream->sample[0][igr], pMP3Stream->sample[0][igr_prev],
 	 yout, side_info.gr[igr][0].block_type, n1, n2, nsamp[igr_prev][0]);
    FreqInvert(yout, nsamp[igr][0]);
-   pMP3Stream->sbt_L3(yout, pcm, 0);
+   pMP3Stream->sbt_L3(yout, (short int *) pcm, 0);
 
 }
 /*--------------------------------------------------------------------*/
@@ -307,7 +307,7 @@ static void Xform_dual_right(void *pcm, int igr)
    nsamp[igr][1] = hybrid(pMP3Stream->sample[1][igr], pMP3Stream->sample[1][igr_prev],
 	 yout, side_info.gr[igr][1].block_type, n1, n2, nsamp[igr_prev][1]);
    FreqInvert(yout, nsamp[igr][1]);
-   pMP3Stream->sbt_L3(yout, pcm, 0);
+   pMP3Stream->sbt_L3(yout, (short int *) pcm, 0);
 
 }
 /*--------------------------------------------------------------------*/
@@ -334,7 +334,7 @@ static void Xform_dual(void *pcm, int igr)
       nsamp[igr][ch] = hybrid(pMP3Stream->sample[ch][igr], pMP3Stream->sample[ch][igr_prev],
        yout, side_info.gr[igr][ch].block_type, n1, n2, nsamp[igr_prev][ch]);
       FreqInvert(yout, nsamp[igr][ch]);
-      pMP3Stream->sbt_L3(yout, pcm, ch);
+      pMP3Stream->sbt_L3(yout, (short int *) pcm, ch);
    }
 
 }
@@ -390,7 +390,7 @@ static void Xform_dual_mono(void *pcm, int igr)
 
 /*--------*/
    FreqInvert(yout, n3);
-   pMP3Stream->sbt_L3(yout, pcm, 0);
+   pMP3Stream->sbt_L3(yout, (short int *) pcm, 0);
 
 }
 /*--------------------------------------------------------------------*/
