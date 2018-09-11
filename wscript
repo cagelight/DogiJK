@@ -105,7 +105,7 @@ def build(bld):
 	clsv_files += bld.path.ant_glob('src/icarus/*.cpp')
 	clsv_files += bld.path.ant_glob('src/server/*.cpp')
 	clsv_files += bld.path.ant_glob('src/server/NPCNav/*.cpp')
-	clsv_files += bld.path.ant_glob('src/mp3code/*.c')
+	clsv_files += bld.path.ant_glob('src/mp3code/*.cpp')
 	clsv_files += bld.path.ant_glob('src/sys/snapvector.cpp')
 	clsv_files += bld.path.ant_glob('src/sys/sys_main.cpp')
 	clsv_files += bld.path.ant_glob('src/sys/sys_event.cpp')

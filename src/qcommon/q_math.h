@@ -218,7 +218,6 @@ void VectorSet2( vec2_t vec, float x, float y );
 void VectorClear2( vec2_t vec );
 void VectorCopy2( const vec2_t vecIn, vec2_t vecOut );
 
-
 ///////////////////////////////////////////////////////////////////////////
 //
 //      VEC3

@@ -51,6 +51,7 @@ is_process does ms or stereo in "forbidded sf regions"
 
 typedef float ARRAY2[2];
 typedef float ARRAY8_2[8][2];
+typedef float ARRAY1152[1152];
 
 float csa[8][2];		/* antialias */		// effectively constant
 
@@ -109,10 +110,12 @@ ARRAY2_64_2 *msis_init_addr_MPEG2()
    return lr2;
 }
 /*===============================================================*/
-void antialias(float x[], int n)
+void antialias(void * xi, int n)
 {
    int i, k;
    float a, b;
+   
+   float * x = (float *)xi;
 
    for (k = 0; k < n; k++)
    {
@@ -127,10 +130,12 @@ void antialias(float x[], int n)
    }
 }
 /*===============================================================*/
-void ms_process(float x[][1152], int n)		/* sum-difference stereo */
+void ms_process(void * xi, int n)		/* sum-difference stereo */
 {
    int i;
    float xl, xr;
+   
+   ARRAY1152 * x = (ARRAY1152 *)xi;
 
 /*-- note: sqrt(2) done scaling by dequant ---*/
    for (i = 0; i < n; i++)
@@ -143,7 +148,7 @@ void ms_process(float x[][1152], int n)		/* sum-difference stereo */
    return;
 }
 /*===============================================================*/
-void is_process_MPEG1(float x[][1152],	/* intensity stereo */
+void is_process_MPEG1(void * xi,	/* intensity stereo */
 		      SCALEFACT * sf,
 		      CB_INFO cb_info[2],	/* [ch] */
 		      int nsamp, int ms_mode)
@@ -154,6 +159,8 @@ void is_process_MPEG1(float x[][1152],	/* intensity stereo */
    int isf;
    float fls[3], frs[3];
    int cb0;
+   
+   ARRAY1152 * x = (ARRAY1152 *)xi;
 
 
    cb0 = cb_info[1].cbmax;	/* start at end of right */
@@ -210,7 +217,7 @@ void is_process_MPEG1(float x[][1152],	/* intensity stereo */
    return;
 }
 /*===============================================================*/
-void is_process_MPEG2(float x[][1152],	/* intensity stereo */
+void is_process_MPEG2(void * xi,	/* intensity stereo */
 		      SCALEFACT * sf,
 		      CB_INFO cb_info[2],	/* [ch] */
 		      IS_SF_INFO * is_sf_info,
@@ -225,6 +232,8 @@ void is_process_MPEG2(float x[][1152],	/* intensity stereo */
    int r;
    ARRAY2 *lr;
    int cb0, cb1;
+   
+   ARRAY1152 * x = (ARRAY1152 *)xi;
 
    lr = lr2[is_sf_info->intensity_scale][ms_mode];
 

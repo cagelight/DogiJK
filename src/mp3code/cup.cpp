@@ -536,6 +536,6 @@ IN_OUT L2audio_decode(unsigned char *bs, signed short *pcm)
 }
 /*-------------------------------------------------------------------------*/
 #define COMPILE_ME
-#include "cupini.c"		/* initialization */
-#include "cupl1.c"		/* Layer I */
+#include "cupini.cpp"		/* initialization */
+#include "cupl1.cpp"		/* Layer I */
 /*-------------------------------------------------------------------------*/
