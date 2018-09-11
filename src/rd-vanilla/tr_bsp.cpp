@@ -190,6 +190,10 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 
 	// create all the lightmaps
 	tr.numLightmaps = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
+	Com_Printf("Loading %i lightmaps...\n", tr.numLightmaps);
+	if (tr.numLightmaps > MAX_LIGHTMAPS) {
+		Com_Error(ERR_DROP, "Lightmap count (%i) exceeds MAX_LIGHTMAPS (%i)", tr.numLightmaps, MAX_LIGHTMAPS);
+	}
 	if ( tr.numLightmaps == 1 ) {
 		//FIXME: HACK: maps with only one lightmap turn up fullbright for some reason.
 		//this avoids this, but isn't the correct solution.
@@ -1859,7 +1863,7 @@ void R_LoadLightGridArray( lump_t *l, world_t &worldData ) {
 	w->numGridArrayElements = w->lightGridBounds[0] * w->lightGridBounds[1] * w->lightGridBounds[2];
 
 	if ( (unsigned)l->filelen != w->numGridArrayElements * sizeof(*w->lightGridArray) ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: light grid array mismatch\n" );
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: light grid array mismatch: expected %lu, found %u", w->numGridArrayElements * sizeof(*w->lightGridArray), l->filelen);
 		w->lightGridData = NULL;
 		return;
 	}

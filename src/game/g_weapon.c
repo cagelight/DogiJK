@@ -95,7 +95,6 @@ static vec3_t muzzle;
 
 // Golan Arms Flechette
 //---------
-#define FLECHETTE_SHOTS				5
 #define FLECHETTE_SPREAD			4.0f
 #define FLECHETTE_DAMAGE			12//15
 #define FLECHETTE_VEL				3500
@@ -119,7 +118,6 @@ static vec3_t muzzle;
 //primary
 //man, this thing is too absurdly powerful. having to
 //slash the values way down from sp.
-#define	CONC_VELOCITY				3000
 #define	CONC_DAMAGE					75 //150
 #define	CONC_NPC_DAMAGE_EASY		40
 #define	CONC_NPC_DAMAGE_NORMAL		80
@@ -257,7 +255,7 @@ static void WP_FireBryarPistol( gentity_t *ent, qboolean altFire )
 	int damage = BRYAR_PISTOL_DAMAGE;
 	int count;
 
-	gentity_t	*missile = CreateMissile( muzzle, forward, BRYAR_PISTOL_VEL, 10000, ent, altFire );
+	gentity_t	*missile = CreateMissile( muzzle, forward, BRYAR_PISTOL_VEL, 10000 * weap_all_lifemult.value, ent, altFire );
 
 	missile->classname = "bryar_proj";
 	missile->s.weapon = WP_BRYAR_PISTOL;
@@ -324,7 +322,7 @@ void WP_FireTurretMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean al
 {
 	gentity_t *missile;
 
-	missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
+	missile = CreateMissile( start, dir, velocity, 10000 * weap_all_lifemult.value, ent, altFire );
 
 	missile->classname = "generic_proj";
 	missile->s.weapon = WP_TURRET;
@@ -404,7 +402,7 @@ void WP_FireGenericBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qbo
 {
 	gentity_t *missile;
 
-	missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
+	missile = CreateMissile( start, dir, velocity, 10000 * weap_all_lifemult.value, ent, altFire );
 
 	missile->classname = "generic_proj";
 	missile->s.weapon = WP_BRYAR_PISTOL;
@@ -439,7 +437,7 @@ void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean a
 		damage = 10;
 	}
 
-	missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
+	missile = CreateMissile( start, dir, velocity, 10000 * weap_all_lifemult.value, ent, altFire );
 
 	missile->classname = "blaster_proj";
 	missile->s.weapon = WP_BLASTER;
@@ -460,7 +458,7 @@ void WP_FireTurboLaserMissile( gentity_t *ent, vec3_t start, vec3_t dir )
 	int velocity	= ent->mass; //FIXME: externalize
 	gentity_t *missile;
 
-	missile = CreateMissile( start, dir, velocity, 10000, ent, qfalse );
+	missile = CreateMissile( start, dir, velocity, 10000 * weap_all_lifemult.value, ent, qfalse );
 
 	//use a custom shot effect
 	missile->s.otherEntityNum2 = ent->genericValue14;
@@ -497,7 +495,7 @@ void WP_FireEmplacedMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean 
 	int	damage		= BLASTER_DAMAGE;
 	gentity_t *missile;
 
-	missile = CreateMissile( start, dir, velocity, 10000, ent, altFire );
+	missile = CreateMissile( start, dir, velocity, 10000 * weap_all_lifemult.value, ent, altFire );
 
 	missile->classname = "emplaced_gun_proj";
 	missile->s.weapon = WP_TURRET;//WP_EMPLACED_GUN;
@@ -555,7 +553,7 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 {
 	int			damage = DISRUPTOR_MAIN_DAMAGE;
 	qboolean	render_impact = qtrue;
-	vec3_t		start, end;
+	vec3_t		start, end, dir, batch_start;
 	trace_t		tr;
 	gentity_t	*traceEnt, *tent;
 	float		shotRange = 8192;
@@ -571,121 +569,131 @@ static void WP_DisruptorMainFire( gentity_t *ent )
 	VectorCopy( ent->client->ps.origin, start );
 	start[2] += ent->client->ps.viewheight;//By eyes
 
-	VectorMA( start, shotRange, forward, end );
+	VectorCopy(forward, dir);
+	
+	for (int b = 0; b < weap_snip_bounce.integer + 1; b++) {
+		
+		VectorCopy( start, batch_start );
 
-	ignore = ent->s.number;
-	traces = 0;
-	while ( traces < 10 )
-	{//need to loop this in case we hit a Jedi who dodges the shot
-		if (d_projectileGhoul2Collision.integer)
-		{
-			trap->Trace( &tr, start, NULL, NULL, end, ignore, MASK_SHOT, qfalse, G2TRFLAG_DOGHOULTRACE|G2TRFLAG_GETSURFINDEX|G2TRFLAG_THICK|G2TRFLAG_HITCORPSES, g_g2TraceLod.integer );
+		ignore = ent->s.number;
+		traces = 0;
+		while ( traces < 10 )
+		{//need to loop this in case we hit a Jedi who dodges the shot
+			VectorMA( start, shotRange, dir, end );
+			if (d_projectileGhoul2Collision.integer)
+			{
+				trap->Trace( &tr, start, NULL, NULL, end, ignore, MASK_SHOT, qfalse, G2TRFLAG_DOGHOULTRACE|G2TRFLAG_GETSURFINDEX|G2TRFLAG_THICK|G2TRFLAG_HITCORPSES, g_g2TraceLod.integer );
+			}
+			else
+			{
+				trap->Trace( &tr, start, NULL, NULL, end, ignore, MASK_SHOT, qfalse, 0, 0 );
+			}
+
+			traceEnt = &g_entities[tr.entityNum];
+
+			if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
+			{ //g2 collision checks -rww
+				if (traceEnt->inuse && traceEnt->client && traceEnt->ghoul2)
+				{ //since we used G2TRFLAG_GETSURFINDEX, tr.surfaceFlags will actually contain the index of the surface on the ghoul2 model we collided with.
+					traceEnt->client->g2LastSurfaceHit = tr.surfaceFlags;
+					traceEnt->client->g2LastSurfaceTime = level.time;
+				}
+
+				if (traceEnt->ghoul2)
+				{
+					tr.surfaceFlags = 0; //clear the surface flags after, since we actually care about them in here.
+				}
+			}
+
+			if (traceEnt && traceEnt->client && traceEnt->client->ps.duelInProgress &&
+				traceEnt->client->ps.duelIndex != ent->s.number)
+			{
+				VectorCopy( tr.endpos, start );
+				ignore = tr.entityNum;
+				traces++;
+				continue;
+			}
+
+			if ( Jedi_DodgeEvasion( traceEnt, ent, &tr, G_GetHitLocation(traceEnt, tr.endpos) ) )
+			{//act like we didn't even hit him
+				VectorCopy( tr.endpos, start );
+				ignore = tr.entityNum;
+				traces++;
+				continue;
+			}
+			else if (traceEnt && traceEnt->client && traceEnt->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] >= FORCE_LEVEL_3)
+			{
+				if (WP_SaberCanBlock(traceEnt, tr.endpos, 0, MOD_DISRUPTOR, qtrue, 0))
+				{ //broadcast and stop the shot because it was blocked
+					gentity_t *te = NULL;
+
+					tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_MAIN_SHOT );
+					VectorCopy( muzzle, tent->s.origin2 );
+					tent->s.eventParm = ent->s.number;
+
+					te = G_TempEntity( tr.endpos, EV_SABER_BLOCK );
+					VectorCopy(tr.endpos, te->s.origin);
+					VectorCopy(tr.plane.normal, te->s.angles);
+					if (!te->s.angles[0] && !te->s.angles[1] && !te->s.angles[2])
+					{
+						te->s.angles[1] = 1;
+					}
+					te->s.eventParm = 0;
+					te->s.weapon = 0;//saberNum
+					te->s.legsAnim = 0;//bladeNum
+
+					return;
+				}
+			}
+			else if ( (traceEnt->flags&FL_SHIELDED) )
+			{//stopped cold
+				return;
+			}
+			//a Jedi is not dodging this shot
+			break;
 		}
-		else
+		
+		float dot = DotProduct( dir, tr.plane.normal );
+		VectorMA( dir, -2*dot, tr.plane.normal, dir );
+		tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_MAIN_SHOT );
+		VectorCopy( b ? batch_start : muzzle, tent->s.origin2 );
+		tent->s.eventParm = ent->s.number;
+		VectorCopy(tr.endpos, start);
+		
+		render_impact = qtrue;
+		if ( tr.surfaceFlags & SURF_NOIMPACT )
 		{
-			trap->Trace( &tr, start, NULL, NULL, end, ignore, MASK_SHOT, qfalse, 0, 0 );
+			render_impact = qfalse;
 		}
 
 		traceEnt = &g_entities[tr.entityNum];
 
-		if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
-		{ //g2 collision checks -rww
-			if (traceEnt->inuse && traceEnt->client && traceEnt->ghoul2)
-			{ //since we used G2TRFLAG_GETSURFINDEX, tr.surfaceFlags will actually contain the index of the surface on the ghoul2 model we collided with.
-				traceEnt->client->g2LastSurfaceHit = tr.surfaceFlags;
-				traceEnt->client->g2LastSurfaceTime = level.time;
-			}
-
-			if (traceEnt->ghoul2)
+		if ( render_impact )
+		{
+			if ( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
 			{
-				tr.surfaceFlags = 0; //clear the surface flags after, since we actually care about them in here.
-			}
-		}
-
-		if (traceEnt && traceEnt->client && traceEnt->client->ps.duelInProgress &&
-			traceEnt->client->ps.duelIndex != ent->s.number)
-		{
-			VectorCopy( tr.endpos, start );
-			ignore = tr.entityNum;
-			traces++;
-			continue;
-		}
-
-		if ( Jedi_DodgeEvasion( traceEnt, ent, &tr, G_GetHitLocation(traceEnt, tr.endpos) ) )
-		{//act like we didn't even hit him
-			VectorCopy( tr.endpos, start );
-			ignore = tr.entityNum;
-			traces++;
-			continue;
-		}
-		else if (traceEnt && traceEnt->client && traceEnt->client->ps.fd.forcePowerLevel[FP_SABER_DEFENSE] >= FORCE_LEVEL_3)
-		{
-			if (WP_SaberCanBlock(traceEnt, tr.endpos, 0, MOD_DISRUPTOR, qtrue, 0))
-			{ //broadcast and stop the shot because it was blocked
-				gentity_t *te = NULL;
-
-				tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_MAIN_SHOT );
-				VectorCopy( muzzle, tent->s.origin2 );
-				tent->s.eventParm = ent->s.number;
-
-				te = G_TempEntity( tr.endpos, EV_SABER_BLOCK );
-				VectorCopy(tr.endpos, te->s.origin);
-				VectorCopy(tr.plane.normal, te->s.angles);
-				if (!te->s.angles[0] && !te->s.angles[1] && !te->s.angles[2])
+				if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
 				{
-					te->s.angles[1] = 1;
+					ent->client->accuracy_hits++;
 				}
-				te->s.eventParm = 0;
-				te->s.weapon = 0;//saberNum
-				te->s.legsAnim = 0;//bladeNum
 
-				return;
+				G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NORMAL, MOD_DISRUPTOR );
+
+				tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_HIT );
+				tent->s.eventParm = DirToByte( tr.plane.normal );
+				if (traceEnt->client)
+				{
+					tent->s.weapon = 1;
+				}
+				break;
 			}
-		}
-		else if ( (traceEnt->flags&FL_SHIELDED) )
-		{//stopped cold
-			return;
-		}
-		//a Jedi is not dodging this shot
-		break;
-	}
-
-	if ( tr.surfaceFlags & SURF_NOIMPACT )
-	{
-		render_impact = qfalse;
-	}
-
-	// always render a shot beam, doing this the old way because I don't much feel like overriding the effect.
-	tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_MAIN_SHOT );
-	VectorCopy( muzzle, tent->s.origin2 );
-	tent->s.eventParm = ent->s.number;
-
-	traceEnt = &g_entities[tr.entityNum];
-
-	if ( render_impact )
-	{
-		if ( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
-		{
-			if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
+			else
 			{
-				ent->client->accuracy_hits++;
-			}
-
-			G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NORMAL, MOD_DISRUPTOR );
-
-			tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_HIT );
-			tent->s.eventParm = DirToByte( tr.plane.normal );
-			if (traceEnt->client)
-			{
+				// Hmmm, maybe don't make any marks on things that could break
+				tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_SNIPER_MISS );
+				tent->s.eventParm = DirToByte( tr.plane.normal );
 				tent->s.weapon = 1;
 			}
-		}
-		else
-		{
-			 // Hmmm, maybe don't make any marks on things that could break
-			tent = G_TempEntity( tr.endpos, EV_DISRUPTOR_SNIPER_MISS );
-			tent->s.eventParm = DirToByte( tr.plane.normal );
-			tent->s.weapon = 1;
 		}
 	}
 }
@@ -1007,7 +1015,7 @@ static void WP_BowcasterAltFire( gentity_t *ent )
 {
 	int	damage	= BOWCASTER_DAMAGE;
 
-	gentity_t *missile = CreateMissile( muzzle, forward, BOWCASTER_VELOCITY, 10000, ent, qfalse);
+	gentity_t *missile = CreateMissile( muzzle, forward, BOWCASTER_VELOCITY, 10000 * weap_all_lifemult.value, ent, qfalse);
 
 	missile->classname = "bowcaster_proj";
 	missile->s.weapon = WP_BOWCASTER;
@@ -1093,7 +1101,7 @@ static void WP_BowcasterMainFire( gentity_t *ent )
 
 		AngleVectors( angs, dir, NULL, NULL );
 
-		missile = CreateMissile( muzzle, dir, vel, 10000, ent, qtrue );
+		missile = CreateMissile( muzzle, dir, vel, 10000 * weap_all_lifemult.value, ent, qtrue );
 
 		missile->classname = "bowcaster_alt_proj";
 		missile->s.weapon = WP_BOWCASTER;
@@ -1141,7 +1149,7 @@ static void WP_RepeaterMainFire( gentity_t *ent, vec3_t dir )
 {
 	int	damage	= REPEATER_DAMAGE;
 
-	gentity_t *missile = CreateMissile( muzzle, dir, REPEATER_VELOCITY, 10000, ent, qfalse );
+	gentity_t *missile = CreateMissile( muzzle, dir, REPEATER_VELOCITY, 10000 * weap_all_lifemult.value, ent, qfalse );
 
 	missile->classname = "repeater_proj";
 	missile->s.weapon = WP_REPEATER;
@@ -1161,15 +1169,19 @@ static void WP_RepeaterAltFire( gentity_t *ent )
 {
 	int	damage	= REPEATER_ALT_DAMAGE;
 
-	gentity_t *missile = CreateMissile( muzzle, forward, REPEATER_ALT_VELOCITY, 10000, ent, qtrue );
+	gentity_t *missile = CreateMissile( muzzle, forward, REPEATER_ALT_VELOCITY, 10000 * weap_all_lifemult.value, ent, qtrue );
 
 	missile->classname = "repeater_alt_proj";
 	missile->s.weapon = WP_REPEATER;
 
 	VectorSet( missile->r.maxs, REPEATER_ALT_SIZE, REPEATER_ALT_SIZE, REPEATER_ALT_SIZE );
 	VectorScale( missile->r.maxs, -1, missile->r.mins );
-	missile->s.pos.trType = TR_GRAVITY;
-	missile->s.pos.trDelta[2] += 40.0f; //give a slight boost in the upward direction
+	
+	if (weap_rep_gravAlt.integer) {
+		missile->s.pos.trType = TR_GRAVITY;
+		missile->s.pos.trDelta[2] += 40.0f; //give a slight boost in the upward direction
+	}
+	
 	missile->damage = damage;
 	missile->dflags = DAMAGE_DEATH_KNOCKBACK;
 	missile->methodOfDeath = MOD_REPEATER_ALT;
@@ -1184,9 +1196,16 @@ static void WP_RepeaterAltFire( gentity_t *ent )
 	{
 		missile->splashRadius = REPEATER_ALT_SPLASH_RADIUS;
 	}
-
-	// we don't want it to bounce forever
-	missile->bounceCount = 8;
+	
+	if (weap_rep_bounceAlt.integer > 0) {
+		missile->flags |= FL_BOUNCE;
+		missile->bounceCount = weap_rep_bounceAlt.integer;
+	} else if (weap_rep_bounceAlt.integer < 0) {
+		missile->flags |= FL_BOUNCE_HALF;
+		missile->bounceCount = -weap_rep_bounceAlt.integer;
+	} else {
+		missile->bounceCount = 0;
+	}
 }
 
 //---------------------------------------------------------
@@ -1226,7 +1245,7 @@ static void WP_DEMP2_MainFire( gentity_t *ent )
 {
 	int	damage	= DEMP2_DAMAGE;
 
-	gentity_t *missile = CreateMissile( muzzle, forward, DEMP2_VELOCITY, 10000, ent, qfalse);
+	gentity_t *missile = CreateMissile( muzzle, forward, DEMP2_VELOCITY, 10000 * weap_all_lifemult.value, ent, qfalse);
 
 	missile->classname = "demp2_proj";
 	missile->s.weapon = WP_DEMP2;
@@ -1368,7 +1387,7 @@ void DEMP2_AltRadiusDamage( gentity_t *ent )
 				if ( gent->client->ps.powerups[PW_CLOAKED] )
 				{//disable cloak temporarily
 					Jedi_Decloak( gent );
-					gent->client->cloakToggleTime = level.time + Q_irand( 3000, 10000 );
+					gent->client->cloakToggleTime = level.time + Q_irand( 3000, 10000 * weap_all_lifemult.value );
 				}
 			}
 		}
@@ -1517,7 +1536,7 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 	gentity_t	*missile;
 	int i;
 
-	for (i = 0; i < FLECHETTE_SHOTS; i++ )
+	for (i = 0; i < weap_flec_shots.integer; i++ )
 	{
 		vectoangles( forward, angs );
 
@@ -1529,7 +1548,7 @@ static void WP_FlechetteMainFire( gentity_t *ent )
 
 		AngleVectors( angs, fwd, NULL, NULL );
 
-		missile = CreateMissile( muzzle, fwd, FLECHETTE_VEL, 10000, ent, qfalse);
+		missile = CreateMissile( muzzle, fwd, FLECHETTE_VEL, 10000 * weap_all_lifemult.value, ent, qfalse);
 
 		missile->classname = "flech_proj";
 		missile->s.weapon = WP_FLECHETTE;
@@ -1760,7 +1779,7 @@ void rocketThink( gentity_t *ent )
 	{//no enemy or enemy not a client or enemy dead or enemy cloaked
 		if ( !ent->genericValue1  )
 		{//doesn't have its own self-kill time
-			ent->nextthink = level.time + 10000;
+			ent->nextthink = level.time + 10000 * weap_all_lifemult.value;
 			ent->think = G_FreeEntity;
 		}
 		return;
@@ -2760,7 +2779,7 @@ void charge_stick (gentity_t *self, gentity_t *other, trace_t *trace)
 		self->touch = charge_stick;
 		return;
 	}
-	else if (other && other->s.number < ENTITYNUM_WORLD)
+	else if (other && other->s.number < ENTITYNUM_WORLD && !weap_detpack_stack.integer)
 	{ //hit an entity that we just want to explode on (probably another projectile or something)
 		vec3_t v;
 
@@ -3081,8 +3100,8 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 {//a rail-gun-like beam
 	int			damage = CONC_ALT_DAMAGE, skip, traces = DISRUPTOR_ALT_TRACES;
 	qboolean	render_impact = qtrue;
-	vec3_t		start, end;
-	vec3_t		/*muzzle2,*/ dir;
+	vec3_t		batch_start, start, end;
+	vec3_t		/*muzzle2,*/ dir, dir2;
 	trace_t		tr;
 	gentity_t	*traceEnt, *tent;
 	float		shotRange = 8192.0f;
@@ -3108,6 +3127,7 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 	//VectorCopy( muzzle, muzzle2 ); // making a backup copy
 
 	VectorCopy( muzzle, start );
+	VectorCopy( forward, dir );
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );
 
 	skip = ent->s.number;
@@ -3121,228 +3141,207 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 	//Make it a little easier to hit guys at long range
 	VectorSet( shot_mins, -1, -1, -1 );
 	VectorSet( shot_maxs, 1, 1, 1 );
+	
+	for (int b = 0; b < weap_conc_bounceAlt.integer + 1; b++) {
+		
+		VectorCopy(start, batch_start);
 
-	for ( i = 0; i < traces; i++ )
-	{
-		VectorMA( start, shotRange, forward, end );
-
-		//NOTE: if you want to be able to hit guys in emplaced guns, use "G2_COLLIDE, 10" instead of "G2_RETURNONHIT, 0"
-		//alternately, if you end up hitting an emplaced_gun that has a sitter, just redo this one trace with the "G2_COLLIDE, 10" to see if we it the sitter
-		//trap->trace( &tr, start, NULL, NULL, end, skip, MASK_SHOT, G2_COLLIDE, 10 );//G2_RETURNONHIT, 0 );
-		if (d_projectileGhoul2Collision.integer)
+		traces = 20;
+		for ( i = 0; i < traces; i++ )
 		{
-			trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, G2TRFLAG_DOGHOULTRACE|G2TRFLAG_GETSURFINDEX|G2TRFLAG_HITCORPSES, g_g2TraceLod.integer );
-		}
-		else
-		{
-			trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, 0, 0 );
-		}
-
-		traceEnt = &g_entities[tr.entityNum];
-
-		if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
-		{ //g2 collision checks -rww
-			if (traceEnt->inuse && traceEnt->client && traceEnt->ghoul2)
-			{ //since we used G2TRFLAG_GETSURFINDEX, tr.surfaceFlags will actually contain the index of the surface on the ghoul2 model we collided with.
-				traceEnt->client->g2LastSurfaceHit = tr.surfaceFlags;
-				traceEnt->client->g2LastSurfaceTime = level.time;
-			}
-
-			if (traceEnt->ghoul2)
+			VectorMA( start, shotRange, dir, end );
+			//NOTE: if you want to be able to hit guys in emplaced guns, use "G2_COLLIDE, 10" instead of "G2_RETURNONHIT, 0"
+			//alternately, if you end up hitting an emplaced_gun that has a sitter, just redo this one trace with the "G2_COLLIDE, 10" to see if we it the sitter
+			//trap->trace( &tr, start, NULL, NULL, end, skip, MASK_SHOT, G2_COLLIDE, 10 );//G2_RETURNONHIT, 0 );
+			if (d_projectileGhoul2Collision.integer)
 			{
-				tr.surfaceFlags = 0; //clear the surface flags after, since we actually care about them in here.
+				trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, G2TRFLAG_DOGHOULTRACE|G2TRFLAG_GETSURFINDEX|G2TRFLAG_HITCORPSES, g_g2TraceLod.integer );
 			}
-		}
-		if ( tr.surfaceFlags & SURF_NOIMPACT )
-		{
-			render_impact = qfalse;
-		}
+			else
+			{
+				trap->Trace( &tr, start, shot_mins, shot_maxs, end, skip, MASK_SHOT, qfalse, 0, 0 );
+			}
 
-		if ( tr.entityNum == ent->s.number )
-		{
-			// should never happen, but basically we don't want to consider a hit to ourselves?
+			traceEnt = &g_entities[tr.entityNum];
+
+			if (d_projectileGhoul2Collision.integer && traceEnt->inuse && traceEnt->client)
+			{ //g2 collision checks -rww
+				if (traceEnt->inuse && traceEnt->client && traceEnt->ghoul2)
+				{ //since we used G2TRFLAG_GETSURFINDEX, tr.surfaceFlags will actually contain the index of the surface on the ghoul2 model we collided with.
+					traceEnt->client->g2LastSurfaceHit = tr.surfaceFlags;
+					traceEnt->client->g2LastSurfaceTime = level.time;
+				}
+
+				if (traceEnt->ghoul2)
+				{
+					tr.surfaceFlags = 0; //clear the surface flags after, since we actually care about them in here.
+				}
+			}
+			if ( tr.surfaceFlags & SURF_NOIMPACT )
+			{
+				render_impact = qfalse;
+			}
+
+			if ( tr.entityNum == ent->s.number )
+			{
+				// should never happen, but basically we don't want to consider a hit to ourselves?
+				// Get ready for an attempt to trace through another person
+				//VectorCopy( tr.endpos, muzzle2 );
+				VectorCopy( tr.endpos, start );
+				skip = tr.entityNum;
+	#ifdef _DEBUG
+				Com_Printf( "BAD! Concussion gun shot somehow traced back and hit the owner!\n" );
+	#endif
+				continue;
+			}
+
+			// always render a shot beam, doing this the old way because I don't much feel like overriding the effect.
+			//NOTE: let's just draw one beam at the end
+			//tent = G_TempEntity( tr.endpos, EV_CONC_ALT_SHOT );
+			//tent->svFlags |= SVF_BROADCAST;
+
+			//VectorCopy( muzzle2, tent->s.origin2 );
+
+			if ( tr.fraction >= 1.0f )
+			{
+				// draw the beam but don't do anything else
+				break;
+			}
+
+			if ( traceEnt->s.weapon == WP_SABER )//&& traceEnt->NPC
+			{//FIXME: need a more reliable way to know we hit a jedi?
+				hitDodged = Jedi_DodgeEvasion( traceEnt, ent, &tr, HL_NONE );
+				//acts like we didn't even hit him
+			}
+			if ( !hitDodged )
+			{
+				if ( render_impact )
+				{
+					if (( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
+						|| !Q_stricmp( traceEnt->classname, "misc_model_breakable" )
+						|| traceEnt->s.eType == ET_MOVER )
+					{
+						qboolean noKnockBack;
+
+						// Create a simple impact type mark that doesn't last long in the world
+						//G_PlayEffectID( G_EffectIndex( "concussion/alt_hit" ), tr.endpos, tr.plane.normal );
+						//no no no
+
+						if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
+						{//NOTE: hitting multiple ents can still get you over 100% accuracy
+							ent->client->accuracy_hits++;
+						}
+
+						noKnockBack = (traceEnt->flags&FL_NO_KNOCKBACK);//will be set if they die, I want to know if it was on *before* they died
+						if ( traceEnt && traceEnt->client && traceEnt->client->NPC_class == CLASS_GALAKMECH )
+						{//hehe
+							G_Damage( traceEnt, ent, ent, forward, tr.endpos, 10, DAMAGE_NO_KNOCKBACK|DAMAGE_NO_HIT_LOC, MOD_CONC_ALT );
+							break;
+						}
+						G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK|DAMAGE_NO_HIT_LOC, MOD_CONC_ALT );
+
+						//do knockback and knockdown manually
+						if ( traceEnt->client )
+						{//only if we hit a client
+							vec3_t pushDir;
+							VectorCopy( forward, pushDir );
+							if ( pushDir[2] < 0.2f )
+							{
+								pushDir[2] = 0.2f;
+							}//hmm, re-normalize?  nah...
+							/*
+							if ( !noKnockBack )
+							{//knock-backable
+								G_Throw( traceEnt, pushDir, 200 );
+							}
+							*/
+							if ( traceEnt->health > 0 )
+							{//alive
+								//if ( G_HasKnockdownAnims( traceEnt ) )
+								if (!noKnockBack && !traceEnt->localAnimIndex && traceEnt->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
+									BG_KnockDownable(&traceEnt->client->ps)) //just check for humanoids..
+								{//knock-downable
+									//G_Knockdown( traceEnt, ent, pushDir, 400, qtrue );
+									vec3_t plPDif;
+									float pStr;
+
+									//cap it and stuff, base the strength and whether or not we can knockdown on the distance
+									//from the shooter to the target
+									VectorSubtract(traceEnt->client->ps.origin, ent->client->ps.origin, plPDif);
+									pStr = 500.0f-VectorLength(plPDif);
+									if (pStr < 150.0f)
+									{
+										pStr = 150.0f;
+									}
+									if (pStr > 200.0f)
+									{
+										traceEnt->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+										traceEnt->client->ps.forceHandExtendTime = level.time + 1100;
+										traceEnt->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+									}
+									traceEnt->client->ps.otherKiller = ent->s.number;
+									traceEnt->client->ps.otherKillerTime = level.time + 5000;
+									traceEnt->client->ps.otherKillerDebounceTime = level.time + 100;
+
+									traceEnt->client->ps.velocity[0] += pushDir[0]*pStr;
+									traceEnt->client->ps.velocity[1] += pushDir[1]*pStr;
+									traceEnt->client->ps.velocity[2] = pStr;
+								}
+							}
+						}
+
+						if ( traceEnt->s.eType == ET_MOVER )
+						{//stop the traces on any mover
+							break;
+						}
+					}
+					else
+					{
+						// we only make this mark on things that can't break or move
+					//	tent = G_TempEntity(tr.endpos, EV_MISSILE_MISS);
+					//	tent->s.eventParm = DirToByte(tr.plane.normal);
+					//	tent->s.eFlags |= EF_ALT_FIRING;
+
+						//tent->svFlags |= SVF_BROADCAST;
+						//eh? why broadcast?
+					//	VectorCopy( tr.plane.normal, tent->pos1 );
+
+						//mmm..no..don't do this more than once for no reason whatsoever.
+						break; // hit solid, but doesn't take damage, so stop the shot...we _could_ allow it to shoot through walls, might be cool?
+					}
+				}
+				else // not rendering impact, must be a skybox or other similar thing?
+				{
+					break; // don't try anymore traces
+				}
+			}
 			// Get ready for an attempt to trace through another person
 			//VectorCopy( tr.endpos, muzzle2 );
 			VectorCopy( tr.endpos, start );
 			skip = tr.entityNum;
-#ifdef _DEBUG
-			Com_Printf( "BAD! Concussion gun shot somehow traced back and hit the owner!\n" );
-#endif
-			continue;
+			hitDodged = qfalse;
 		}
 
-		// always render a shot beam, doing this the old way because I don't much feel like overriding the effect.
-		//NOTE: let's just draw one beam at the end
-		//tent = G_TempEntity( tr.endpos, EV_CONC_ALT_SHOT );
-		//tent->svFlags |= SVF_BROADCAST;
+		VectorSubtract( tr.endpos, start, dir2 );
+		
+		float dot = DotProduct( dir, tr.plane.normal );
+		VectorMA( dir, -2*dot, tr.plane.normal, dir );
 
-		//VectorCopy( muzzle2, tent->s.origin2 );
-
-		if ( tr.fraction >= 1.0f )
-		{
-			// draw the beam but don't do anything else
-			break;
-		}
-
-		if ( traceEnt->s.weapon == WP_SABER )//&& traceEnt->NPC
-		{//FIXME: need a more reliable way to know we hit a jedi?
-			hitDodged = Jedi_DodgeEvasion( traceEnt, ent, &tr, HL_NONE );
-			//acts like we didn't even hit him
-		}
-		if ( !hitDodged )
-		{
-			if ( render_impact )
-			{
-				if (( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
-					|| !Q_stricmp( traceEnt->classname, "misc_model_breakable" )
-					|| traceEnt->s.eType == ET_MOVER )
-				{
-					qboolean noKnockBack;
-
-					// Create a simple impact type mark that doesn't last long in the world
-					//G_PlayEffectID( G_EffectIndex( "concussion/alt_hit" ), tr.endpos, tr.plane.normal );
-					//no no no
-
-					if ( traceEnt->client && LogAccuracyHit( traceEnt, ent ))
-					{//NOTE: hitting multiple ents can still get you over 100% accuracy
-						ent->client->accuracy_hits++;
-					}
-
-					noKnockBack = (traceEnt->flags&FL_NO_KNOCKBACK);//will be set if they die, I want to know if it was on *before* they died
-					if ( traceEnt && traceEnt->client && traceEnt->client->NPC_class == CLASS_GALAKMECH )
-					{//hehe
-						G_Damage( traceEnt, ent, ent, forward, tr.endpos, 10, DAMAGE_NO_KNOCKBACK|DAMAGE_NO_HIT_LOC, MOD_CONC_ALT );
-						break;
-					}
-					G_Damage( traceEnt, ent, ent, forward, tr.endpos, damage, DAMAGE_NO_KNOCKBACK|DAMAGE_NO_HIT_LOC, MOD_CONC_ALT );
-
-					//do knockback and knockdown manually
-					if ( traceEnt->client )
-					{//only if we hit a client
-						vec3_t pushDir;
-						VectorCopy( forward, pushDir );
-						if ( pushDir[2] < 0.2f )
-						{
-							pushDir[2] = 0.2f;
-						}//hmm, re-normalize?  nah...
-						/*
-						if ( !noKnockBack )
-						{//knock-backable
-							G_Throw( traceEnt, pushDir, 200 );
-						}
-						*/
-						if ( traceEnt->health > 0 )
-						{//alive
-							//if ( G_HasKnockdownAnims( traceEnt ) )
-							if (!noKnockBack && !traceEnt->localAnimIndex && traceEnt->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN &&
-								BG_KnockDownable(&traceEnt->client->ps)) //just check for humanoids..
-							{//knock-downable
-								//G_Knockdown( traceEnt, ent, pushDir, 400, qtrue );
-								vec3_t plPDif;
-								float pStr;
-
-								//cap it and stuff, base the strength and whether or not we can knockdown on the distance
-								//from the shooter to the target
-								VectorSubtract(traceEnt->client->ps.origin, ent->client->ps.origin, plPDif);
-								pStr = 500.0f-VectorLength(plPDif);
-								if (pStr < 150.0f)
-								{
-									pStr = 150.0f;
-								}
-								if (pStr > 200.0f)
-								{
-									traceEnt->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-									traceEnt->client->ps.forceHandExtendTime = level.time + 1100;
-									traceEnt->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-								}
-								traceEnt->client->ps.otherKiller = ent->s.number;
-								traceEnt->client->ps.otherKillerTime = level.time + 5000;
-								traceEnt->client->ps.otherKillerDebounceTime = level.time + 100;
-
-								traceEnt->client->ps.velocity[0] += pushDir[0]*pStr;
-								traceEnt->client->ps.velocity[1] += pushDir[1]*pStr;
-								traceEnt->client->ps.velocity[2] = pStr;
-							}
-						}
-					}
-
-					if ( traceEnt->s.eType == ET_MOVER )
-					{//stop the traces on any mover
-						break;
-					}
-				}
-				else
-				{
-					 // we only make this mark on things that can't break or move
-				//	tent = G_TempEntity(tr.endpos, EV_MISSILE_MISS);
-				//	tent->s.eventParm = DirToByte(tr.plane.normal);
-				//	tent->s.eFlags |= EF_ALT_FIRING;
-
-					//tent->svFlags |= SVF_BROADCAST;
-					//eh? why broadcast?
-				//	VectorCopy( tr.plane.normal, tent->pos1 );
-
-					//mmm..no..don't do this more than once for no reason whatsoever.
-					break; // hit solid, but doesn't take damage, so stop the shot...we _could_ allow it to shoot through walls, might be cool?
-				}
-			}
-			else // not rendering impact, must be a skybox or other similar thing?
-			{
-				break; // don't try anymore traces
-			}
-		}
-		// Get ready for an attempt to trace through another person
-		//VectorCopy( tr.endpos, muzzle2 );
-		VectorCopy( tr.endpos, start );
-		skip = tr.entityNum;
-		hitDodged = qfalse;
+		tent = G_TempEntity(tr.endpos, EV_CONC_ALT_IMPACT);
+		tent->s.eventParm = DirToByte(tr.plane.normal);
+		tent->s.owner = ent->s.number;
+		VectorCopy(dir2, tent->s.angles);
+		VectorCopy(b ? batch_start : muzzle, tent->s.origin2);
+		VectorCopy(forward, tent->s.angles2);
+		VectorCopy(tr.endpos, start);
 	}
-	//just draw one beam all the way to the end
-//	tent = G_TempEntity( tr.endpos, EV_CONC_ALT_SHOT );
-//	tent->svFlags |= SVF_BROADCAST;
-	//again, why broadcast?
-
-//	tent = G_TempEntity(tr.endpos, EV_MISSILE_MISS);
-//	tent->s.eventParm = DirToByte(tr.plane.normal);
-//	tent->s.eFlags |= EF_ALT_FIRING;
-//	VectorCopy( muzzle, tent->s.origin2 );
-
-	// now go along the trail and make sight events
-	VectorSubtract( tr.endpos, muzzle, dir );
-
-//	shotDist = VectorNormalize( dir );
-
-	//let's pack all this junk into a single tempent, and send it off.
-	tent = G_TempEntity(tr.endpos, EV_CONC_ALT_IMPACT);
-	tent->s.eventParm = DirToByte(tr.plane.normal);
-	tent->s.owner = ent->s.number;
-	VectorCopy(dir, tent->s.angles);
-	VectorCopy(muzzle, tent->s.origin2);
-	VectorCopy(forward, tent->s.angles2);
-
-#if 0 //yuck
-	//FIXME: if shoot *really* close to someone, the alert could be way out of their FOV
-	for ( dist = 0; dist < shotDist; dist += 64 )
-	{
-		//FIXME: on a really long shot, this could make a LOT of alerts in one frame...
-		VectorMA( muzzle, dist, dir, spot );
-		AddSightEvent( ent, spot, 256, AEL_DISCOVERED, 50 );
-		//FIXME: creates *way* too many effects, make it one effect somehow?
-		G_PlayEffectID( G_EffectIndex( "concussion/alt_ring" ), spot, actualAngles );
-	}
-	//FIXME: spawn a temp ent that continuously spawns sight alerts here?  And 1 sound alert to draw their attention?
-	VectorMA( start, shotDist-4, forward, spot );
-	AddSightEvent( ent, spot, 256, AEL_DISCOVERED, 50 );
-
-	G_PlayEffectID( G_EffectIndex( "concussion/altmuzzle_flash" ), muzzle, forward );
-#endif
 }
 
 static void WP_FireConcussion( gentity_t *ent )
 {//a fast rocket-like projectile
 	vec3_t	start;
 	int		damage	= CONC_DAMAGE;
-	float	vel = CONC_VELOCITY;
+	float	vel = weap_conc_velocity.value;
 	gentity_t *missile;
 
 	//hold us still for a bit
@@ -3360,7 +3359,7 @@ static void WP_FireConcussion( gentity_t *ent )
 	VectorCopy( muzzle, start );
 	WP_TraceSetStart( ent, start, vec3_origin, vec3_origin );//make sure our start point isn't on the other side of a wall
 
-	missile = CreateMissile( start, forward, vel, 10000, ent, qfalse );
+	missile = CreateMissile( start, forward, vel, 10000 * weap_all_lifemult.value, ent, qfalse );
 
 	missile->classname = "conc_proj";
 	missile->s.weapon = WP_CONCUSSION;
@@ -3369,6 +3368,9 @@ static void WP_FireConcussion( gentity_t *ent )
 	// Make it easier to hit things
 	VectorSet( missile->r.maxs, ROCKET_SIZE, ROCKET_SIZE, ROCKET_SIZE );
 	VectorScale( missile->r.maxs, -1, missile->r.mins );
+	
+	if (weap_conc_grav.integer)
+		missile->s.pos.trType = TR_GRAVITY;
 
 	missile->damage = damage;
 	missile->dflags = DAMAGE_EXTRA_KNOCKBACK;
@@ -3380,8 +3382,15 @@ static void WP_FireConcussion( gentity_t *ent )
 	missile->splashDamage = CONC_SPLASH_DAMAGE;
 	missile->splashRadius = CONC_SPLASH_RADIUS;
 
-	// we don't want it to ever bounce
-	missile->bounceCount = 0;
+	if (weap_conc_bounce.integer > 0) {
+		missile->flags |= FL_BOUNCE;
+		missile->bounceCount = weap_conc_bounce.integer;
+	} else if (weap_conc_bounce.integer < 0) {
+		missile->flags |= FL_BOUNCE_HALF;
+		missile->bounceCount = -weap_conc_bounce.integer;
+	} else {
+		missile->bounceCount = 0;
+	}
 }
 
 
@@ -3740,7 +3749,7 @@ gentity_t *WP_FireVehicleWeapon( gentity_t *ent, vec3_t start, vec3_t dir, vehWe
 
 		//FIXME: CUSTOM MODEL?
 		//QUERY: alt_fire true or not?  Does it matter?
-		missile = CreateMissile( start, dir, vehWeapon->fSpeed, 10000, ent, qfalse );
+		missile = CreateMissile( start, dir, vehWeapon->fSpeed, 10000 * weap_all_lifemult.value, ent, qfalse );
 
 		missile->classname = "vehicle_proj";
 
@@ -4493,7 +4502,7 @@ void FireWeapon( gentity_t *ent, qboolean altFire ) {
 	if( ent->s.weapon != WP_SABER && ent->s.weapon != WP_STUN_BATON && ent->s.weapon != WP_MELEE )
 	{
 		if( ent->s.weapon == WP_FLECHETTE ) {
-			ent->client->accuracy_shots += FLECHETTE_SHOTS;
+			ent->client->accuracy_shots += weap_flec_shots.integer;
 		} else {
 			ent->client->accuracy_shots++;
 		}

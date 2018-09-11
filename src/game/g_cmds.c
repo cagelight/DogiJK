@@ -2510,7 +2510,7 @@ void Cmd_SetViewpos_f( gentity_t *ent ) {
 	trap->Argv( 4, buffer, sizeof( buffer ) );
 	angles[YAW] = atof( buffer );
 
-	TeleportPlayer( ent, origin, angles );
+	TeleportPlayer( ent, origin, angles, qfalse );
 }
 
 void G_LeaveVehicle( gentity_t* ent, qboolean ConCheck ) {
@@ -3361,6 +3361,129 @@ void Cmd_AddBot_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s.\n\"", G_GetStringEdString( "MP_SVGAME", "ONLY_ADD_BOTS_AS_SERVER" ) ) );
 }
 
+static void Cmd_Tele_f( gentity_t * ent ) {
+	
+	char cmd [MAX_STRING_CHARS];
+	float origin[3] = {0, 0, 0};
+	float angles[3] = {0, 0, 0};
+	char player1token [MAX_NETNAME], player2token [MAX_NETNAME];
+	gentity_t * player1, * player2;
+	int i;
+	qboolean silent = qfalse;
+	
+	trap->Argv(0, cmd, MAX_STRING_CHARS);
+	if (!strcmp(cmd, "teles")) silent = qtrue;
+	
+	switch (trap->Argc()) {
+		case 1: {
+			trap->SendServerCommand( ent-g_entities, "print \"Usage 1: <player to>\nUsage 2: <player from> <player to>\nUsage 3: <X> <Y> <Z>\nUsage 4: <X> <Y> <Z> <PITCH> <YAW>\"" );
+			return;
+		}
+		case 2: {
+			trap->Argv(1, player2token, MAX_NETNAME);
+			for(player2 = g_entities, i = 0;i < MAX_CLIENTS;i++,player2++) {
+				if (!player2->client) continue;
+				if (strstr(player2->client->pers.netname, player2token)) {
+					break;
+				}
+			}
+			if (!player2 || !player2->client) {
+				trap->SendServerCommand( ent-g_entities, "print \"<to> player not found\n\"" );
+				return;
+			}
+			TeleportPlayerToPlayer(ent, player2, silent);
+			break;
+		}
+		case 3: {
+			trap->Argv(1, player1token, MAX_NETNAME);
+			trap->Argv(2, player2token, MAX_NETNAME);
+			for(player1 = g_entities, i = 0;i < MAX_CLIENTS;i++,player1++) {
+				if (!player1->client) continue;
+				if (strstr(player1->client->pers.netname, player1token)) {
+					break;
+				}
+			}
+			for(player2 = g_entities, i = 0;i < MAX_CLIENTS;i++,player2++) {
+				if (!player2->client) continue;
+				if (strstr(player2->client->pers.netname, player2token)) {
+					break;
+				}
+			}
+			if (!player1 || !player1->client) {
+				trap->SendServerCommand( ent-g_entities, "print \"<from> player not found\n\"" );
+				return;
+			}
+			if (!player2 || !player2->client) {
+				trap->SendServerCommand( ent-g_entities, "print \"<to> player not found\n\"" );
+				return;
+			}
+			TeleportPlayerToPlayer(player1, player2, silent);
+			break;
+		}
+		case 4: {
+			trap->Argv(1, cmd, MAX_STRING_CHARS);
+			origin[0] = strtof(cmd, NULL);
+			trap->Argv(2, cmd, MAX_STRING_CHARS);
+			origin[1] = strtof(cmd, NULL);
+			trap->Argv(3, cmd, MAX_STRING_CHARS);
+			origin[2] = strtof(cmd, NULL);
+			TeleportPlayer(ent, origin, angles, silent);
+			break;
+		}
+		case 5: {
+			trap->Argv(1, player1token, MAX_NETNAME);
+			for(player1 = g_entities, i = 0;i < MAX_CLIENTS;i++,player1++) {
+				if (!player1->client) continue;
+				if (strstr(player1->client->pers.netname, player1token)) {
+					break;
+				}
+			}
+			if (!player1 || !player1->client) {
+				trap->SendServerCommand( ent-g_entities, "print \"<from> player not found\n\"" );
+				return;
+			}
+			trap->Argv(2, cmd, MAX_STRING_CHARS);
+			origin[0] = strtof(cmd, NULL);
+			trap->Argv(3, cmd, MAX_STRING_CHARS);
+			origin[1] = strtof(cmd, NULL);
+			trap->Argv(4, cmd, MAX_STRING_CHARS);
+			origin[2] = strtof(cmd, NULL);
+			TeleportPlayer(player1, origin, angles, silent);
+			break;
+		}
+		case 6: {
+			trap->Argv(1, cmd, MAX_STRING_CHARS);
+			origin[0] = strtof(cmd, NULL);
+			trap->Argv(2, cmd, MAX_STRING_CHARS);
+			origin[1] = strtof(cmd, NULL);
+			trap->Argv(3, cmd, MAX_STRING_CHARS);
+			origin[2] = strtof(cmd, NULL);
+			trap->Argv(4, cmd, MAX_STRING_CHARS);
+			angles[0] = strtof(cmd, NULL);
+			trap->Argv(5, cmd, MAX_STRING_CHARS);
+			angles[1] = strtof(cmd, NULL);
+			TeleportPlayer(ent, origin, angles, silent);
+			break;
+		}
+		case 7: {
+			trap->Argv(1, cmd, MAX_STRING_CHARS);
+			origin[0] = strtof(cmd, NULL);
+			trap->Argv(2, cmd, MAX_STRING_CHARS);
+			origin[1] = strtof(cmd, NULL);
+			trap->Argv(3, cmd, MAX_STRING_CHARS);
+			origin[2] = strtof(cmd, NULL);
+			trap->Argv(4, cmd, MAX_STRING_CHARS);
+			angles[0] = strtof(cmd, NULL);
+			trap->Argv(5, cmd, MAX_STRING_CHARS);
+			angles[1] = strtof(cmd, NULL);
+			trap->Argv(6, cmd, MAX_STRING_CHARS);
+			angles[2] = strtof(cmd, NULL);
+			TeleportPlayer(ent, origin, angles, silent);
+			break;
+		}
+	}
+}
+
 /*
 =================
 ClientCommand
@@ -3418,6 +3541,8 @@ command_t commands[] = {
 	{ "tell",				Cmd_Tell_f,					0 },
 	{ "thedestroyer",		Cmd_TheDestroyer_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
+	{ "tele",				Cmd_Tele_f,					CMD_CHEAT|CMD_NOINTERMISSION },
+	{ "teles",				Cmd_Tele_f,					CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },

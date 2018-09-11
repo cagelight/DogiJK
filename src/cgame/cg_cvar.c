@@ -68,11 +68,13 @@ typedef struct cvarTable_s {
 
 #define XCVAR_DECL
 	#include "cg_xcvar.h"
+	#include "game/bg_xcvar.h"
 #undef XCVAR_DECL
 
 static const cvarTable_t cvarTable[] = {
 	#define XCVAR_LIST
 		#include "cg_xcvar.h"
+		#include "game/bg_xcvar.h"
 	#undef XCVAR_LIST
 };
 static const size_t cvarTableSize = ARRAY_LEN( cvarTable );

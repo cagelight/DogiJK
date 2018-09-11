@@ -7619,6 +7619,8 @@ static void PM_Weapon( void )
 	{
 		amount = weaponData[pm->ps->weapon].energyPerShot;
 	}
+	
+	if (bg_infammo.integer) amount = 0;
 
 	pm->ps->weaponstate = WEAPON_FIRING;
 
@@ -7695,7 +7697,7 @@ static void PM_Weapon( void )
 		addTime *= 1.5;
 	}
 
-	pm->ps->weaponTime += addTime;
+	pm->ps->weaponTime += addTime / bg_gunrate.value;
 }
 
 /*

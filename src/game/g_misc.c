@@ -193,8 +193,7 @@ TELEPORTERS
 
 =================================================================================
 */
-
-void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
+void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles, qboolean silent ) {
 	gentity_t	*tent;
 	qboolean	isNPC = qfalse;
 	qboolean	noAngles;
@@ -207,7 +206,7 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 
 	// use temp events at source and destination to prevent the effect
 	// from getting dropped by a second player event
-	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR ) {
+	if ( player->client->sess.sessionTeam != TEAM_SPECTATOR && !silent ) {
 		tent = G_TempEntity( player->client->ps.origin, EV_PLAYER_TELEPORT_OUT );
 		tent->s.clientNum = player->s.clientNum;
 
@@ -223,10 +222,12 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 
 	// spit the player out
 	if ( !noAngles ) {
-		AngleVectors( angles, player->client->ps.velocity, NULL, NULL );
-		VectorScale( player->client->ps.velocity, 400, player->client->ps.velocity );
-		player->client->ps.pm_time = 160;		// hold time
-		player->client->ps.pm_flags |= PMF_TIME_KNOCKBACK;
+		if (!silent) {
+			AngleVectors( angles, player->client->ps.velocity, NULL, NULL );
+			VectorScale( player->client->ps.velocity, 400, player->client->ps.velocity );
+			player->client->ps.pm_time = 160;		// hold time
+			player->client->ps.pm_flags |= PMF_TIME_KNOCKBACK;
+		}
 
 		// set angles
 		SetClientViewAngle( player, angles );
@@ -255,6 +256,15 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles ) {
 	}
 }
 
+#define TELEPORT_P2P_FACE_DIST 80
+void TeleportPlayerToPlayer(gentity_t * playerFrom, gentity_t * playerTo, qboolean silent) {
+	float pos[3];
+	float ang[3];
+	VectorCopy(playerTo->client->ps.origin, pos);
+	ang[YAW] = -playerTo->client->ps.viewangles[YAW];
+	VectorOffset(pos, playerTo->client->ps.viewangles, TELEPORT_P2P_FACE_DIST, pos);
+	TeleportPlayer(playerFrom, pos, ang, silent);
+}
 
 /*QUAKED misc_teleporter_dest (1 0 0) (-32 -32 -24) (32 32 -16)
 Point teleporters at these.

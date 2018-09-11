@@ -2444,13 +2444,13 @@ void CG_EntityEvent( centity_t *cent, vec3_t position ) {
 		if (cent->currentState.eventParm != cg.snap->ps.clientNum ||
 			cg.renderingThirdPerson)
 		{ //h4q3ry
-			CG_GetClientWeaponMuzzleBoltPoint(cent->currentState.eventParm, cent->currentState.origin2);
+			if (!weap_snip_bounce.integer) CG_GetClientWeaponMuzzleBoltPoint(cent->currentState.eventParm, cent->currentState.origin2);
 		}
 		else
 		{
 			if (cg.lastFPFlashPoint[0] ||cg.lastFPFlashPoint[1] || cg.lastFPFlashPoint[2])
 			{ //get the position of the muzzle flash for the first person weapon model from the last frame
-				VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
+				if (!weap_snip_bounce.integer) VectorCopy(cg.lastFPFlashPoint, cent->currentState.origin2);
 			}
 		}
 		FX_DisruptorMainShot( cent->currentState.origin2, cent->lerpOrigin );

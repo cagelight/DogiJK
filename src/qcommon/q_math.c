@@ -1237,6 +1237,17 @@ qboolean VectorCompare2( const vec3_t v1, const vec3_t v2 )
 	return qtrue;
 }
 
+void VectorOffset(vec3_t pos, vec3_t angles, float distance, vec3_t out) {
+	vec3_t delta, adjang;
+	float z = pos[2];
+	VectorCopy(angles, adjang);
+	adjang[0] = 0;
+	adjang[2] = 0;
+	AngleVectors(adjang, delta, NULL, NULL);
+	VectorMA(pos, distance, delta, out);
+	out[2] = z;
+}
+
 void SnapVector( float *v )
 {
 #if defined(_MSC_VER) && !defined(idx64)

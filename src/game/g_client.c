@@ -3487,6 +3487,19 @@ void ClientSpawn(gentity_t *ent) {
 				client->ps.stats[STAT_WEAPONS] |= (1 << WP_MELEE);
 			}
 		}
+		
+		client->ps.stats[STAT_WEAPONS] |= g_startingweapons.integer;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_BLASTER)) client->ps.ammo[weaponData[WP_BLASTER].ammoIndex] += weaponData[WP_BLASTER].energyPerShot * 80;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_DISRUPTOR)) client->ps.ammo[weaponData[WP_DISRUPTOR].ammoIndex] += weaponData[WP_DISRUPTOR].energyPerShot * 30;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_BOWCASTER)) client->ps.ammo[weaponData[WP_BOWCASTER].ammoIndex] += weaponData[WP_BOWCASTER].energyPerShot * 40;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_REPEATER)) client->ps.ammo[weaponData[WP_REPEATER].ammoIndex] += weaponData[WP_REPEATER].energyPerShot * 120;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_DEMP2)) client->ps.ammo[weaponData[WP_DEMP2].ammoIndex] += weaponData[WP_DEMP2].energyPerShot * 20;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_FLECHETTE)) client->ps.ammo[weaponData[WP_FLECHETTE].ammoIndex] += weaponData[WP_FLECHETTE].energyPerShot * 30;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_ROCKET_LAUNCHER)) client->ps.ammo[weaponData[WP_ROCKET_LAUNCHER].ammoIndex] += weaponData[WP_ROCKET_LAUNCHER].energyPerShot * 10;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_THERMAL)) client->ps.ammo[weaponData[WP_THERMAL].ammoIndex] += weaponData[WP_THERMAL].energyPerShot * 5;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_TRIP_MINE)) client->ps.ammo[weaponData[WP_TRIP_MINE].ammoIndex] += weaponData[WP_TRIP_MINE].energyPerShot * 5;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_DET_PACK)) client->ps.ammo[weaponData[WP_DET_PACK].ammoIndex] += weaponData[WP_DET_PACK].energyPerShot * 5;
+		if (client->ps.stats[STAT_WEAPONS] & (1 << WP_CONCUSSION)) client->ps.ammo[weaponData[WP_CONCUSSION].ammoIndex] += weaponData[WP_CONCUSSION].energyPerShot * 10;
 
 		if (level.gametype != GT_SIEGE)
 		{

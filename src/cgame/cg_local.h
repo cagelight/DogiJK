@@ -1655,6 +1655,7 @@ extern	markPoly_t		cg_markPolys[MAX_MARK_POLYS];
 // cg_cvar.c
 #define XCVAR_PROTO
 	#include "cg_xcvar.h"
+	#include "game/bg_xcvar.h"
 #undef XCVAR_PROTO
 void CG_RegisterCvars( void );
 void CG_UpdateCvars( void );

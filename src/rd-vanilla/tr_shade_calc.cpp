@@ -1046,15 +1046,13 @@ void RB_CalcRotateTexCoords( float degsPerSecond, float *st )
 {
 	float timeScale = tess.shaderTime;
 	float degs;
-	int index;
 	float sinValue, cosValue;
 	texModInfo_t tmi;
 
-	degs = -degsPerSecond * timeScale;
-	index = degs * ( FUNCTABLE_SIZE / 360.0f );
+	degs = M_PI * (-degsPerSecond * timeScale) / 180.0f;
 
-	sinValue = tr.sinTable[ index & FUNCTABLE_MASK ];
-	cosValue = tr.sinTable[ ( index + FUNCTABLE_SIZE / 4 ) & FUNCTABLE_MASK ];
+	sinValue = sin(degs);
+	cosValue = cos(degs);
 
 	tmi.matrix[0][0] = cosValue;
 	tmi.matrix[1][0] = -sinValue;

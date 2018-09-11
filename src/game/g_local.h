@@ -1254,7 +1254,7 @@ int	TAG_GetAngles( const char *owner, const char *name, vec3_t angles );
 int TAG_GetRadius( const char *owner, const char *name );
 int TAG_GetFlags( const char *owner, const char *name );
 
-void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles );
+void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles, qboolean silent );
 
 //
 // g_weapon.c
@@ -1522,6 +1522,7 @@ void Svcmd_ToggleAllowVote_f( void );
 // g_cvar.c
 #define XCVAR_PROTO
 	#include "g_xcvar.h"
+	#include "bg_xcvar.h"
 #undef XCVAR_PROTO
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );

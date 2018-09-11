@@ -263,6 +263,7 @@ void CrossProduct( const vec3_t vec1, const vec3_t vec2, vec3_t vecOut );
 float DotProduct( const vec3_t vec1, const vec3_t vec2 );
 qboolean VectorCompare( const vec3_t vec1, const vec3_t vec2 );
 qboolean VectorCompare2( const vec3_t v1, const vec3_t v2 );
+void VectorOffset(vec3_t pos, vec3_t angles, float distance, vec3_t out);
 
 void SnapVector( float *v );
 float Distance( const vec3_t p1, const vec3_t p2 );

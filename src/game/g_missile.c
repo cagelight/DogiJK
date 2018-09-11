@@ -194,10 +194,12 @@ void G_BounceMissile( gentity_t *ent, trace_t *trace ) {
 	else if (ent->s.weapon == WP_SABER)
 	{
 		G_Sound(ent, CHAN_BODY, G_SoundIndex(va("sound/weapons/saber/bounce%i.wav", Q_irand(1, 3))));
-	}
-	else if (ent->s.weapon == G2_MODEL_PART)
-	{
-		//Limb bounce sound?
+	} else if (ent->s.weapon == WP_REPEATER && ent->s.eFlags & EF_ALT_FIRING && weap_rep_bounceAlt.integer) {
+		G_RadiusDamage( ent->r.currentOrigin, ent->parent, ent->splashDamage, ent->splashRadius, ent, ent, ent->splashMethodOfDeath );
+		G_PlayEffectID( G_EffectIndex("repeater/concussion"), ent->r.currentOrigin, trace->plane.normal );
+	} else if (ent->s.weapon == WP_CONCUSSION && !(ent->s.eFlags & EF_ALT_FIRING) && weap_conc_bounce.integer) {
+		G_RadiusDamage( ent->r.currentOrigin, ent->parent, ent->splashDamage, ent->splashRadius, ent, ent, ent->splashMethodOfDeath );
+		G_PlayEffectID( G_EffectIndex("concussion/explosion"), ent->r.currentOrigin, trace->plane.normal );
 	}
 
 	VectorAdd( ent->r.currentOrigin, trace->plane.normal, ent->r.currentOrigin);
