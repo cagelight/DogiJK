@@ -5844,6 +5844,7 @@ void WP_SaberStartMissileBlockCheck( gentity_t *self, usercmd_t *ucmd  )
 #define SABER_THROWN_RETURN_HIT_DAMAGE 5
 
 void thrownSaberTouch (gentity_t *saberent, gentity_t *other, trace_t *trace);
+void thrownSaberTouchOP (gentity_t *saberent, gentity_t *other, trace_t *trace);
 
 static QINLINE qboolean CheckThrownSaberDamaged(gentity_t *saberent, gentity_t *saberOwner, gentity_t *ent, int dist, int returning, qboolean noDCheck)
 {
@@ -5966,7 +5967,7 @@ static QINLINE qboolean CheckThrownSaberDamaged(gentity_t *saberent, gentity_t *
 
 					te->s.eventParm = 1;
 
-					if (!returning)
+					if (!returning && saberOwner->client->ps.fd.forcePowerLevel[FP_SABERTHROW] < FORCE_LEVEL_3)
 					{ //return to owner if blocked
 						thrownSaberTouch(saberent, saberent, NULL);
 					}
@@ -6070,7 +6071,7 @@ static QINLINE qboolean CheckThrownSaberDamaged(gentity_t *saberent, gentity_t *
 					te->s.eventParm = 1;
 				}
 
-				if (!returning)
+				if (!returning && saberOwner->client->ps.fd.forcePowerLevel[FP_SABERTHROW] < FORCE_LEVEL_3)
 				{ //return to owner if blocked
 					thrownSaberTouch(saberent, saberent, NULL);
 				}
@@ -6176,7 +6177,7 @@ static QINLINE void saberMoveBack( gentity_t *ent, qboolean goingBack )
 			{ //eh, this is a filthy lie. (obviously it had to hit something or it wouldn't be in here, so we'll say it hit the world)
 				tr.entityNum = ENTITYNUM_WORLD;
 			}
-			thrownSaberTouch(ent, &g_entities[tr.entityNum], &tr);
+			thrownSaberTouchOP(ent, &g_entities[tr.entityNum], &tr);
 			return;
 		}
 	}
@@ -6480,7 +6481,7 @@ void saberReactivate(gentity_t *saberent, gentity_t *saberOwner)
 
 	SetSaberBoxSize(saberent);
 
-	saberent->touch = thrownSaberTouch;
+	saberent->touch = thrownSaberTouchOP;
 
 	saberent->s.weapon = WP_SABER;
 
@@ -7075,6 +7076,12 @@ void saberBackToOwner(gentity_t *saberent)
 
 void saberFirstThrown(gentity_t *saberent);
 
+void thrownSaberTouchOP (gentity_t *saberent, gentity_t *other, trace_t *trace) {
+	if (g_entities[saberent->r.ownerNum].client->ps.fd.forcePowerLevel[FP_SABERTHROW] < FORCE_LEVEL_3) {
+		thrownSaberTouch(saberent, other, trace);
+	}
+}
+
 void thrownSaberTouch (gentity_t *saberent, gentity_t *other, trace_t *trace)
 {
 	gentity_t *hitEnt = other;
@@ -7175,7 +7182,7 @@ void saberFirstThrown(gentity_t *saberent)
 			thrownSaberTouch(saberent, saberent, NULL);
 			goto runMin;
 		}
-		else if ((level.time - saberOwn->client->ps.saberDidThrowTime) > 6000)
+		else if ((level.time - saberOwn->client->ps.saberDidThrowTime) > 6000 && saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] < FORCE_LEVEL_3)
 		{ //if it's out longer than 6 seconds, return it
 			thrownSaberTouch(saberent, saberent, NULL);
 			goto runMin;
@@ -7197,7 +7204,7 @@ void saberFirstThrown(gentity_t *saberent)
 	VectorSubtract(saberOwn->client->ps.origin, saberent->r.currentOrigin, vSub);
 	vLen = VectorLength(vSub);
 
-	if (vLen >= (SABER_MAX_THROW_DISTANCE*saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW]))
+	if (vLen >= (SABER_MAX_THROW_DISTANCE*saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW]) && saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] < FORCE_LEVEL_3)
 	{
 		thrownSaberTouch(saberent, saberent, NULL);
 		goto runMin;
@@ -7225,13 +7232,17 @@ void saberFirstThrown(gentity_t *saberent)
 		if (saberOwn->client->ps.fd.forcePowerLevel[FP_SABERTHROW] >= FORCE_LEVEL_3)
 		{ //if highest saber throw rank, we can direct the saber toward players directly by looking at them
 			trap->Trace(&tr, traceFrom, NULL, NULL, traceTo, saberOwn->s.number, MASK_PLAYERSOLID, qfalse, 0, 0);
+			if (tr.entityNum != ENTITYNUM_NONE && (g_entities[tr.entityNum].s.eType == ET_PLAYER || g_entities[tr.entityNum].s.eType == ET_NPC)) {
+				VectorCopy(g_entities[tr.entityNum].r.currentOrigin, traceTo);
+			} else VectorCopy(tr.endpos, traceTo);
 		}
 		else
 		{
 			trap->Trace(&tr, traceFrom, NULL, NULL, traceTo, saberOwn->s.number, MASK_SOLID, qfalse, 0, 0);
+			VectorCopy(tr.endpos, traceTo);
 		}
-
-		VectorSubtract(tr.endpos, saberent->r.currentOrigin, dir);
+		
+		VectorSubtract(traceTo, saberent->r.currentOrigin, dir);
 
 		VectorNormalize(dir);
 
@@ -8668,7 +8679,7 @@ nextStep:
 
 				saberent->s.genericenemyindex = self->s.number+1024;
 
-				saberent->touch = thrownSaberTouch;
+				saberent->touch = thrownSaberTouchOP;
 
 				saberent->s.weapon = WP_SABER;
 
