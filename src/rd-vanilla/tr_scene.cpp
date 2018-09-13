@@ -232,13 +232,6 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 		return;
 	}
 
-#ifdef _DEBUG
-	if (ent->reType == RT_MODEL)
-	{
-		assert(ent->hModel || ent->ghoul2 || ent->customShader);
-	}
-#endif
-
 	if ( (int)ent->reType < 0 || ent->reType >= RT_MAX_REF_ENTITY_TYPE ) {
 		Com_Error( ERR_DROP, "RE_AddRefEntityToScene: bad reType %i", ent->reType );
 	}

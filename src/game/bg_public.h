@@ -514,7 +514,6 @@ typedef struct pmove_s {
 
 	int			gametype;
 
-	int			debugMelee;
 	int			stepSlideFix;
 	int			noSpecMove;
 

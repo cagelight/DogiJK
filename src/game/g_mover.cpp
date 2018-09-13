@@ -490,7 +490,7 @@ void G_MoverTeam( gentity_t *ent ) {
 	for ( part = ent ; part ; part = part->teamchain ) {
 		// call the reached function if time is at or past end point
 		if ( part->s.pos.trType == TR_LINEAR_STOP ||
-			part->s.pos.trType == TR_NONLINEAR_STOP) {
+			part->s.pos.trType == TR_COSINE_STOP) {
 			if ( level.time >= part->s.pos.trTime + part->s.pos.trDuration ) {
 				if ( part->reached ) {
 					part->reached( part );
@@ -595,7 +595,7 @@ void SetMoverState( gentity_t *ent, moverState_t moverState, int time ) {
 		}
 		else
 		{
-			ent->s.pos.trType = TR_NONLINEAR_STOP;
+			ent->s.pos.trType = TR_COSINE_STOP;
 		}
 		//ent->s.eFlags &= ~EF_BLOCKED_MOVER;
 		break;
@@ -610,7 +610,7 @@ void SetMoverState( gentity_t *ent, moverState_t moverState, int time ) {
 		}
 		else
 		{
-			ent->s.pos.trType = TR_NONLINEAR_STOP;
+			ent->s.pos.trType = TR_COSINE_STOP;
 		}
 		//ent->s.eFlags &= ~EF_BLOCKED_MOVER;
 		break;

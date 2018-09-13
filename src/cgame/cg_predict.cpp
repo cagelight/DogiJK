@@ -1243,7 +1243,6 @@ void CG_PredictPlayerState( void ) {
 		cg_pmove.animations = bgAllAnims[pEnt->localAnimIndex].anims;
 		cg_pmove.gametype = cgs.gametype;
 
-		cg_pmove.debugMelee = cgs.debugMelee;
 		cg_pmove.stepSlideFix = cgs.stepSlideFix;
 		cg_pmove.noSpecMove = cgs.noSpecMove;
 

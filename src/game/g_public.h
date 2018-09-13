@@ -212,7 +212,7 @@ typedef struct Vehicle_s Vehicle_t;
 
 // the server looks at a sharedEntity, which is the start of the game's gentity_t structure
 //mod authors should not touch this struct
-typedef struct sharedEntity_s {
+struct sharedEntity_t {
 	entityState_t	s;				// communicated by server to clients
 	playerState_t	*playerState;	//needs to be in the gentity for bg entity access
 									//if you want to actually see the contents I guess
@@ -252,7 +252,7 @@ typedef struct sharedEntity_s {
 	int				failedWaypointCheckTime;
 
 	int				next_roff_time; //rww - npc's need to know when they're getting roff'd
-} sharedEntity_t;
+};
 
 #if !defined(_GAME) && defined(__cplusplus)
 class CSequencer;

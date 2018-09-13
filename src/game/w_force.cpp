@@ -710,23 +710,20 @@ qboolean WP_ForcePowerUsable( gentity_t *self, forcePowers_t forcePower )
 		return qfalse;
 	}
 
-	if ( g_debugMelee.integer )
-	{
-		if ( (self->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
-		{//no offensive force powers when stuck to wall
-			switch ( forcePower )
-			{
-			case FP_GRIP:
-			case FP_LIGHTNING:
-			case FP_DRAIN:
-			case FP_SABER_OFFENSE:
-			case FP_SABER_DEFENSE:
-			case FP_SABERTHROW:
-				return qfalse;
-				break;
-			default:
-				break;
-			}
+	if ( (self->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
+	{//no offensive force powers when stuck to wall
+		switch ( forcePower )
+		{
+		case FP_GRIP:
+		case FP_LIGHTNING:
+		case FP_DRAIN:
+		case FP_SABER_OFFENSE:
+		case FP_SABER_DEFENSE:
+		case FP_SABERTHROW:
+			return qfalse;
+			break;
+		default:
+			break;
 		}
 	}
 
@@ -3355,14 +3352,11 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				qboolean canPullWeapon = qtrue;
 				float dirLen = 0;
 
-				if ( g_debugMelee.integer )
-				{
-					if ( (push_list[x]->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
-					{//no resistance if stuck to wall
-						//push/pull them off the wall
-						otherPushPower = 0;
-						G_LetGoOfWall( push_list[x] );
-					}
+				if ( (push_list[x]->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
+				{//no resistance if stuck to wall
+					//push/pull them off the wall
+					otherPushPower = 0;
+					G_LetGoOfWall( push_list[x] );
 				}
 
 				pushPowerMod = pushPower;

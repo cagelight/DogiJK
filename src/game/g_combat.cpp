@@ -5530,12 +5530,10 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 		}
 		else
 		{
-			if ( g_debugMelee.integer )
-			{//getting hurt makes you let go of the wall
-				if ( targ->client && (targ->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
-				{
-					G_LetGoOfWall( targ );
-				}
+			//getting hurt makes you let go of the wall
+			if ( targ->client && (targ->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
+			{
+				G_LetGoOfWall( targ );
 			}
 			if ( targ->pain )
 			{

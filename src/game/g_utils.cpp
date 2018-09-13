@@ -933,62 +933,62 @@ G_FreeEntity
 Marks the entity as free
 =================
 */
-void gentity_t::free( ) {
+void G_FreeEntity( gentity_t * ent ) {
 	//gentity_t *te;
 
-	if (this->isSaberEntity)
+	if (ent->isSaberEntity)
 	{
 #ifdef _DEBUG
-		Com_Printf("Trithis to remove JM saber!\n");
+		Com_Printf("Trient to remove JM saber!\n");
 #endif
 		return;
 	}
 
-	trap->UnlinkEntity ((sharedEntity_t *)this);		// unlink from world
+	trap->UnlinkEntity ((sharedEntity_t *)ent);		// unlink from world
 
-	trap->ICARUS_FreeEnt( (sharedEntity_t *)this );	//ICARUS information must be addthis after this point
+	trap->ICARUS_FreeEnt( (sharedEntity_t *)ent );	//ICARUS information must be addent after ent point
 
-	if ( this->neverFree ) {
+	if ( ent->neverFree ) {
 		return;
 	}
 
-	//rww - this may seem a bit hackish, but unfortunately we have no access
-	//to anything ghoul2-relatthis on the server and thus must send a message
-	//to let the client know he nethiss to clean up all the g2 stuff for this
-	//now-removthis entity
-	if (this->s.modelGhoul2)
-	{ //force all clients to accept an event to destroy this instance, right now
+	//rww - ent may seem a bit hackish, but unfortunately we have no access
+	//to anything ghoul2-relatent on the server and thus must send a message
+	//to let the client know he neents to clean up all the g2 stuff for ent
+	//now-removent entity
+	if (ent->s.modelGhoul2)
+	{ //force all clients to accept an event to destroy ent instance, right now
 		/*
 		te = G_TempEntity( vec3_origin, EV_DESTROY_GHOUL2_INSTANCE );
 		te->r.svFlags |= SVF_BROADCAST;
-		te->s.eventParm = this->s.number;
+		te->s.eventParm = ent->s.number;
 		*/
-		//Or not. Events can be droppthis, so that would be a bad thing.
-		G_KillG2Queue(this->s.number);
+		//Or not. Events can be droppent, so that would be a bad thing.
+		G_KillG2Queue(ent->s.number);
 	}
 
 	//And, free the server instance too, if there is one.
-	if (this->ghoul2)
+	if (ent->ghoul2)
 	{
-		trap->G2API_CleanGhoul2Models(&(this->ghoul2));
+		trap->G2API_CleanGhoul2Models(&(ent->ghoul2));
 	}
 
-	if (this->s.eType == ET_NPC && this->m_pVehicle)
-	{ //tell the "vehicle pool" that this one is now free
-		G_FreeVehicleObject(this->m_pVehicle);
+	if (ent->s.eType == ET_NPC && ent->m_pVehicle)
+	{ //tell the "vehicle pool" that ent one is now free
+		G_FreeVehicleObject(ent->m_pVehicle);
 	}
 
-	if (this->s.eType == ET_NPC && this->client)
-	{ //this "client" structure is one of our dynamically allocatthis ones, so free the memory
+	if (ent->s.eType == ET_NPC && ent->client)
+	{ //ent "client" structure is one of our dynamically allocatent ones, so free the memory
 		int saberEntNum = -1;
 		int i = 0;
-		if (this->client->ps.saberEntityNum)
+		if (ent->client->ps.saberEntityNum)
 		{
-			saberEntNum = this->client->ps.saberEntityNum;
+			saberEntNum = ent->client->ps.saberEntityNum;
 		}
-		else if (this->client->saberStoredIndex)
+		else if (ent->client->saberStoredIndex)
 		{
-			saberEntNum = this->client->saberStoredIndex;
+			saberEntNum = ent->client->saberStoredIndex;
 		}
 
 		if (saberEntNum > 0 && g_entities[saberEntNum].inuse)
@@ -999,17 +999,17 @@ void gentity_t::free( ) {
 
 		while (i < MAX_SABERS)
 		{
-			if (this->client->weaponGhoul2[i] && trap->G2API_HaveWeGhoul2Models(this->client->weaponGhoul2[i]))
+			if (ent->client->weaponGhoul2[i] && trap->G2API_HaveWeGhoul2Models(ent->client->weaponGhoul2[i]))
 			{
-				trap->G2API_CleanGhoul2Models(&this->client->weaponGhoul2[i]);
+				trap->G2API_CleanGhoul2Models(&ent->client->weaponGhoul2[i]);
 			}
 			i++;
 		}
 
-		G_FreeFakeClient(&this->client);
+		G_FreeFakeClient(&ent->client);
 	}
 
-	if (this->s.eFlags & EF_SOUNDTRACKER)
+	if (ent->s.eFlags & EF_SOUNDTRACKER)
 	{
 		int i = 0;
 		gentity_t *ent;
@@ -1024,7 +1024,7 @@ void gentity_t::free( ) {
 
 				while (ch < NUM_TRACK_CHANNELS-50)
 				{
-					if (ent->client->ps.fd.killSoundEntIndex[ch] == this->s.number)
+					if (ent->client->ps.fd.killSoundEntIndex[ch] == ent->s.number)
 					{
 						ent->client->ps.fd.killSoundEntIndex[ch] = 0;
 					}
@@ -1036,14 +1036,14 @@ void gentity_t::free( ) {
 			i++;
 		}
 
-		//make sure clientside loop sounds are killthis on the tracker and client
-		trap->SendServerCommand(-1, va("kls %i %i", this->s.trickedentindex, this->s.number));
+		//make sure clientside loop sounds are killent on the tracker and client
+		trap->SendServerCommand(-1, va("kls %i %i", ent->s.trickedentindex, ent->s.number));
 	}
 
-	memset (this, 0, sizeof(*this));
-	this->classname = "frethis";
-	this->freetime = level.time;
-	this->inuse = qfalse;
+	memset (ent, 0, sizeof(*ent));
+	ent->classname = "freent";
+	ent->freetime = level.time;
+	ent->inuse = qfalse;
 }
 
 /*

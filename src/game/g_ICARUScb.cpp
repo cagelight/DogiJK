@@ -859,7 +859,7 @@ void Q3_Lerp2Pos( int taskID, int entID, vec3_t origin, vec3_t angles, float dur
 		}
 		else
 		{
-			ent->s.apos.trType = TR_NONLINEAR_STOP;
+			ent->s.apos.trType = TR_COSINE_STOP;
 		}
 		ent->s.apos.trDuration = duration;
 
@@ -929,7 +929,7 @@ void Q3_Lerp2Angles( int taskID, int entID, vec3_t angles, float duration )
 	}
 	else
 	{
-		ent->s.apos.trType = TR_NONLINEAR_STOP;
+		ent->s.apos.trType = TR_COSINE_STOP;
 	}
 
 	ent->s.apos.trTime = level.time;

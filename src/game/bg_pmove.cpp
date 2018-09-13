@@ -1618,28 +1618,27 @@ qboolean PM_AdjustAngleForWallJump( playerState_t *ps, usercmd_t *ucmd, qboolean
 			return qfalse;
 			break;
 		}
-		if ( pm->debugMelee )
-		{//uber-skillz
-			if ( ucmd->upmove > 0 )
-			{//hold on until you let go manually
-				if ( BG_InReboundHold( ps->legsAnim ) )
-				{//keep holding
-					if ( ps->legsTimer < 150 )
-					{
-						ps->legsTimer = 150;
-					}
+		
+		if ( ucmd->upmove > 0 )
+		{//hold on until you let go manually
+			if ( BG_InReboundHold( ps->legsAnim ) )
+			{//keep holding
+				if ( ps->legsTimer < 150 )
+				{
+					ps->legsTimer = 150;
 				}
-				else
-				{//if got to hold part of anim, play hold anim
-					if ( ps->legsTimer <= 300 )
-					{
-						ps->saberHolstered = 2;
-						PM_SetAnim( SETANIM_BOTH, BOTH_FORCEWALLRELEASE_FORWARD+(ps->legsAnim-BOTH_FORCEWALLHOLD_FORWARD), SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
-						ps->legsTimer = ps->torsoTimer = 150;
-					}
+			}
+			else
+			{//if got to hold part of anim, play hold anim
+				if ( ps->legsTimer <= 300 )
+				{
+					ps->saberHolstered = 2;
+					PM_SetAnim( SETANIM_BOTH, BOTH_FORCEWALLRELEASE_FORWARD+(ps->legsAnim-BOTH_FORCEWALLHOLD_FORWARD), SETANIM_FLAG_OVERRIDE|SETANIM_FLAG_HOLD );
+					ps->legsTimer = ps->torsoTimer = 150;
 				}
 			}
 		}
+			
 		VectorMA( ps->origin, dist, checkDir, traceTo );
 		pm->trace( &trace, ps->origin, mins, maxs, traceTo, ps->clientNum, MASK_PLAYERSOLID );
 		if ( //ucmd->upmove <= 0 &&
@@ -7467,8 +7466,7 @@ static void PM_Weapon( void )
 		//Alternate between punches and use the anim length as weapon time.
 		if (!pm->ps->m_iVehicleNum)
 		{ //if riding a vehicle don't do this stuff at all
-			if (pm->debugMelee &&
-				(pm->cmd.buttons & BUTTON_ATTACK) &&
+			if ((pm->cmd.buttons & BUTTON_ATTACK) &&
 				(pm->cmd.buttons & BUTTON_ALT_ATTACK))
 			{ //ok, grapple time
 #if 0 //eh, I want to try turning the saber off, but can't do that reliably for prediction..
@@ -7515,8 +7513,7 @@ static void PM_Weapon( void )
 	#endif
 #endif
 			}
-			else if (pm->debugMelee &&
-				(pm->cmd.buttons & BUTTON_ALT_ATTACK))
+			else if (pm->cmd.buttons & BUTTON_ALT_ATTACK)
 			{ //kicks
 				if (!BG_KickingAnim(pm->ps->torsoAnim) &&
 					!BG_KickingAnim(pm->ps->legsAnim))

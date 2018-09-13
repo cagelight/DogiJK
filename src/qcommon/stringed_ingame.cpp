@@ -754,11 +754,18 @@ void CStringEdPackage::AddEntry( const char *psLocalReference )
 	// the reason I don't just assign it anyway is because the optional .STE override files don't contain flags,
 	//	and therefore would wipe out the parsed flags of the .STR file...
 	//
-	mapStringEntries_t::iterator itEntry = m_StringEntries.find( va("%s_%s",m_strCurrentFileRef_ParseOnly.c_str(), psLocalReference) );
+	
+	char const * lookup;
+	if (!strcmp("*", psLocalReference))
+		lookup = m_strCurrentFileRef_ParseOnly.c_str();
+	else
+		lookup = va("%s_%s",m_strCurrentFileRef_ParseOnly.c_str(), psLocalReference);
+	
+	mapStringEntries_t::iterator itEntry = m_StringEntries.find( lookup );
 	if (itEntry == m_StringEntries.end())
 	{
 		SE_Entry_t SE_Entry;
-		m_StringEntries[ va("%s_%s", m_strCurrentFileRef_ParseOnly.c_str(), psLocalReference) ] = SE_Entry;
+		m_StringEntries[ lookup ] = SE_Entry;
 	}
 	m_strCurrentEntryRef_ParseOnly = psLocalReference;
 }
@@ -788,7 +795,13 @@ const char *Leetify( const char *psString )
 
 void CStringEdPackage::SetString( const char *psLocalReference, const char *psNewString, SE_BOOL bEnglishDebug )
 {
-	mapStringEntries_t::iterator itEntry = m_StringEntries.find( va("%s_%s",m_strCurrentFileRef_ParseOnly.c_str(), psLocalReference) );
+	char const * lookup;
+	if (!strcmp("*", psLocalReference))
+		lookup = m_strCurrentFileRef_ParseOnly.c_str();
+	else
+		lookup = va("%s_%s",m_strCurrentFileRef_ParseOnly.c_str(), psLocalReference);
+	
+	mapStringEntries_t::iterator itEntry = m_StringEntries.find( lookup );
 	if (itEntry != m_StringEntries.end())
 	{
 		SE_Entry_t &Entry = (*itEntry).second;

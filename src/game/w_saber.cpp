@@ -7487,17 +7487,19 @@ static qboolean G_KickDownable(gentity_t *ent)
 		return qfalse;
 	}
 
+	/*
 	if (ent->client->ps.weaponTime <= 0 &&
 		ent->client->ps.weapon == WP_SABER &&
 		ent->client->ps.groundEntityNum != ENTITYNUM_NONE)
 	{
 		return qfalse;
 	}
+	*/
 
 	return qtrue;
 }
 
-static void G_TossTheMofo(gentity_t *ent, vec3_t tossDir, float tossStr)
+void G_TossTheMofo(gentity_t *ent, vec3_t tossDir, float tossStr)
 {
 	if (!ent->inuse || !ent->client)
 	{ //no good
@@ -7636,7 +7638,7 @@ static gentity_t *G_KickTrace( gentity_t *ent, vec3_t kickDir, float kickDist, v
 	return (hitEnt);
 }
 
-static void G_KickSomeMofos(gentity_t *ent)
+void G_KickSomeMofos(gentity_t *ent)
 {
 	vec3_t	kickDir, kickEnd, fwdAngs;
 	float animLength = BG_AnimLength( ent->localAnimIndex, (animNumber_t)ent->client->ps.legsAnim );

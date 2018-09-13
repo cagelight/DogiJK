@@ -69,6 +69,7 @@ gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboo
 
 extern void Rancor_SetBolts( gentity_t *self );
 extern void Wampa_SetBolts( gentity_t *self );
+extern void Howler_SetBolts( gentity_t *self );
 
 #define	NSF_DROP_TO_FLOOR	16
 
@@ -269,6 +270,10 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 		ent->flags |= FL_NO_KNOCKBACK;
 		ent->pain = NPC_Rancor_Pain;
 		ent->health *= 4;
+	}
+	if ( ent->client->NPC_class == CLASS_HOWLER )
+	{
+		Howler_SetBolts( ent );
 	}
 	if ( !Q_stricmp( "Yoda", ent->NPC_type ) )
 	{//FIXME: extern this into NPC.cfg?

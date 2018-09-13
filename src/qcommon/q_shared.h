@@ -1550,6 +1550,7 @@ typedef enum {
 	TR_LINEAR_STOP,
 	TR_NONLINEAR_STOP,
 	TR_SINE,					// value = base + sin( time / duration ) * delta
+	TR_COSINE_STOP,
 	TR_GRAVITY
 } trType_t;
 

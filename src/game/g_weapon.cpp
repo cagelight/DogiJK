@@ -3478,8 +3478,8 @@ void WP_FireStunBaton( gentity_t *ent, qboolean alt_fire )
 //---------------------------------------------------------
 // FireMelee
 //---------------------------------------------------------
-void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
-{
+
+static void WP_FireMeleePunch( gentity_t * ent ) {
 	gentity_t	*tr_ent;
 	trace_t		tr;
 	vec3_t		mins, maxs, end;
@@ -3559,6 +3559,22 @@ void WP_FireMelee( gentity_t *ent, qboolean alt_fire )
 
 			G_Damage( tr_ent, ent, ent, forward, tr.endpos, dmg, DAMAGE_NO_ARMOR, MOD_MELEE );
 		}
+	}
+}
+
+extern void G_KickSomeMofos(gentity_t *ent);
+static void WP_FireMeleeKick( gentity_t * ent ) {
+	if (BG_KickingAnim(ent->client->ps.legsAnim))
+	{ //do some kick traces and stuff if we're in the appropriate anim
+		G_KickSomeMofos(ent);
+	}
+}
+
+void WP_FireMelee( gentity_t *ent, qboolean alt_fire ) {
+	if (alt_fire) {
+		WP_FireMeleeKick(ent);
+	} else {
+		WP_FireMeleePunch(ent);
 	}
 }
 

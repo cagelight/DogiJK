@@ -2250,6 +2250,13 @@ void BG_EvaluateTrajectory( const trajectory_t *tr, int atTime, vec3_t result ) 
 		VectorMA( tr->trBase, deltaTime, tr->trDelta, result );
 		result[2] -= 0.5 * DEFAULT_GRAVITY * deltaTime * deltaTime;		// FIXME: local gravity...
 		break;
+	case TR_COSINE_STOP:
+		if (atTime > tr->trTime + tr->trDuration) atTime = tr->trTime + tr->trDuration;
+		deltaTime = ((atTime - tr->trTime) * M_PI) / tr->trDuration;
+		if (deltaTime < 0) deltaTime = 0;
+		phase = cos(deltaTime + M_PI) / 2 + 0.5f;
+		VectorMA( tr->trBase, phase * tr->trDuration * 0.001, tr->trDelta, result );
+		break;
 	default:
 #ifdef _GAME
 		Com_Error( ERR_DROP, "BG_EvaluateTrajectory: [ GAME] unknown trType: %i", tr->trType );

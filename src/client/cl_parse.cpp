@@ -541,36 +541,6 @@ void CL_ParseGamestate( msg_t *msg ) {
 				Com_Printf("%3i: %d: %s\n", start, i, s);
 			}
 
-			/*
-			if (i == CS_SERVERINFO)
-			{ //get the special value here
-				char *f = strstr(s, "g_debugMelee");
-				if (f)
-				{
-					while (*f && *f != '\\')
-					{ //find the \ after it
-						f++;
-					}
-					if (*f == '\\')
-					{ //got it
-						int i = 0;
-
-						f++;
-						while (*f && *f != '\\' && i < 128)
-						{
-							hiddenCvarVal[i] = *f;
-							i++;
-							f++;
-						}
-						hiddenCvarVal[i] = 0;
-
-						//resume here
-						s = f;
-					}
-				}
-			}
-			*/
-
 			len = strlen( s );
 
 			if ( len + 1 + cl.gameState.dataCount > MAX_GAMESTATE_CHARS ) {

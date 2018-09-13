@@ -31,8 +31,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_vehicles.h"
 #include "g_public.h"
 
-typedef struct gentity_s gentity_t;
-typedef struct gclient_s gclient_t;
+struct gentity_t;
+struct gclient_t;
 
 //npc stuff
 #include "b_public.h"
@@ -174,50 +174,9 @@ extern void *g2SaberInstance;
 extern qboolean gEscaping;
 extern int gEscapeTime;
 
-struct gentity_s {
-	
-	void free();
-	
-	//rww - entstate must be first, to correspond with the bg shared entity structure
-	entityState_t	s;				// communicated by server to clients
-	playerState_t	*playerState;	//ptr to playerstate if applicable (for bg ents)
-	Vehicle_t		*m_pVehicle; //vehicle data
-	void			*ghoul2; //g2 instance
-	int				localAnimIndex; //index locally (game/cgame) to anim data for this skel
-	vec3_t			modelScale; //needed for g2 collision
+struct gentity_t : public sharedEntity_t {
 
-	//From here up must be the same as centity_t/bgEntity_t
-
-	entityShared_t	r;				// shared by both the server system and game
-
-	//rww - these are shared icarus things. They must be in this order as well in relation to the entityshared structure.
-	int				taskID[NUM_TIDS];
-	parms_t			*parms;
-	char			*behaviorSet[NUM_BSETS];
-	char			*script_targetname;
-	int				delayScriptTime;
-	char			*fullName;
-
-	//rww - targetname and classname are now shared as well. ICARUS needs access to them.
-	char			*targetname;
-	char			*classname;			// set in QuakeEd
-
-	//rww - and yet more things to share. This is because the nav code is in the exe because it's all C++.
-	int				waypoint;			//Set once per frame, if you've moved, and if someone asks
-	int				lastWaypoint;		//To make sure you don't double-back
-	int				lastValidWaypoint;	//ALWAYS valid -used for tracking someone you lost
-	int				noWaypointTime;		//Debouncer - so don't keep checking every waypoint in existance every frame that you can't find one
-	int				combatPoint;
-	int				failedWaypoints[MAX_FAILED_NODES];
-	int				failedWaypointCheckTime;
-
-	int				next_roff_time; //rww - npc's need to know when they're getting roff'd
-
-	// DO NOT MODIFY ANYTHING ABOVE THIS, THE SERVER
-	// EXPECTS THE FIELDS IN THAT ORDER!
-	//================================
-
-	struct gclient_s	*client;			// NULL if not a client
+	gclient_t	*client;			// NULL if not a client
 
 	gNPC_t		*NPC;//Only allocated if the entity becomes an NPC
 	int			cantHitEnemyCounter;//HACK - Makes them look for another enemy on the same team if the one they're after can't be hit
@@ -409,7 +368,7 @@ struct gentity_s {
 	int			useDebounceTime;	// for cultist_destroyer
 };
 
-inline void	G_FreeEntity( gentity_t *e ) { e->free(); }
+void G_FreeEntity( gentity_t *e );
 
 #define DAMAGEREDIRECT_HEAD		1
 #define DAMAGEREDIRECT_RLEG		2
@@ -582,13 +541,16 @@ typedef struct renderInfo_s
 	int			footRBolt;
 	int			footLBolt;
 	int			motionBolt;
+	
+	int			genericBolt1;
+	int			genericBolt2;
 
 	int			boltValidityTime;
 } renderInfo_t;
 
 // this structure is cleared on each ClientSpawn(),
 // except for 'client->pers' and 'client->sess'
-struct gclient_s {
+struct gclient_t {
 	// ps MUST be the first element, because the server expects it
 	playerState_t	ps;				// communicated by server to clients
 
@@ -880,9 +842,9 @@ typedef struct {
 } locationData_t;
 
 typedef struct level_locals_s {
-	struct gclient_s	*clients;		// [maxclients]
+	gclient_t	*clients;		// [maxclients]
 
-	struct gentity_s	*gentities;
+	gentity_t	*gentities;
 	int			gentitySize;
 	int			num_entities;		// current number, <= MAX_GENTITIES
 

@@ -1545,7 +1545,6 @@ typedef struct cgs_s {
 	int				siegeTeamSwitch;
 	int				showDuelHealths;
 	gametype_t		gametype;
-	int				debugMelee;
 	int				stepSlideFix;
 	int				noSpecMove;
 	int				dmflags;

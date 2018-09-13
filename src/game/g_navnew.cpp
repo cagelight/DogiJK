@@ -884,3 +884,24 @@ failed:
 	goto finish;
 	*/
 }
+
+qboolean NAV_DirSafe( gentity_t *self, vec3_t dir, float dist )
+{
+	vec3_t	mins, end;
+	trace_t	trace;
+
+	VectorMA( self->r.currentOrigin, dist, dir, end );
+
+	//Offset the step height
+	VectorSet( mins, self->r.mins[0], self->r.mins[1], self->r.mins[2] + STEPSIZE );
+
+	trap->Trace( &trace, self->r.currentOrigin, mins, self->r.maxs, end, self->s.number, CONTENTS_BOTCLIP, 0, 0, 0 );
+
+	//Do a simple check
+	if ( ( trace.allsolid == qfalse ) && ( trace.startsolid == qfalse ) && ( trace.fraction == 1.0f ) )
+	{
+		return qtrue;
+	}
+
+	return qfalse;
+}
