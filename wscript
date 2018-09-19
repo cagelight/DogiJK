@@ -87,10 +87,10 @@ def build(bld):
 	
 	# BOTLIB
 	if build_server or build_client:
-		botlib_files = bld.path.ant_glob('src/botlib/*.cpp')
-		botlib_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
-		botlib_files += bld.path.ant_glob('src/qcommon/q_math.cpp')
-		botlib_files += bld.path.ant_glob('src/qcommon/q_string.cpp')
+		botlib_files = bld.path.ant_glob('src/botlib/*.cc')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_math.cc')
+		botlib_files += bld.path.ant_glob('src/qcommon/q_string.cc')
 		
 		botlib = bld (
 			features = 'cxx cxxstlib',
@@ -101,25 +101,25 @@ def build(bld):
 		)
 	
 	clsv_files = []
-	clsv_files += bld.path.ant_glob('src/qcommon/*.cpp')
-	clsv_files += bld.path.ant_glob('src/icarus/*.cpp')
-	clsv_files += bld.path.ant_glob('src/server/*.cpp')
-	clsv_files += bld.path.ant_glob('src/server/NPCNav/*.cpp')
-	clsv_files += bld.path.ant_glob('src/mp3code/*.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/snapvector.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/sys_main.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/sys_event.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/sys_log.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/con_log.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/sys_unix.cpp')
-	clsv_files += bld.path.ant_glob('src/sys/con_tty.cpp')
+	clsv_files += bld.path.ant_glob('src/qcommon/*.cc')
+	clsv_files += bld.path.ant_glob('src/icarus/*.cc')
+	clsv_files += bld.path.ant_glob('src/server/*.cc')
+	clsv_files += bld.path.ant_glob('src/server/NPCNav/*.cc')
+	clsv_files += bld.path.ant_glob('src/mp3code/*.cc')
+	clsv_files += bld.path.ant_glob('src/sys/snapvector.cc')
+	clsv_files += bld.path.ant_glob('src/sys/sys_main.cc')
+	clsv_files += bld.path.ant_glob('src/sys/sys_event.cc')
+	clsv_files += bld.path.ant_glob('src/sys/sys_log.cc')
+	clsv_files += bld.path.ant_glob('src/sys/con_log.cc')
+	clsv_files += bld.path.ant_glob('src/sys/sys_unix.cc')
+	clsv_files += bld.path.ant_glob('src/sys/con_tty.cc')
 	
 	# SERVER
 	if build_server:
 	
-		server_files = bld.path.ant_glob('src/rd-dedicated/*.cpp')
-		server_files += bld.path.ant_glob('src/null/*.cpp')
-		server_files += bld.path.ant_glob('src/ghoul2/*.cpp')
+		server_files = bld.path.ant_glob('src/rd-dedicated/*.cc')
+		server_files += bld.path.ant_glob('src/null/*.cc')
+		server_files += bld.path.ant_glob('src/ghoul2/*.cc')
 
 		server = bld (
 			features = 'cxx cxxprogram',
@@ -136,10 +136,10 @@ def build(bld):
 	if build_client:
 	
 		client_files = []
-		client_files += bld.path.ant_glob('src/client/*.cpp')
-		client_files += bld.path.ant_glob('src/sdl/sdl_window.cpp')
-		client_files += bld.path.ant_glob('src/sdl/sdl_input.cpp')
-		client_files += bld.path.ant_glob('src/sdl/sdl_sound.cpp')
+		client_files += bld.path.ant_glob('src/client/*.cc')
+		client_files += bld.path.ant_glob('src/sdl/sdl_window.cc')
+		client_files += bld.path.ant_glob('src/sdl/sdl_input.cc')
+		client_files += bld.path.ant_glob('src/sdl/sdl_sound.cc')
 		
 		client = bld (
 			features = 'cxx cxxprogram',
@@ -151,13 +151,13 @@ def build(bld):
 			install_path = os.path.join(top, 'install')
 		)
 	
-	gcgui_files = bld.path.ant_glob('src/qcommon/q_math.cpp')
-	gcgui_files += bld.path.ant_glob('src/qcommon/q_string.cpp')
-	gcgui_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
+	gcgui_files = bld.path.ant_glob('src/qcommon/q_math.cc')
+	gcgui_files += bld.path.ant_glob('src/qcommon/q_string.cc')
+	gcgui_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
 	
 	# GAME
 	if build_game:
-		game_files = bld.path.ant_glob('src/game/*.cpp')
+		game_files = bld.path.ant_glob('src/game/*.cc')
 		
 		game = bld (
 			features = 'cxx cxxshlib',
@@ -176,13 +176,13 @@ def build(bld):
 	# CGAME
 	if build_cgame:
 		
-		cgame_files = bld.path.ant_glob('src/cgame/*.cpp')
-		cgame_files += bld.path.ant_glob('src/game/bg_*.cpp')
-		cgame_files += bld.path.ant_glob('src/game/AnimalNPC.cpp')
-		cgame_files += bld.path.ant_glob('src/game/FighterNPC.cpp')
-		cgame_files += bld.path.ant_glob('src/game/SpeederNPC.cpp')
-		cgame_files += bld.path.ant_glob('src/game/WalkerNPC.cpp')
-		cgame_files += bld.path.ant_glob('src/ui/ui_shared.cpp')
+		cgame_files = bld.path.ant_glob('src/cgame/*.cc')
+		cgame_files += bld.path.ant_glob('src/game/bg_*.cc')
+		cgame_files += bld.path.ant_glob('src/game/AnimalNPC.cc')
+		cgame_files += bld.path.ant_glob('src/game/FighterNPC.cc')
+		cgame_files += bld.path.ant_glob('src/game/SpeederNPC.cc')
+		cgame_files += bld.path.ant_glob('src/game/WalkerNPC.cc')
+		cgame_files += bld.path.ant_glob('src/ui/ui_shared.cc')
 		
 		cgame = bld (
 			features = 'cxx cxxshlib',
@@ -200,12 +200,12 @@ def build(bld):
 	# UI
 	if build_ui:
 	
-		ui_files = bld.path.ant_glob('src/ui/*.cpp')
-		ui_files += bld.path.ant_glob('src/game/bg_misc.cpp')
-		ui_files += bld.path.ant_glob('src/game/bg_saberLoad.cpp')
-		ui_files += bld.path.ant_glob('src/game/bg_saga.cpp')
-		ui_files += bld.path.ant_glob('src/game/bg_vehicleLoad.cpp')
-		ui_files += bld.path.ant_glob('src/game/bg_weapons.cpp')
+		ui_files = bld.path.ant_glob('src/ui/*.cc')
+		ui_files += bld.path.ant_glob('src/game/bg_misc.cc')
+		ui_files += bld.path.ant_glob('src/game/bg_saberLoad.cc')
+		ui_files += bld.path.ant_glob('src/game/bg_saga.cc')
+		ui_files += bld.path.ant_glob('src/game/bg_vehicleLoad.cc')
+		ui_files += bld.path.ant_glob('src/game/bg_weapons.cc')
 		
 		ui = bld (
 			features = 'cxx cxxshlib',
@@ -223,13 +223,13 @@ def build(bld):
 	# RD-VANILLA
 	if build_rdvan:
 	
-		rdvan_files = bld.path.ant_glob('src/rd-vanilla/*.cpp')
-		rdvan_files += bld.path.ant_glob('src/rd-common/*.cpp')
-		rdvan_files += bld.path.ant_glob('src/ghoul2/*.cpp')
-		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cpp')
-		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cpp')
-		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cpp')
-		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cpp')
+		rdvan_files = bld.path.ant_glob('src/rd-vanilla/*.cc')
+		rdvan_files += bld.path.ant_glob('src/rd-common/*.cc')
+		rdvan_files += bld.path.ant_glob('src/ghoul2/*.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cc')
 			
 		rdvan = bld (
 			features = 'cxx cxxshlib',
