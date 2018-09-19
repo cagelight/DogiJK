@@ -432,7 +432,7 @@ void WP_SpawnInitForcePowers( gentity_t *ent )
 	{
 		if (ent->client->ps.fd.forcePowersActive & (1 << i))
 		{
-			WP_ForcePowerStop(ent, i);
+			WP_ForcePowerStop(ent, (forcePowers_t) i);
 		}
 
 		i++;
@@ -2507,8 +2507,8 @@ qboolean ForceTelepathyCheckDirectNPCTarget( gentity_t *self, trace_t *tr, qbool
 						traceEnt->genericValue2 = traceEnt->client->enemyTeam;
 						traceEnt->genericValue3 = traceEnt->s.teamowner;
 						//set the new values
-						traceEnt->client->playerTeam = newPlayerTeam;
-						traceEnt->client->enemyTeam = newEnemyTeam;
+						traceEnt->client->playerTeam = (npcteam_t) newPlayerTeam;
+						traceEnt->client->enemyTeam = (npcteam_t) newEnemyTeam;
 						traceEnt->s.teamowner = newPlayerTeam;
 						//FIXME: need a *charmed* timer on this...?  Or do TEAM_PLAYERS assume that "confusion" means they should switch to team_enemy when done?
 						traceEnt->NPC->charmedTime = level.time + mindTrickTime[self->client->ps.fd.forcePowerLevel[FP_TELEPATHY]];
@@ -2812,7 +2812,7 @@ qboolean CanCounterThrow(gentity_t *self, gentity_t *thrower, qboolean pull)
 		powerUse = FP_PUSH;
 	}
 
-	if ( !WP_ForcePowerUsable( self, powerUse ) )
+	if ( !WP_ForcePowerUsable( self, (forcePowers_t) powerUse ) )
 	{
 		return 0;
 	}
@@ -2968,7 +2968,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 		powerUse = FP_PUSH;
 	}
 
-	if ( !WP_ForcePowerUsable( self, powerUse ) )
+	if ( !WP_ForcePowerUsable( self, (forcePowers_t) powerUse ) )
 	{
 		return;
 	}
@@ -2987,7 +2987,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 		return;
 	}
 
-	WP_ForcePowerStart( self, powerUse, 0 );
+	WP_ForcePowerStart( self, (forcePowers_t) powerUse, 0 );
 
 	//make sure this plays and that you cannot press fire for about 1 second after this
 	if ( pull )
@@ -3149,7 +3149,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				vectoangles(a, a);
 
 				if (ent->client && !InFieldOfVision(self->client->ps.viewangles, visionArc, a) &&
-					ForcePowerUsableOn(self, ent, powerUse))
+					ForcePowerUsableOn(self, ent, (forcePowers_t) powerUse))
 				{ //only bother with arc rules if the victim is a client
 					entityList[e] = ENTITYNUM_NONE;
 				}
@@ -4761,7 +4761,7 @@ void HolocronUpdate(gentity_t *self)
 
 			if ((self->client->ps.fd.forcePowersActive & (1 << i)) && i != FP_LEVITATION && i != FP_SABER_OFFENSE)
 			{
-				WP_ForcePowerStop(self, i);
+				WP_ForcePowerStop(self, (forcePowers_t) i);
 			}
 
 			if (i == FP_LEVITATION)
@@ -4862,7 +4862,7 @@ void JediMasterUpdate(gentity_t *self)
 
 			if ((self->client->ps.fd.forcePowersActive & (1 << i)) && i != FP_LEVITATION)
 			{
-				WP_ForcePowerStop(self, i);
+				WP_ForcePowerStop(self, (forcePowers_t) i);
 			}
 
 			if (i == FP_LEVITATION)
@@ -5149,7 +5149,7 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		{
 			if ((self->client->ps.fd.forcePowersActive & (1 << i)) && i != FP_LEVITATION)
 			{
-				WP_ForcePowerStop(self, i);
+				WP_ForcePowerStop(self, (forcePowers_t) i);
 			}
 
 			i++;
@@ -5176,9 +5176,9 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 		while (i < NUM_FORCE_POWERS)
 		{
 			if ((self->client->ps.fd.forcePowersActive & (1 << i)) && i != FP_LEVITATION &&
-				!BG_CanUseFPNow(level.gametype, &self->client->ps, level.time, i))
+				!BG_CanUseFPNow(level.gametype, &self->client->ps, level.time, (forcePowers_t) i))
 			{
-				WP_ForcePowerStop(self, i);
+				WP_ForcePowerStop(self, (forcePowers_t) i);
 			}
 
 			i++;
@@ -5221,7 +5221,7 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 			{
 				if (self->client->ps.fd.forcePowersActive & (1 << i))
 				{
-					WP_ForcePowerStop(self, i);
+					WP_ForcePowerStop(self, (forcePowers_t) i);
 				}
 				self->client->ps.fd.forcePowersKnown &= ~(1 << i);
 			}
@@ -5375,12 +5375,12 @@ void WP_ForcePowersUpdate( gentity_t *self, usercmd_t *ucmd )
 	}
 
 	if ( (ucmd->buttons & BUTTON_FORCEPOWER) &&
-		BG_CanUseFPNow(level.gametype, &self->client->ps, level.time, self->client->ps.fd.forcePowerSelected))
+		BG_CanUseFPNow(level.gametype, &self->client->ps, level.time, (forcePowers_t) self->client->ps.fd.forcePowerSelected))
 	{
 		if (self->client->ps.fd.forcePowerSelected == FP_LEVITATION)
 			ForceJumpCharge( self, ucmd );
 		else
-			WP_DoSpecificPower( self, ucmd, self->client->ps.fd.forcePowerSelected );
+			WP_DoSpecificPower( self, ucmd, (forcePowers_t) self->client->ps.fd.forcePowerSelected );
 	}
 	else
 	{

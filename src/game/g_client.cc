@@ -1952,7 +1952,7 @@ if desired.
 ============
 */
 
-qboolean G_SetSaber(gentity_t *ent, int saberNum, char *saberName, qboolean siegeOverride);
+qboolean G_SetSaber(gentity_t *ent, int saberNum, char const *saberName, qboolean siegeOverride);
 void G_ValidateSiegeClassForTeam(gentity_t *ent, int team);
 
 typedef struct userinfoValidate_s {
@@ -2645,7 +2645,7 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 
 			preSess = ent->client->sess.sessionTeam;
 			G_ReadSessionData( ent->client );
-			ent->client->sess.sessionTeam = preSess;
+			ent->client->sess.sessionTeam = (team_t) preSess;
 			G_WriteClientSessionData(ent->client);
 			if ( !ClientUserinfoChanged( clientNum ) )
 				return;
@@ -2685,7 +2685,7 @@ void ClientBegin( int clientNum, qboolean allowTeamReset ) {
 	{
 		if (ent->client->ps.fd.forcePowersActive & (1 << i))
 		{
-			WP_ForcePowerStop(ent, i);
+			WP_ForcePowerStop(ent, (forcePowers_t) i);
 		}
 		i++;
 	}
@@ -3809,18 +3809,18 @@ void ClientSpawn(gentity_t *ent) {
 	{ //Imperial (team1) team is allied with "enemy" NPCs in this mode
 		if (client->sess.sessionTeam == SIEGETEAM_TEAM1)
 		{
-			client->playerTeam = ent->s.teamowner = NPCTEAM_ENEMY;
+			ent->s.teamowner = client->playerTeam = NPCTEAM_ENEMY;
 			client->enemyTeam = NPCTEAM_PLAYER;
 		}
 		else
 		{
-			client->playerTeam = ent->s.teamowner = NPCTEAM_PLAYER;
+			ent->s.teamowner = client->playerTeam = NPCTEAM_PLAYER;
 			client->enemyTeam = NPCTEAM_ENEMY;
 		}
 	}
 	else
 	{
-		client->playerTeam = ent->s.teamowner = NPCTEAM_PLAYER;
+		ent->s.teamowner = client->playerTeam = NPCTEAM_PLAYER;
 		client->enemyTeam = NPCTEAM_ENEMY;
 	}
 
@@ -3928,7 +3928,7 @@ void ClientDisconnect( int clientNum ) {
 	{
 		if (ent->client->ps.fd.forcePowersActive & (1 << i))
 		{
-			WP_ForcePowerStop(ent, i);
+			WP_ForcePowerStop(ent, (forcePowers_t) i);
 		}
 		i++;
 	}

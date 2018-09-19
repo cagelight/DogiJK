@@ -510,7 +510,7 @@ void TossClientWeapon(gentity_t *self, vec3_t direction, float speed)
 	}
 
 	// find the item type for this weapon
-	item = BG_FindItemForWeapon( weapon );
+	item = BG_FindItemForWeapon( (weapon_t) weapon );
 
 	ammoSub = (self->client->ps.ammo[weaponData[weapon].ammoIndex] - bg_itemlist[BG_GetItemIndexByTag(weapon, IT_WEAPON)].quantity);
 
@@ -621,7 +621,7 @@ void TossClientItems( gentity_t *self ) {
 		gentity_t *te;
 
 		// find the item type for this weapon
-		item = BG_FindItemForWeapon( weapon );
+		item = BG_FindItemForWeapon( (weapon_t) weapon );
 
 		// tell all clients to remove the weapon model on this guy until he respawns
 		te = G_TempEntity( vec3_origin, EV_DESTROY_WEAPON_MODEL );
@@ -637,7 +637,7 @@ void TossClientItems( gentity_t *self ) {
 		angle = 45;
 		for ( i = 1 ; i < PW_NUM_POWERUPS ; i++ ) {
 			if ( self->client->ps.powerups[ i ] > level.time ) {
-				item = BG_FindItemForPowerup( i );
+				item = BG_FindItemForPowerup( (powerup_t) i );
 				if ( !item ) {
 					continue;
 				}

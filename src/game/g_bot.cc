@@ -977,7 +977,7 @@ static void G_AddBot( const char *name, float skill, const char *team, int delay
 		trap->GetUserinfo( clientNum, userinfo, sizeof( userinfo ) );
 
 		if ( bot->client->sess.sessionTeam == TEAM_SPECTATOR )
-			bot->client->sess.sessionTeam = preTeam;
+			bot->client->sess.sessionTeam = (team_t) preTeam;
 
 		if ( bot->client->sess.sessionTeam == TEAM_RED )
 			team = "Red";

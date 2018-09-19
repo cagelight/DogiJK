@@ -733,7 +733,7 @@ void NPC_Precache ( gentity_t *spawner )
 			}
 			//playerTeam = TranslateTeamName(value);
 			Com_sprintf(tk, sizeof(tk), "NPC%s", token);
-			playerTeam = GetIDForString( TeamTable, tk );
+			playerTeam = (npcteam_t) GetIDForString( TeamTable, tk );
 			continue;
 		}
 
@@ -2136,7 +2136,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					continue;
 				}
 				Com_sprintf(tk, sizeof(tk), "NPC%s", token);
-				NPC->client->playerTeam = NPC->s.teamowner = (team_t)GetIDForString( TeamTable, tk );//TranslateTeamName(value);
+				NPC->client->playerTeam = (npcteam_t) (NPC->s.teamowner = (team_t)GetIDForString( TeamTable, tk ));//TranslateTeamName(value);
 				continue;
 			}
 
@@ -2150,7 +2150,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 					continue;
 				}
 				Com_sprintf(tk, sizeof(tk), "NPC%s", token);
-				NPC->client->enemyTeam = GetIDForString( TeamTable, tk );//TranslateTeamName(value);
+				NPC->client->enemyTeam = (npcteam_t) GetIDForString( TeamTable, tk );//TranslateTeamName(value);
 				continue;
 			}
 

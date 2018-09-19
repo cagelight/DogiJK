@@ -162,7 +162,6 @@ def build(bld):
 		game = bld (
 			features = 'cxx cxxshlib',
 			target = 'jampgame',
-			cxxflags = ['-fpermissive'],
 			includes = ['src'],
 			source = gcgui_files + game_files,
 			uselib = ['PTHREAD'],

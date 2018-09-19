@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <map>
 #include <string>
 
+#include "blockstream.hh"
 #include "sequencer.hh"
 class CSequencer;
 

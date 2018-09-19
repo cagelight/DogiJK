@@ -1210,7 +1210,7 @@ void InitShooter( gentity_t *ent, int weapon ) {
 	ent->use = Use_Shooter;
 	ent->s.weapon = weapon;
 
-	RegisterItem( BG_FindItemForWeapon( weapon ) );
+	RegisterItem( BG_FindItemForWeapon( (weapon_t) weapon ) );
 
 	G_SetMovedir( ent->s.angles, ent->movedir );
 
@@ -3616,7 +3616,7 @@ void SP_misc_weapon_shooter( gentity_t *self )
 		self->s.weapon = self->client->ps.weapon = GetIDForString( WPTable, s );
 	}
 
-	RegisterItem(BG_FindItemForWeapon(self->s.weapon));
+	RegisterItem(BG_FindItemForWeapon((weapon_t) self->s.weapon));
 
 	//set where our muzzle is
 	VectorCopy( self->s.origin, self->client->renderInfo.muzzlePoint );

@@ -1312,7 +1312,7 @@ argCheck:
 
 extern qboolean WP_SaberStyleValidForSaber( saberInfo_t *saber1, saberInfo_t *saber2, int saberHolstered, int saberAnimLevel );
 extern qboolean WP_UseFirstValidSaberStyle( saberInfo_t *saber1, saberInfo_t *saber2, int saberHolstered, int *saberAnimLevel );
-qboolean G_SetSaber(gentity_t *ent, int saberNum, char *saberName, qboolean siegeOverride)
+qboolean G_SetSaber(gentity_t *ent, int saberNum, char const *saberName, qboolean siegeOverride)
 {
 	char truncSaberName[MAX_QPATH] = {0};
 
