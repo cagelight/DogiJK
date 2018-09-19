@@ -210,7 +210,6 @@ def build(bld):
 		ui = bld (
 			features = 'cxx cxxshlib',
 			target = 'ui',
-			cxxflags = ['-fpermissive'],
 			includes = ['src'],
 			source = gcgui_files + ui_files,
 			uselib = ['PTHREAD'],

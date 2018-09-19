@@ -5750,7 +5750,7 @@ void UI_SiegeSetCvarsForClass( siegeClass_t *scl ) {
 			}
 			else
 			{
-				gitem_t *item = BG_FindItemForWeapon( i );
+				gitem_t *item = BG_FindItemForWeapon( (weapon_t) i );
 				trap->Cvar_Set(va("ui_class_weapon%i", count), item->icon);
 				trap->Cvar_Set(va("ui_class_weapondesc%i", count), item->description);
 				count++;
@@ -5769,7 +5769,7 @@ void UI_SiegeSetCvarsForClass( siegeClass_t *scl ) {
 	{
 		if (scl->invenItems & (1<<i))
 		{
-			gitem_t *item = BG_FindItemForHoldable(i);
+			gitem_t *item = BG_FindItemForHoldable( (holdable_t) i);
 			trap->Cvar_Set(va("ui_class_item%i", count), item->icon);
 			trap->Cvar_Set(va("ui_class_itemdesc%i", count), item->description);
 			count++;
@@ -9649,7 +9649,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 	int		i;
 	int		j;
 
-	dirlist = malloc(DIR_LIST_SIZE);
+	dirlist = (char *)malloc(DIR_LIST_SIZE);
 	if ( !dirlist )
 	{
 		Com_Printf(S_COLOR_YELLOW "WARNING: Failed to allocate %u bytes of memory for player model "
@@ -9702,7 +9702,7 @@ static void UI_BuildPlayerModel_List( qboolean inGameLoad )
 			int                  iSkinParts=0;
 			char                *buffer = NULL;
 
-			buffer = malloc(filelen + 1);
+			buffer = (char *)malloc(filelen + 1);
 			if(!buffer)
 			{
 				trap->FS_Close( f );
@@ -10616,7 +10616,7 @@ Q_EXPORT intptr_t vmMain( int command, intptr_t arg0, intptr_t arg1, intptr_t ar
 		return Menus_AnyFullScreenVisible();
 
 	case UI_SET_ACTIVE_MENU:
-		UI_SetActiveMenu( arg0 );
+		UI_SetActiveMenu( (uiMenuCommand_t) arg0 );
 		return 0;
 
 	case UI_CONSOLE_COMMAND:
