@@ -45,39 +45,23 @@ ____________________________________________________________________________*/
 /*-----------------------------------------------------------*/
 /*---- huffman lookup tables ---*/
 /* endian dependent !!! */
-#ifdef Q3_LITTLE_ENDIAN
-typedef union
-{
-   int ptr;
-   struct
-   {
-      unsigned char signbits;
-      unsigned char x;
-      unsigned char y;
-      unsigned char purgebits;	// 0 = esc
+union HUFF_ELEMENT {
+	
+	constexpr HUFF_ELEMENT(unsigned int i) : ptr(i) {}
+	
+	int ptr;
+	struct
+	{
+		unsigned char signbits;
+		unsigned char x;
+		unsigned char y;
+		unsigned char purgebits;	// 0 = esc
 
-   }
-   b;
+	}
+	b;
 }
-HUFF_ELEMENT;
+;
 
-#else /* big endian machines */
-typedef union
-{
-   int ptr;			/* int must be 32 bits or more */
-   struct
-   {
-      unsigned char purgebits;	// 0 = esc
-
-      unsigned char y;
-      unsigned char x;
-      unsigned char signbits;
-   }
-   b;
-}
-HUFF_ELEMENT;
-
-#endif
 /*--------------------------------------------------------------*/
 typedef struct
 {
