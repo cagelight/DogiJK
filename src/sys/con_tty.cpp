@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <termios.h>
 #include <fcntl.h>
 #include <sys/time.h>
+#include <sys/ioctl.h>
 
 /*
 =============================================================
@@ -341,21 +342,25 @@ void CON_Init( void )
 CON_Input
 ==================
 */
+
+
+
 char *CON_Input( void )
 {
 	// we use this when sending back commands
 	static char text[MAX_EDIT_LINE];
-	int avail;
+	int avail, err;
 	char key;
 	field_t *history;
 	size_t UNUSED_VAR size;
 
 	if(ttycon_on)
 	{
-		avail = read(STDIN_FILENO, &key, 1);
-		if (avail != -1)
+		err = ioctl(STDIN_FILENO, FIONREAD, &avail);
+		if (err != -1 && avail > 0)
 		{
 			// we have something
+			read(STDIN_FILENO, &key, 1);
 			// backspace?
 			// NOTE TTimo testing a lot of values .. seems it's the only way to get it to work everywhere
 			if ((key == TTY_erase) || (key == 127) || (key == 8))
@@ -406,15 +411,17 @@ char *CON_Input( void )
 					CON_Show();
 					return NULL;
 				}
-				avail = read(STDIN_FILENO, &key, 1);
-				if (avail != -1)
+				err = ioctl(STDIN_FILENO, FIONREAD, &avail);
+				if (err != -1 && avail > 0)
 				{
+					read(STDIN_FILENO, &key, 1);
 					// VT 100 keys
 					if (key == '[' || key == 'O')
 					{
-						avail = read(STDIN_FILENO, &key, 1);
-						if (avail != -1)
+						err = ioctl(STDIN_FILENO, FIONREAD, &avail);
+						if (err != -1 && avail > 0)
 						{
+							read(STDIN_FILENO, &key, 1);
 							switch (key)
 							{
 								case 'A':
