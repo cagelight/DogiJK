@@ -1833,7 +1833,7 @@ saberMoveName_t PM_SaberJumpAttackMove2( void )
 	//just do it
 	if (pm->ps->fd.saberAnimLevel == SS_DUAL)
 	{
-		return PM_SaberDualJumpAttackMove();
+		return (saberMoveName_t) PM_SaberDualJumpAttackMove();
 	}
 	else
 	{
@@ -2450,7 +2450,7 @@ saberMoveName_t PM_SaberAttackForMovement(saberMoveName_t curmove)
 				pm->ps->forceHandExtend == HANDEXTEND_NONE &&
 				(pm->cmd.buttons & BUTTON_ATTACK))
 			{ //BACKFLIP ATTACK
-				newmove = PM_SaberBackflipAttackMove();
+				newmove = (saberMoveName_t) PM_SaberBackflipAttackMove();
 			}
 			else if (PM_CanBackstab() && !BG_SaberInSpecialAttack(pm->ps->torsoAnim))
 			{ //BACKSTAB (attack varies by level)
@@ -3605,7 +3605,7 @@ weapChecks:
 						newmove = saberMoveData[curmove].chain_idle;
 					}
 					else */
-					newmove = PM_SaberAttackForMovement( curmove );
+					newmove = PM_SaberAttackForMovement( (saberMoveName_t) curmove );
 					if ( (PM_SaberInBounce( curmove )||PM_SaberInBrokenParry( curmove ))
 						&& saberMoveData[newmove].startQuad == saberMoveData[curmove].endQuad )
 					{//this attack would be a repeat of the last (which was blocked), so don't actually use it, use the default chain attack for this bounce

@@ -187,7 +187,6 @@ def build(bld):
 		cgame = bld (
 			features = 'cxx cxxshlib',
 			target = 'cgame',
-			cxxflags = ['-fpermissive'],
 			includes = ['src'],
 			source = gcgui_files + cgame_files,
 			uselib = ['PTHREAD'],

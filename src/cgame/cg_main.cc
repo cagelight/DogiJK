@@ -2469,7 +2469,7 @@ Ghoul2 Insert End
 	i = WP_NONE+1;
 	while (i <= LAST_USEABLE_WEAPON)
 	{
-		item = BG_FindItemForWeapon(i);
+		item = BG_FindItemForWeapon((weapon_t)i);
 
 		if (item && item->icon && item->icon[0])
 		{

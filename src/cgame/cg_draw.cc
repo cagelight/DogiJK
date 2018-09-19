@@ -3981,7 +3981,7 @@ static float CG_DrawTeamOverlay( float y, qboolean right, qboolean upper ) {
 			for (j = 0; j <= PW_NUM_POWERUPS; j++) {
 				if (ci->powerups & (1 << j)) {
 
-					item = BG_FindItemForPowerup( j );
+					item = BG_FindItemForPowerup( (powerup_t) j );
 
 					if (item) {
 						CG_DrawPic( xx + xOffset, y, TINYCHAR_WIDTH, TINYCHAR_HEIGHT,
@@ -4027,7 +4027,7 @@ static void CG_DrawPowerupIcons(int y)
 		{
 			int secondsleft = (cg.snap->ps.powerups[j] - cg.time)/1000;
 
-			item = BG_FindItemForPowerup( j );
+			item = BG_FindItemForPowerup( (powerup_t) j );
 
 			if (item)
 			{

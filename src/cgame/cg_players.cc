@@ -1540,7 +1540,8 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	clientInfo_t newInfo;
 	const char	*configstring;
 	const char	*v;
-	char		*slash;
+	const char	*slash;
+	char 		*slash2;
 	void *oldGhoul2;
 	void *oldG2Weapons[MAX_SABERS];
 	int i = 0;
@@ -1620,7 +1621,7 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 
 	// team
 	v = Info_ValueForKey( configstring, "t" );
-	newInfo.team = atoi( v );
+	newInfo.team = (team_t) atoi( v );
 
 //copy team info out to menu
 	if ( clientNum == cg.clientNum)	//this is me
@@ -1678,14 +1679,14 @@ void CG_NewClientInfo( int clientNum, qboolean entitiesInitialized ) {
 	} else {
 		Q_strncpyz( newInfo.modelName, v, sizeof( newInfo.modelName ) );
 
-		slash = strchr( newInfo.modelName, '/' );
-		if ( !slash ) {
+		slash2 = strchr( newInfo.modelName, '/' );
+		if ( !slash2 ) {
 			// modelName didn not include a skin name
 			Q_strncpyz( newInfo.skinName, "default", sizeof( newInfo.skinName ) );
 		} else {
-			Q_strncpyz( newInfo.skinName, slash + 1, sizeof( newInfo.skinName ) );
+			Q_strncpyz( newInfo.skinName, slash2 + 1, sizeof( newInfo.skinName ) );
 			// truncate modelName
-			*slash = 0;
+			*slash2 = 0;
 		}
 	}
 
@@ -6530,7 +6531,7 @@ JustDoIt:
 	//CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
 	//	scolor, renderfx, (qboolean)(saberNum==0&&bladeNum==0) );
 	CG_DoSaber( org_, axis_[0], saberLen, client->saber[saberNum].blade[bladeNum].lengthMax, client->saber[saberNum].blade[bladeNum].radius,
-		scolor, renderfx, (qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)) );
+		(saber_colors_t) scolor, renderfx, (qboolean)(client->saber[saberNum].numBlades < 3 && !(client->saber[saberNum].saberFlags2&SFL2_NO_DLIGHT)) );
 }
 
 int CG_IsMindTricked(int trickIndex1, int trickIndex2, int trickIndex3, int trickIndex4, int client)
