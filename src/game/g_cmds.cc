@@ -3486,6 +3486,19 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 	}
 }
 
+extern qboolean saberKnockOutOfHand(gentity_t *saberent, gentity_t *saberOwner, vec3_t velocity);
+
+void Cmd_DropSaber_f( gentity_t * ent ) {
+	if (ent->client->ps.weapon != WP_SABER) {
+		return;
+	}
+	if (ent->playerState->saberInFlight) if (ent->playerState->saberEntityNum)
+		saberKnockDown(&g_entities[ent->client->ps.saberEntityNum], ent, ent);
+		else return;
+	else
+		saberKnockOutOfHand(&g_entities[ent->client->ps.saberEntityNum], ent, vec3_origin);
+}
+
 /*
 =================
 ClientCommand
@@ -3515,6 +3528,7 @@ command_t commands[] = {
 	{ "debugBMove_Left",	Cmd_BotMoveLeft_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Right",	Cmd_BotMoveRight_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
+	{ "dropsaber",			Cmd_DropSaber_f,			CMD_ALIVE },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },

@@ -970,17 +970,6 @@ void ShootThink( void )
 		if ( !NPCS.NPCInfo->burstCount )
 		{
 			NPCS.NPCInfo->burstCount = Q_irand( NPCS.NPCInfo->burstMin, NPCS.NPCInfo->burstMax );
-			/*
-			NPCInfo->burstCount = erandom( NPCInfo->burstMean );
-			if ( NPCInfo->burstCount < NPCInfo->burstMin )
-			{
-				NPCInfo->burstCount = NPCInfo->burstMin;
-			}
-			else if ( NPCInfo->burstCount > NPCInfo->burstMax )
-			{
-				NPCInfo->burstCount = NPCInfo->burstMax;
-			}
-			*/
 			delay = 0;
 		}
 		else

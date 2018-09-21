@@ -896,7 +896,12 @@ void Use_BinaryMover( gentity_t *ent, gentity_t *other, gentity_t *activator )
 	{//I cannot be used anymore, must be a door with a wait of -1 that's opened.
 		return;
 	}
-
+	
+	if ( ent->spawnflags & MOVER_PLAYER_USE ) {
+		if (ent->use_timer > level.time) return;
+		else ent->use_timer = level.time + ent->delay + 500;
+	}
+	
 	// only the master should be used
 	if ( ent->flags & FL_TEAMSLAVE )
 	{

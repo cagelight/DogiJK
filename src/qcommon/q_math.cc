@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <math.h>
 #include <stdlib.h>
 
+#include <random>
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -198,45 +199,25 @@ void NormalToLatLong( const vec3_t normal, byte bytes[2] )
 //      RANDOM NUMBER GENERATION
 //
 ///////////////////////////////////////////////////////////////////////////
-int Q_rand( int *seed )
-{
-	*seed = (69069 * *seed + 1);
-	return *seed;
-}
 
-float Q_random( int *seed )
+static std::mt19937_64 rng { std::random_device {}() };
+
+float Q_random( int * )
 {
-	return (Q_rand(seed) & 0xffff) / (float)0x10000;
+	static std::uniform_real_distribution<float> dist {0, 1};
+	return dist(rng);
 }
 
 float Q_crandom( int *seed )
 {
-	return 2.0f * (Q_random(seed) - 0.5f);
-}
-
-// This is the VC libc version of rand() without multiple seeds per thread or 12 levels
-// of subroutine calls.
-// Both calls have been designed to minimise the inherent number of float <--> int
-// conversions and the additional math required to get the desired value.
-// eg the typical tint = (rand() * 255) / 32768
-// becomes tint = irand(0, 255)
-static uint32_t	holdrand = 0x89abcdef;
-
-void Rand_Init( int seed )
-{
-	holdrand = seed;
+	static std::uniform_real_distribution<float> dist {-0.5, 0.5};
+	return dist(rng);
 }
 
 // Returns a float min <= x < max (exclusive; will get max - 0.00001; but never max)
 float flrand(float min, float max)
 {
-	float	result;
-
-	holdrand = (holdrand * 214013L) + 2531011L;
-	result = (float)(holdrand >> 17); // 0 - 32767 range
-	result = ((result * (max - min)) / (float)QRAND_MAX) + min;
-
-	return(result);
+	return std::uniform_real_distribution<float> {min, max} (rng);
 }
 
 float Q_flrand( float min, float max )
@@ -247,40 +228,13 @@ float Q_flrand( float min, float max )
 // Returns an integer min <= x <= max (ie inclusive)
 int irand( int min, int max )
 {
-	int	result;
-
-	assert((max - min) < QRAND_MAX);
-
-	max++;
-	holdrand = (holdrand * 214013L) + 2531011L;
-	result = holdrand >> 17;
-	result = ((result * (max - min)) >> 15) + min;
-
-	return result;
+	return std::uniform_int_distribution<int> {min, max} (rng);
 }
 
 int Q_irand( int value1, int value2 )
 {
 	return irand(value1, value2);
 }
-
-/*
-erandom
-
-This function produces a random number with a exponential
-distribution and the specified mean value.
-*/
-float erandom( float mean )
-{
-	float	r;
-
-	do {
-		r = Q_flrand(0.0f, 1.0f);
-	} while ( r == 0.0 );
-
-	return -mean * logf( r );
-}
-
 
 ///////////////////////////////////////////////////////////////////////////
 //

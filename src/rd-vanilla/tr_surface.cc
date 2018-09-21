@@ -867,20 +867,6 @@ static float f_count;
 
 #define LIGHTNING_RECURSION_LEVEL 1 // was 2
 
-// these functions are pretty crappy in terms of returning a nice range of rnd numbers, but it's probably good enough?
-/*static int Q_rand( int *seed ) {
-	*seed = (69069 * *seed + 1);
-	return *seed;
-}
-
-static float Q_random( int *seed ) {
-	return ( Q_rand( seed ) & 0xffff ) / (float)0x10000;
-}
-
-static float Q_crandom( int *seed ) {
-	return 2.0F * ( Q_random( seed ) - 0.5f );
-}
-*/
 // Up front, we create a random "shape", then apply that to each line segment...and then again to each of those segments...kind of like a fractal
 //----------------------------------------------------------------------------
 static void CreateShape()

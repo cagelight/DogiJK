@@ -7634,14 +7634,7 @@ static gentity_t *G_KickTrace( gentity_t *ent, vec3_t kickDir, float kickDist, v
 						G_Knockdown( hitEnt, ent, kickDir, kickPush, qtrue );
 					}
 					*/
-					if ( kickPush >= 75.0f && !Q_irand( 0, 2 ) )
-					{
-						G_TossTheMofo(hitEnt, kickDir, 300.0f);
-					}
-					else
-					{
-						G_TossTheMofo(hitEnt, kickDir, kickPush);
-					}
+					G_TossTheMofo(hitEnt, kickDir, kickPush);
 				}
 			}
 		}
@@ -7656,8 +7649,8 @@ void G_KickSomeMofos(gentity_t *ent)
 	float elapsedTime = (float)(animLength-ent->client->ps.legsTimer);
 	float remainingTime = (animLength-elapsedTime);
 	float kickDist = (ent->r.maxs[0]*1.5f)+STAFF_KICK_RANGE+8.0f;//fudge factor of 8
-	int	  kickDamage = Q_irand(10, 15);//Q_irand( 3, 8 ); //since it can only hit a guy once now
-	int	  kickPush = flrand( 50.0f, 100.0f );
+	int	  kickDamage = Q_irand( weap_kickDamMin.integer, weap_kickDamMax.integer );//Q_irand( 3, 8 ); //since it can only hit a guy once now
+	int	  kickPush = flrand( weap_kickDistMin.value, weap_kickDistMax.value );
 	qboolean doKick = qfalse;
 	renderInfo_t *ri = &ent->client->renderInfo;
 
@@ -7803,7 +7796,7 @@ void G_KickSomeMofos(gentity_t *ent)
 			}
 			break;
 		case BOTH_A7_KICK_S:
-			kickPush = flrand( 75.0f, 125.0f );
+			kickPush *= 1.5;
 			if ( ri->footRBolt != -1 )
 			{//actually trace to a bolt
 				if ( elapsedTime >= 550
@@ -7870,7 +7863,7 @@ void G_KickSomeMofos(gentity_t *ent)
 			}
 			break;
 		case BOTH_A7_KICK_BF:
-			kickPush = flrand( 75.0f, 125.0f );
+			kickPush *= 1.5;
 			kickDist += 20.0f;
 			if ( elapsedTime < 1500 )
 			{//auto-aim!
@@ -7908,7 +7901,7 @@ void G_KickSomeMofos(gentity_t *ent)
 			}
 			break;
 		case BOTH_A7_KICK_RL:
-			kickPush = flrand( 75.0f, 125.0f );
+			kickPush *= 1.5;
 			kickDist += 10.0f;
 
 			//ok, I'm tracing constantly on these things, they NEVER hit otherwise (in MP at least)

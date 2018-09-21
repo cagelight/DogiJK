@@ -334,6 +334,7 @@ struct gentity_t : public sharedEntity_t {
 	float		wait;
 	float		random;
 	int			delay;
+	int			use_timer;
 
 	//generic values used by various entities for different purposes.
 	int			genericValue1;
