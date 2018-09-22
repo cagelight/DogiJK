@@ -372,7 +372,7 @@ typedef struct vehicleInfo_s {
 
 #define	VFOFS(x) offsetof(vehicleInfo_t, x)
 
-#define MAX_VEHICLES	16	//sigh... no more than 64 individual vehicles
+#define MAX_VEHICLES	1024	//sigh... no more than 64 individual vehicles
 #define VEHICLE_BASE	0
 #define VEHICLE_NONE	-1
 
@@ -636,3 +636,6 @@ typedef struct Vehicle_s
 #endif
 
 extern int BG_VehicleGetIndex( const char *vehicleName );
+
+void BG_ListVehicleWeapons();
+void BG_ListVehicles();

@@ -26,6 +26,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "anims.hh"
 #include "ghoul2/G2.hh"
 
+#include <algorithm>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 extern qboolean NPCsPrecached;
 
 extern qboolean WP_SaberParseParms( const char *SaberName, saberInfo_t *saber );
@@ -232,11 +237,17 @@ int NPC_ReactionTime ( void )
 
 extern qboolean BG_ParseLiteral( const char **data, const char *string );
 
-//
-// NPC parameters file : scripts/NPCs.cfg
-//
-#define MAX_NPC_DATA_SIZE 0x40000
-char	NPCParms[MAX_NPC_DATA_SIZE];
+std::unordered_map<istring, std::string> NPCParms;
+
+void BG_ListNPCs() {
+	std::vector<istring> NPCs;
+	for (auto const & i : NPCParms) 
+		NPCs.push_back(i.first);
+	std::sort(NPCs.begin(), NPCs.end());
+	for (auto const & i : NPCs) {
+		Com_Printf("\t%s\n", i.c_str());
+	}
+}
 
 /*
 team_t TranslateTeamName( const char *name )
@@ -604,11 +615,14 @@ void NPC_Precache ( gentity_t *spawner )
 		return;
 	}
 	strcpy(customSkin,"default");
+	
+	auto npcf = NPCParms.find(spawner->NPC_type);
+	if (npcf == NPCParms.end()) return;
 
-	p = NPCParms;
 	Com_sprintf( sessionName, sizeof(sessionName), "NPC_Precache(%s)", spawner->NPC_type );
 	COM_BeginParseSession(sessionName);
 
+	/*
 	// look for the right NPC
 	while ( p )
 	{
@@ -628,6 +642,9 @@ void NPC_Precache ( gentity_t *spawner )
 	{
 		return;
 	}
+	*/
+	
+	p = npcf->second.c_str();
 
 	if ( BG_ParseLiteral( &p, "{" ) )
 	{
@@ -1100,11 +1117,15 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 	else
 	{
 		int fp;
+		
+		auto npcf = NPCParms.find(NPCName);
+		if (npcf == NPCParms.end()) return qfalse;
 
-		p = NPCParms;
+		p = npcf->second.c_str();
 		Com_sprintf( sessionName, sizeof(sessionName), "NPC_ParseParms(%s)", NPCName );
 		COM_BeginParseSession(sessionName);
 
+		/*
 		// look for the right NPC
 		while ( p )
 		{
@@ -1125,6 +1146,7 @@ qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC )
 		{
 			return qfalse;
 		}
+		*/
 
 		if ( BG_ParseLiteral( &p, "{" ) )
 		{
@@ -3556,21 +3578,13 @@ Ghoul2 Insert End
 	return qtrue;
 }
 
-char npcParseBuffer[MAX_NPC_DATA_SIZE];
-
 void NPC_LoadParms( void )
 {
-	int			len, totallen, npcExtFNLen, fileCnt, i;
-//	const char	*filename = "ext_data/NPC2.cfg";
-	char		/**buffer,*/ *holdChar, *marker;
-	char		npcExtensionListBuf[2048];			//	The list of file names read in
+	int			len, npcExtFNLen, fileCnt, i;
+	char		*holdChar;
+	static char		npcExtensionListBuf[1 << 16];			//	The list of file names read in
 	fileHandle_t f;
 	len = 0;
-
-	//remember where to store the next one
-	totallen = len;
-	marker = NPCParms+totallen;
-	*marker = 0;
 
 	//now load in the extra .npc extensions
 	fileCnt = trap->FS_GetFileList("ext_data/NPCs", ".npc", npcExtensionListBuf, sizeof(npcExtensionListBuf) );
@@ -3580,34 +3594,27 @@ void NPC_LoadParms( void )
 	{
 		npcExtFNLen = strlen( holdChar );
 
-//		Com_Printf( "Parsing %s\n", holdChar );
-
 		len = trap->FS_Open(va( "ext_data/NPCs/%s", holdChar), &f, FS_READ);
 
-		if ( len == -1 )
-		{
+		if ( len == -1 ) {
 			Com_Printf( "error reading file\n" );
+			return;
 		}
-		else
-		{
-			if ( totallen + len >= MAX_NPC_DATA_SIZE ) {
-				trap->FS_Close( f );
-				trap->Error( ERR_DROP, "NPC extensions (*.npc) are too large" );
-			}
-			trap->FS_Read(npcParseBuffer, len, f);
-			npcParseBuffer[len] = 0;
 
-			len = COM_Compress( npcParseBuffer );
+		std::vector<char> strbuf;
+		strbuf.resize(len+1);
+		trap->FS_Read(strbuf.data(), len, f);
+		strbuf[len] = 0;
 
-			strcat( marker, npcParseBuffer );
-			strcat(marker, "\n");
-			len++;
-			trap->FS_Close(f);
-
-			totallen += len;
-			marker = NPCParms+totallen;
-			//*marker = 0; //rww - make sure this is null or strcat will not append to the correct place
-			//rww  12/19/02-actually the probelm was npcParseBuffer not being nul-term'd, which could cause issues in the strcat too
+		len = COM_Compress( strbuf.data() );
+		
+		char const * p = strbuf.data();
+		
+		for (char const * token = COM_ParseExt( &p, qtrue ); token[0]; token = COM_ParseExt( &p, qtrue )) {
+			NPCParms[token] = p;
+			SkipBracedSection(&p, 0);
 		}
+		
+		trap->FS_Close(f);
 	}
 }

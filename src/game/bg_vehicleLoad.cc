@@ -35,21 +35,29 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#include "ui/ui_local.hh"
 #endif
 
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 extern stringID_table_t animTable [MAX_ANIMATIONS+1];
 
-// These buffers are filled in with the same contents and then just read from in
-// a few places. We only need one copy on Xbox.
-#define MAX_VEH_WEAPON_DATA_SIZE 0x40000 // 0x4000
-#define MAX_VEHICLE_DATA_SIZE 0x100000 // 0x10000
+std::unordered_map<istring, std::string> VehWeaponParms;
+std::unordered_map<istring, std::string> VehicleParms;
 
-char	VehWeaponParms[MAX_VEH_WEAPON_DATA_SIZE];
-char	VehicleParms[MAX_VEHICLE_DATA_SIZE];
+void BG_ListVehicleWeapons() {
+	for (auto const & i : VehWeaponParms) 
+		Com_Printf("\t%s\n", i.first.c_str());
+}
+
+void BG_ListVehicles() {
+	for (auto const & i : VehicleParms) 
+		Com_Printf("\t%s\n", i.first.c_str());
+}
 
 void BG_ClearVehicleParseParms(void)
 {
-	//You can't strcat to these forever without clearing them!
-	VehWeaponParms[0] = 0;
-	VehicleParms[0] = 0;
+	VehWeaponParms.clear();
+	VehicleParms.clear();
 }
 
 #if defined(_GAME) || defined(_CGAME)
@@ -263,33 +271,17 @@ int VEH_LoadVehWeapon( const char *vehWeaponName )
 	vehWeaponInfo_t	*vehWeapon = NULL;
 
 	//BG_VehWeaponSetDefaults( &g_vehWeaponInfo[0] );//set the first vehicle to default data
-
-	//try to parse data out
-	p = VehWeaponParms;
+	
+	auto const & weapf = VehWeaponParms.find(vehWeaponName);
+	if (weapf == VehWeaponParms.end()) {
+		Com_Printf( S_COLOR_RED "ERROR: could not find vehicle weapon '%s'\n", vehWeaponName);
+		return VEH_WEAPON_NONE;
+	}
+	p = weapf->second.c_str();
 
 	COM_BeginParseSession("vehWeapons");
 
 	vehWeapon = &g_vehWeaponInfo[numVehicleWeapons];
-	// look for the right vehicle weapon
-	while ( p )
-	{
-		token = COM_ParseExt( &p, qtrue );
-		if ( token[0] == 0 )
-		{
-			return qfalse;
-		}
-
-		if ( !Q_stricmp( token, vehWeaponName ) )
-		{
-			break;
-		}
-
-		SkipBracedSection( &p, 0 );
-	}
-	if ( !p )
-	{
-		return qfalse;
-	}
 
 	token = COM_ParseExt( &p, qtrue );
 	if ( token[0] == 0 )
@@ -916,33 +908,13 @@ int VEH_LoadVehicle( const char *vehicleName )
 		BG_VehicleLoadParms();
 	}
 
-	//try to parse data out
-	p = VehicleParms;
+	auto const & weapf = VehicleParms.find(vehicleName);
+	if (weapf == VehicleParms.end()) return qfalse;
+	p = weapf->second.c_str();
 
 	COM_BeginParseSession("vehicles");
 
 	vehicle = &g_vehicleInfo[numVehicles];
-	// look for the right vehicle
-	while ( p )
-	{
-		token = COM_ParseExt( &p, qtrue );
-		if ( token[0] == 0 )
-		{
-			return VEHICLE_NONE;
-		}
-
-		if ( !Q_stricmp( token, vehicleName ) )
-		{
-			break;
-		}
-
-		SkipBracedSection( &p, 0 );
-	}
-
-	if ( !p )
-	{
-		return VEHICLE_NONE;
-	}
 
 	token = COM_ParseExt( &p, qtrue );
 	if ( token[0] == 0 )
@@ -1274,64 +1246,39 @@ void BG_VehWeaponLoadParms( void )
 	char		*holdChar, *marker;
 	char		vehWeaponExtensionListBuf[2048];			//	The list of file names read in
 	fileHandle_t	f;
-	char		*tempReadBuffer;
-
-	len = 0;
-
-	//remember where to store the next one
-	totallen = len;
-	marker = VehWeaponParms+totallen;
-	*marker = 0;
 
 	//now load in the extra .veh extensions
 	fileCnt = trap->FS_GetFileList("ext_data/vehicles/weapons", ".vwp", vehWeaponExtensionListBuf, sizeof(vehWeaponExtensionListBuf) );
 
 	holdChar = vehWeaponExtensionListBuf;
 
-	tempReadBuffer = (char *)BG_TempAlloc(MAX_VEH_WEAPON_DATA_SIZE);
-
-	// NOTE: Not use TempAlloc anymore...
-	//Make ABSOLUTELY CERTAIN that BG_Alloc/etc. is not used before
-	//the subsequent BG_TempFree or the pool will be screwed.
-
 	for ( i = 0; i < fileCnt; i++, holdChar += vehExtFNLen + 1 )
 	{
 		vehExtFNLen = strlen( holdChar );
-
-//		Com_Printf( "Parsing %s\n", holdChar );
-
+		
 		len = trap->FS_Open(va( "ext_data/vehicles/weapons/%s", holdChar), &f, FS_READ);
 
-		if ( len == -1 )
-		{
+		if ( len == -1 ) {
 			Com_Printf( "error reading file\n" );
+			continue;
 		}
-		else
-		{
-			trap->FS_Read(tempReadBuffer, len, f);
-			tempReadBuffer[len] = 0;
 
-			// Don't let it end on a } because that should be a stand-alone token.
-			if ( totallen && *(marker-1) == '}' )
-			{
-				strcat( marker, " " );
-				totallen++;
-				marker++;
-			}
-
-			if ( totallen + len >= MAX_VEH_WEAPON_DATA_SIZE ) {
-				trap->FS_Close( f );
-				Com_Error(ERR_DROP, "Vehicle Weapon extensions (*.vwp) are too large" );
-			}
-			strcat( marker, tempReadBuffer );
-			trap->FS_Close( f );
-
-			totallen += len;
-			marker = VehWeaponParms+totallen;
+		std::vector<char> strbuf;
+		strbuf.resize(len+1);
+		trap->FS_Read(strbuf.data(), len, f);
+		strbuf[len] = 0;
+		
+		//len = COM_Compress( strbuf.data() );
+		
+		char const * p = strbuf.data();
+		
+		for (char const * token = COM_ParseExt( &p, qtrue ); token[0]; token = COM_ParseExt( &p, qtrue )) {
+			VehWeaponParms[token] = p;
+			SkipBracedSection(&p, 0);
 		}
+		
+		trap->FS_Close( f );
 	}
-
-	BG_TempFree(MAX_VEH_WEAPON_DATA_SIZE);
 }
 
 void BG_VehicleLoadParms( void )
@@ -1345,60 +1292,38 @@ void BG_VehicleLoadParms( void )
 
 	len = 0;
 
-	//remember where to store the next one
-	totallen = len;
-	marker = VehicleParms+totallen;
-	*marker = 0;
-
 	//now load in the extra .veh extensions
 	fileCnt = trap->FS_GetFileList("ext_data/vehicles", ".veh", vehExtensionListBuf, sizeof(vehExtensionListBuf) );
 
 	holdChar = vehExtensionListBuf;
 
-	tempReadBuffer = (char *)BG_TempAlloc(MAX_VEHICLE_DATA_SIZE);
-
-	// NOTE: Not use TempAlloc anymore...
-	//Make ABSOLUTELY CERTAIN that BG_Alloc/etc. is not used before
-	//the subsequent BG_TempFree or the pool will be screwed.
-
 	for ( i = 0; i < fileCnt; i++, holdChar += vehExtFNLen + 1 )
 	{
 		vehExtFNLen = strlen( holdChar );
-
-//		Com_Printf( "Parsing %s\n", holdChar );
-
+		
 		len = trap->FS_Open(va( "ext_data/vehicles/%s", holdChar), &f, FS_READ);
 
-		if ( len == -1 )
-		{
+		if ( len == -1 ) {
 			Com_Printf( "error reading file\n" );
+			continue;
 		}
-		else
-		{
-			trap->FS_Read(tempReadBuffer, len, f);
-			tempReadBuffer[len] = 0;
 
-			// Don't let it end on a } because that should be a stand-alone token.
-			if ( totallen && *(marker-1) == '}' )
-			{
-				strcat( marker, " " );
-				totallen++;
-				marker++;
-			}
-
-			if ( totallen + len >= MAX_VEHICLE_DATA_SIZE ) {
-				trap->FS_Close( f );
-				Com_Error(ERR_DROP, "Vehicle extensions (*.veh) are too large" );
-			}
-			strcat( marker, tempReadBuffer );
-			trap->FS_Close( f );
-
-			totallen += len;
-			marker = VehicleParms+totallen;
+		std::vector<char> strbuf;
+		strbuf.resize(len+1);
+		trap->FS_Read(strbuf.data(), len, f);
+		strbuf[len] = 0;
+		
+		//len = COM_Compress( strbuf.data() );
+		
+		char const * p = strbuf.data();
+		
+		for (char const * token = COM_ParseExt( &p, qtrue ); token[0]; token = COM_ParseExt( &p, qtrue )) {
+			VehicleParms[token] = p;
+			SkipBracedSection(&p, 0);
 		}
+
+		trap->FS_Close( f );
 	}
-
-	BG_TempFree(MAX_VEHICLE_DATA_SIZE);
 
 	numVehicles = 1;//first one is null/default
 	//set the first vehicle to default data

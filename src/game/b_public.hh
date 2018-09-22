@@ -289,3 +289,5 @@ void Svcmd_NPC_f( void );
 void NAV_DebugShowWaypoints (void);
 void NAV_DebugShowBoxes (void);
 void NAV_DebugShowSquadPaths (void);
+
+void BG_ListNPCs();
