@@ -1163,6 +1163,31 @@ void NPC_BehaviorSet_Jedi( int bState )
 
 /*
 -------------------------
+NPC_BehaviorSet_SandCreature
+-------------------------
+*/
+
+extern void NPC_BSSandCreature_Default();
+
+void NPC_BehaviorSet_SandCreature( int bState )
+{
+	switch( bState )
+	{
+	case BS_STAND_GUARD:
+	case BS_PATROL:
+	case BS_STAND_AND_SHOOT:
+	case BS_HUNT_AND_KILL:
+	case BS_DEFAULT:
+		NPC_BSSandCreature_Default();
+		break;
+	default:
+		NPC_BehaviorSet_Default( bState );
+		break;
+	}
+}
+
+/*
+-------------------------
 NPC_BehaviorSet_Droid
 -------------------------
 */
@@ -1340,6 +1365,11 @@ void NPC_RunBehavior( int team, int bState )
 	else if ( NPCS.NPC->client->NPC_class == CLASS_HOWLER )
 	{
 		NPC_BehaviorSet_Howler( bState );
+		return;
+	}
+	else if ( NPCS.NPC->client->NPC_class == CLASS_SAND_CREATURE )
+	{
+		NPC_BehaviorSet_SandCreature( bState );
 		return;
 	}
 //	else if ( NPCS.NPC->client->ps.weapon == WP_SABER )		// this is an _extremely_ shitty comparison.. FIXME: make a CLASS_CULTIST? --eez
