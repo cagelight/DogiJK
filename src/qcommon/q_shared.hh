@@ -53,6 +53,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/q_string.hh"
 #include "qcommon/disablewarnings.hh"
 
+#include <algorithm>
+#include <functional>
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include "game/teams.hh" //npc team stuff
 
 #define MAX_WORLD_COORD		( 64 * 1024 )

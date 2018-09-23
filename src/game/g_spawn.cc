@@ -87,126 +87,109 @@ qboolean	G_SpawnBoolean( const char *key, const char *defaultString, qboolean *o
 		*out = qfalse;
 
 	return present;
+};
+
+static void parse_vec3_field(char const * context, char const * str, vec3_t & vec) {
+	if ( sscanf( str, "%f %f %f", &vec[0], &vec[1], &vec[2] ) != 3 ) {
+		trap->Print( "G_ParseField: Failed sscanf on F_VECTOR (key/value: %s/%s)\n", context, str );
+		VectorClear(vec);
+	}
 }
 
-//
-// fields are needed for spawning from the entity string
-//
-typedef enum {
-	F_INT,
-	F_FLOAT,
-	F_STRING,			// string on disk, pointer in memory
-	F_VECTOR,
-	F_ANGLEHACK,
-	F_PARM1,			// Special case for parms
-	F_PARM2,			// Special case for parms
-	F_PARM3,			// Special case for parms
-	F_PARM4,			// Special case for parms
-	F_PARM5,			// Special case for parms
-	F_PARM6,			// Special case for parms
-	F_PARM7,			// Special case for parms
-	F_PARM8,			// Special case for parms
-	F_PARM9,			// Special case for parms
-	F_PARM10,			// Special case for parms
-	F_PARM11,			// Special case for parms
-	F_PARM12,			// Special case for parms
-	F_PARM13,			// Special case for parms
-	F_PARM14,			// Special case for parms
-	F_PARM15,			// Special case for parms
-	F_PARM16			// Special case for parms
-} fieldtype_t;
+void Q3_SetParm ( int entID, int parmNum, const char *parmValue );
 
-typedef struct field_s {
-	const char	*name;
-	size_t		ofs;
-	fieldtype_t	type;
-} field_t;
+#define FINT(f) [](gentity_t * ent, char const * str){ ent->f = std::strtol(str, nullptr, 10); }
+#define FFLT(f) [](gentity_t * ent, char const * str){ ent->f = std::strtod(str, nullptr); }
+#define FSTR(f) [](gentity_t * ent, char const * str){ ent->f = G_NewString(str); }
+#define FVEC(f) [](gentity_t * ent, char const * str){ parse_vec3_field(#f, str, ent->f); }
+#define FAHK(f) [](gentity_t * ent, char const * str){ VectorClear(ent->f); ent->f[1] = std::strtod(str, nullptr); }
+#define FPRM(n) [](gentity_t * ent, char const * str){ Q3_SetParm( ent->s.number, n, str ); }
 
-field_t fields[] = {
-	{ "alliedteam",				FOFS( alliedTeam ),						F_INT },//for misc_turrets
-	{ "angerscript",			FOFS( behaviorSet[BSET_ANGER] ),		F_STRING },//name of script to run
-	{ "angle",					FOFS( s.angles ),						F_ANGLEHACK },
-	{ "angles",					FOFS( s.angles ),						F_VECTOR },
-	{ "attackscript",			FOFS( behaviorSet[BSET_ATTACK] ),		F_STRING },//name of script to run
-	{ "awakescript",			FOFS( behaviorSet[BSET_AWAKE] ),		F_STRING },//name of script to run
-	{ "blockedscript",			FOFS( behaviorSet[BSET_BLOCKED] ),		F_STRING },//name of script to run
-	{ "chunksize",				FOFS( mass ),							F_FLOAT },//for func_breakables
-	{ "classname",				FOFS( classname ),						F_STRING },
-	{ "closetarget",			FOFS( closetarget ),					F_STRING },//for doors
-	{ "count",					FOFS( count ),							F_INT },
-	{ "deathscript",			FOFS( behaviorSet[BSET_DEATH] ),		F_STRING },//name of script to run
-	{ "delay",					FOFS( delay ),							F_INT },
-	{ "delayscript",			FOFS( behaviorSet[BSET_DELAYED] ),		F_STRING },//name of script to run
-	{ "delayscripttime",		FOFS( delayScriptTime ),				F_INT },//name of script to run
-	{ "dmg",					FOFS( damage ),							F_INT },
-	{ "ffdeathscript",			FOFS( behaviorSet[BSET_FFDEATH] ),		F_STRING },//name of script to run
-	{ "ffirescript",			FOFS( behaviorSet[BSET_FFIRE] ),		F_STRING },//name of script to run
-	{ "fleescript",				FOFS( behaviorSet[BSET_FLEE] ),			F_STRING },//name of script to run
-	{ "fullname",				FOFS( fullName ),						F_STRING },
-	{ "goaltarget",				FOFS( goaltarget ),						F_STRING },//for siege
-	{ "healingclass",			FOFS( healingclass ),					F_STRING },
-	{ "healingrate",			FOFS( healingrate ),					F_INT },
-	{ "healingsound",			FOFS( healingsound ),					F_STRING },
-	{ "health",					FOFS( health ),							F_INT },
-	{ "idealclass",				FOFS( idealclass ),						F_STRING },//for siege spawnpoints
-	{ "linear",					FOFS( alt_fire ),						F_INT },//for movers to use linear movement
-	{ "lostenemyscript",		FOFS( behaviorSet[BSET_LOSTENEMY] ),	F_STRING },//name of script to run
-	{ "message",				FOFS( message ),						F_STRING },
-	{ "mindtrickscript",		FOFS( behaviorSet[BSET_MINDTRICK] ),	F_STRING },//name of script to run
-	{ "model",					FOFS( model ),							F_STRING },
-	{ "model2",					FOFS( model2 ),							F_STRING },
-	{ "npc_target",				FOFS( NPC_target ),						F_STRING },
-	{ "npc_target2",			FOFS( target2 ),						F_STRING },//NPC_spawner only
-	{ "npc_target4",			FOFS( target4 ),						F_STRING },//NPC_spawner only
-	{ "npc_targetname",			FOFS( NPC_targetname ),					F_STRING },
-	{ "npc_type",				FOFS( NPC_type ),						F_STRING },
-	{ "numchunks",				FOFS( radius ),							F_FLOAT },//for func_breakables
-	{ "opentarget",				FOFS( opentarget ),						F_STRING },//for doors
-	{ "origin",					FOFS( s.origin ),						F_VECTOR },
-	{ "ownername",				FOFS( ownername ),						F_STRING },
-	{ "painscript",				FOFS( behaviorSet[BSET_PAIN] ),			F_STRING },//name of script to run
-	{ "paintarget",				FOFS( paintarget ),						F_STRING },//for doors
-	{ "parm1",					0,										F_PARM1 },
-	{ "parm10",					0,										F_PARM10 },
-	{ "parm11",					0,										F_PARM11 },
-	{ "parm12",					0,										F_PARM12 },
-	{ "parm13",					0,										F_PARM13 },
-	{ "parm14",					0,										F_PARM14 },
-	{ "parm15",					0,										F_PARM15 },
-	{ "parm16",					0,										F_PARM16 },
-	{ "parm2",					0,										F_PARM2 },
-	{ "parm3",					0,										F_PARM3 },
-	{ "parm4",					0,										F_PARM4 },
-	{ "parm5",					0,										F_PARM5 },
-	{ "parm6",					0,										F_PARM6 },
-	{ "parm7",					0,										F_PARM7 },
-	{ "parm8",					0,										F_PARM8 },
-	{ "parm9",					0,										F_PARM9 },
-	{ "radius",					FOFS( radius ),							F_FLOAT },
-	{ "random",					FOFS( random ),							F_FLOAT },
-	{ "roffname",				FOFS( roffname ),						F_STRING },
-	{ "rofftarget",				FOFS( rofftarget ),						F_STRING },
-	{ "script_targetname",		FOFS( script_targetname ),				F_STRING },//scripts look for this when "affecting"
-	{ "soundset",				FOFS( soundSet ),						F_STRING },
-	{ "spawnflags",				FOFS( spawnflags ),						F_INT },
-	{ "spawnscript",			FOFS( behaviorSet[BSET_SPAWN] ),		F_STRING },//name of script to run
-	{ "speed",					FOFS( speed ),							F_FLOAT },
-	{ "target",					FOFS( target ),							F_STRING },
-	{ "target2",				FOFS( target2 ),						F_STRING },
-	{ "target3",				FOFS( target3 ),						F_STRING },
-	{ "target4",				FOFS( target4 ),						F_STRING },
-	{ "target5",				FOFS( target5 ),						F_STRING },
-	{ "target6",				FOFS( target6 ),						F_STRING },
-	{ "targetname",				FOFS( targetname ),						F_STRING },
-	{ "targetshadername",		FOFS( targetShaderName ),				F_STRING },
-	{ "targetshadernewname",	FOFS( targetShaderNewName ),			F_STRING },
-	{ "team",					FOFS( team ),							F_STRING },
-	{ "teamnodmg",				FOFS( teamnodmg ),						F_INT },
-	{ "teamowner",				FOFS( s.teamowner ),					F_INT },
-	{ "teamuser",				FOFS( alliedTeam ),						F_INT },
-	{ "usescript",				FOFS( behaviorSet[BSET_USE] ),			F_STRING },//name of script to run
-	{ "victoryscript",			FOFS( behaviorSet[BSET_VICTORY] ),		F_STRING },//name of script to run
-	{ "wait",					FOFS( wait ),							F_FLOAT },
+std::unordered_map<istring, std::function<void(gentity_t * ent, char const * str)>> fields {
+	{ "alliedteam",				FINT( alliedTeam ) },//for misc_turrets
+	{ "angerscript",			FSTR( behaviorSet[BSET_ANGER] ) },//name of script to run
+	{ "angle",					FAHK( s.angles ) },
+	{ "angles",					FVEC( s.angles ) },
+	{ "attackscript",			FSTR( behaviorSet[BSET_ATTACK] ) },//name of script to run
+	{ "awakescript",			FSTR( behaviorSet[BSET_AWAKE] ) },//name of script to run
+	{ "blockedscript",			FSTR( behaviorSet[BSET_BLOCKED] ) },//name of script to run
+	{ "chunksize",				FFLT( mass ) },//for func_breakables
+	{ "classname",				FSTR( classname ) },
+	{ "closetarget",			FSTR( closetarget ) },//for doors
+	{ "count",					FINT( count ) },
+	{ "deathscript",			FSTR( behaviorSet[BSET_DEATH] ) },//name of script to run
+	{ "delay",					FINT( delay ) },
+	{ "delayscript",			FSTR( behaviorSet[BSET_DELAYED] ) },//name of script to run
+	{ "delayscripttime",		FINT( delayScriptTime ) },//name of script to run
+	{ "dmg",					FINT( damage ) },
+	{ "ffdeathscript",			FSTR( behaviorSet[BSET_FFDEATH] ) },//name of script to run
+	{ "ffirescript",			FSTR( behaviorSet[BSET_FFIRE] ) },//name of script to run
+	{ "fleescript",				FSTR( behaviorSet[BSET_FLEE] ) },//name of script to run
+	{ "fullname",				FSTR( fullName ) },
+	{ "goaltarget",				FSTR( goaltarget ) },//for siege
+	{ "healingclass",			FSTR( healingclass ) },
+	{ "healingrate",			FINT( healingrate ) },
+	{ "healingsound",			FSTR( healingsound ) },
+	{ "health",					FINT( health ) },
+	{ "idealclass",				FSTR( idealclass ) },//for siege spawnpoints
+	{ "linear",					FINT( alt_fire ) },//for movers to use linear movement
+	{ "lostenemyscript",		FSTR( behaviorSet[BSET_LOSTENEMY] ) },//name of script to run
+	{ "message",				FSTR( message ) },
+	{ "mindtrickscript",		FSTR( behaviorSet[BSET_MINDTRICK] ) },//name of script to run
+	{ "model",					FSTR( model ) },
+	{ "model2",					FSTR( model2 ) },
+	{ "npc_target",				FSTR( NPC_target ) },
+	{ "npc_target2",			FSTR( target2 ) },//NPC_spawner only
+	{ "npc_target4",			FSTR( target4 ) },//NPC_spawner only
+	{ "npc_targetname",			FSTR( NPC_targetname ) },
+	{ "npc_type",				FSTR( NPC_type ) },
+	{ "numchunks",				FFLT( radius ) },//for func_breakables
+	{ "opentarget",				FSTR( opentarget ) },//for doors
+	{ "origin",					FVEC( s.origin ) },
+	{ "ownername",				FSTR( ownername ) },
+	{ "painscript",				FSTR( behaviorSet[BSET_PAIN] ) },//name of script to run
+	{ "paintarget",				FSTR( paintarget ) },//for doors
+	{ "parm1",					FPRM( 0 ) },
+	{ "parm2",					FPRM( 1 ) },
+	{ "parm3",					FPRM( 2 ) },
+	{ "parm4",					FPRM( 3 ) },
+	{ "parm5",					FPRM( 4 ) },
+	{ "parm6",					FPRM( 5 ) },
+	{ "parm7",					FPRM( 6 ) },
+	{ "parm8",					FPRM( 7 ) },
+	{ "parm9",					FPRM( 8 ) },
+	{ "parm10",					FPRM( 9 ) },
+	{ "parm11",					FPRM( 10 ) },
+	{ "parm12",					FPRM( 11 ) },
+	{ "parm13",					FPRM( 12 ) },
+	{ "parm14",					FPRM( 13 ) },
+	{ "parm15",					FPRM( 14 ) },
+	{ "parm16",					FPRM( 15 ) },
+	{ "radius",					FFLT( radius ) },
+	{ "random",					FFLT( random ) },
+	{ "roffname",				FSTR( roffname ) },
+	{ "rofftarget",				FSTR( rofftarget ) },
+	{ "script_targetname",		FSTR( script_targetname ) },//scripts look for this when "affecting"
+	{ "soundset",				FSTR( soundSet ) },
+	{ "spawnflags",				FINT( spawnflags ) },
+	{ "spawnscript",			FSTR( behaviorSet[BSET_SPAWN] ) },//name of script to run
+	{ "speed",					FFLT( speed ) },
+	{ "target",					FSTR( target ) },
+	{ "target2",				FSTR( target2 ) },
+	{ "target3",				FSTR( target3 ) },
+	{ "target4",				FSTR( target4 ) },
+	{ "target5",				FSTR( target5 ) },
+	{ "target6",				FSTR( target6 ) },
+	{ "targetname",				FSTR( targetname ) },
+	{ "targetshadername",		FSTR( targetShaderName ) },
+	{ "targetshadernewname",	FSTR( targetShaderNewName ) },
+	{ "team",					FSTR( team ) },
+	{ "teamnodmg",				FINT( teamnodmg ) },
+	{ "teamowner",				FINT( s.teamowner ) },
+	{ "teamuser",				FINT( alliedTeam ) },
+	{ "usescript",				FSTR( behaviorSet[BSET_USE] ) },//name of script to run
+	{ "victoryscript",			FSTR( behaviorSet[BSET_VICTORY] ) },//name of script to run
+	{ "wait",					FFLT( wait ) },
 };
 
 typedef struct spawn_s {
@@ -804,71 +787,10 @@ in a gentity
 ===============
 */
 
-static int fieldcmp( const void *a, const void *b ) {
-	return Q_stricmp( (const char *)a, ((field_t*)b)->name );
-}
-
-void Q3_SetParm ( int entID, int parmNum, const char *parmValue );
-void G_ParseField( const char *key, const char *value, gentity_t *ent )
-{
-	field_t	*f;
-	byte	*b;
-	float	v;
-	vec3_t	vec;
-
-	f = (field_t *)Q_LinearSearch( key, fields, ARRAY_LEN( fields ), sizeof( field_t ), fieldcmp );
-	if ( f )
-	{// found it
-		b = (byte *)ent;
-
-		switch( f->type ) {
-		case F_STRING:
-			*(char **)(b+f->ofs) = G_NewString (value);
-			break;
-		case F_VECTOR:
-			if ( sscanf( value, "%f %f %f", &vec[0], &vec[1], &vec[2] ) == 3 ) {
-				((float *)(b+f->ofs))[0] = vec[0];
-				((float *)(b+f->ofs))[1] = vec[1];
-				((float *)(b+f->ofs))[2] = vec[2];
-			}
-			else {
-				trap->Print( "G_ParseField: Failed sscanf on F_VECTOR (key/value: %s/%s)\n", key, value );
-				((float *)(b+f->ofs))[0] = ((float *)(b+f->ofs))[1] = ((float *)(b+f->ofs))[2] = 0.0f;
-			}
-			break;
-		case F_INT:
-			*(int *)(b+f->ofs) = atoi(value);
-			break;
-		case F_FLOAT:
-			*(float *)(b+f->ofs) = atof(value);
-			break;
-		case F_ANGLEHACK:
-			v = atof(value);
-			((float *)(b+f->ofs))[0] = 0;
-			((float *)(b+f->ofs))[1] = v;
-			((float *)(b+f->ofs))[2] = 0;
-			break;
-		case F_PARM1:
-		case F_PARM2:
-		case F_PARM3:
-		case F_PARM4:
-		case F_PARM5:
-		case F_PARM6:
-		case F_PARM7:
-		case F_PARM8:
-		case F_PARM9:
-		case F_PARM10:
-		case F_PARM11:
-		case F_PARM12:
-		case F_PARM13:
-		case F_PARM14:
-		case F_PARM15:
-		case F_PARM16:
-			Q3_SetParm( ent->s.number, (f->type - F_PARM1), (char *) value );
-			break;
-		}
-		return;
-	}
+void G_ParseField( const char *key, const char *value, gentity_t *ent ){
+	auto s = fields.find(key);
+	if (s == fields.end()) return;
+	s->second(ent, value);
 }
 
 #define ADJUST_AREAPORTAL() \

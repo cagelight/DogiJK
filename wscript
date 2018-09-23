@@ -8,7 +8,7 @@ out = 'build'
 	
 g_comflags = ['-pthread', '-Wall', '-Wno-unused-variable']
 g_cflags = ['-std=c11'] + g_comflags
-g_cxxflags = ['-std=c++14'] + g_comflags
+g_cxxflags = ['-std=c++17'] + g_comflags
 
 def btype_cflags(ctx):
 	return {
@@ -28,7 +28,6 @@ def options(opt):
 	opt.load('g++')
 	
 	opt.add_option('--build_type', dest='build_type', type='string', default='RELEASE', action='store', help='DEBUG, NATIVE, RELEASE')
-	opt.add_option('--bash_location', dest='bash_location', type='string', default='bash', action='store', help='Location of bash when compiling on Windows. Optional.')
 	opt.add_option('--no_server', dest='bldsv', default=True, action='store_false', help='True/False')
 	opt.add_option('--no_client', dest='bldcl', default=True, action='store_false', help='True/False')
 
