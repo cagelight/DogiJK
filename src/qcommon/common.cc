@@ -283,6 +283,11 @@ void NORETURN QDECL Com_Error( int code, const char *fmt, ... ) {
 		Cvar_Get("com_errorMessage", "", CVAR_ROM);	//give com_errorMessage a default so it won't come back to life after a resetDefaults
 		Cvar_Set("com_errorMessage", com_errorMessage);
 	}
+	
+	if (code == ERR_FATAL) {
+		Com_Printf ("%s", com_errorMessage);
+		std::terminate();
+	}
 
 	if ( code == ERR_DISCONNECT || code == ERR_SERVERDISCONNECT || code == ERR_DROP || code == ERR_NEED_CD ) {
 		throw code;

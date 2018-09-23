@@ -443,38 +443,6 @@ static void SV_GetUsercmd( int clientNum, usercmd_t *cmd ) {
 	*cmd = svs.clients[clientNum].lastUsercmd;
 }
 
-static sharedEntity_t gLocalModifier;
-static sharedEntity_t *ConvertedEntity( sharedEntity_t *ent ) { //Return an entity with the memory shifted around to allow reading/modifying VM memory
-	int i = 0;
-
-	assert(ent);
-
-	gLocalModifier.s = ent->s;
-	gLocalModifier.r = ent->r;
-	while (i < NUM_TIDS)
-	{
-		gLocalModifier.taskID[i] = ent->taskID[i];
-		i++;
-	}
-	i = 0;
-	gLocalModifier.parms = (parms_t *)VM_ArgPtr((intptr_t)ent->parms);
-	while (i < NUM_BSETS)
-	{
-		gLocalModifier.behaviorSet[i] = (char *)VM_ArgPtr((intptr_t)ent->behaviorSet[i]);
-		i++;
-	}
-	i = 0;
-	gLocalModifier.script_targetname = (char *)VM_ArgPtr((intptr_t)ent->script_targetname);
-	gLocalModifier.delayScriptTime = ent->delayScriptTime;
-	gLocalModifier.fullName = (char *)VM_ArgPtr((intptr_t)ent->fullName);
-	gLocalModifier.targetname = (char *)VM_ArgPtr((intptr_t)ent->targetname);
-	gLocalModifier.classname = (char *)VM_ArgPtr((intptr_t)ent->classname);
-
-	gLocalModifier.ghoul2 = ent->ghoul2;
-
-	return &gLocalModifier;
-}
-
 static const char *SV_SetActiveSubBSP( int index ) {
 	if ( index >= 0 ) {
 		sv.mLocalSubBSPIndex = CM_FindSubBSP( index );
@@ -1352,6 +1320,7 @@ static void SV_G2API_SetGhoul2ModelIndexes( void *ghoul2, qhandle_t *modelList, 
 
 static qboolean SV_G2API_HaveWeGhoul2Models( void *ghoul2) {
 	if ( !ghoul2 ) return qfalse;
+	return qtrue;
 	return re->G2API_HaveWeGhoul2Models( *((CGhoul2Info_v *)ghoul2) );
 }
 

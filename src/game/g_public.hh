@@ -213,45 +213,45 @@ typedef struct Vehicle_s Vehicle_t;
 // the server looks at a sharedEntity, which is the start of the game's gentity_t structure
 //mod authors should not touch this struct
 struct sharedEntity_t {
+	
+	sharedEntity_t();
+	~sharedEntity_t();
+	
 	entityState_t	s;				// communicated by server to clients
-	playerState_t	*playerState;	//needs to be in the gentity for bg entity access
+	playerState_t	*playerState = nullptr;	//needs to be in the gentity for bg entity access
 									//if you want to actually see the contents I guess
 									//you will have to be sure to VMA it first.
-#if (!defined(MACOS_X) && !defined(__GCC__) && !defined(__GNUC__))
-	Vehicle_t		*m_pVehicle; //vehicle data
-#else
-	struct Vehicle_s		*m_pVehicle; //vehicle data
-#endif
-	void			*ghoul2; //g2 instance
-	int				localAnimIndex; //index locally (game/cgame) to anim data for this skel
-	vec3_t			modelScale; //needed for g2 collision
+	struct Vehicle_s		*m_pVehicle = nullptr; //vehicle data
+	void			*ghoul2 = nullptr; //g2 instance
+	int				localAnimIndex = 0; //index locally (game/cgame) to anim data for this skel
+	vec3_t			modelScale {0, 0, 0}; //needed for g2 collision
 
 	//from here up must also be unified with bgEntity/centity
 
 	entityShared_t	r;				// shared by both the server system and game
 
 	//Script/ICARUS-related fields
-	int				taskID[NUM_TIDS];
-	parms_t			*parms;
-	char			*behaviorSet[NUM_BSETS];
-	char			*script_targetname;
-	int				delayScriptTime;
-	char			*fullName;
+	int				taskID[NUM_TIDS] {0};
+	parms_t			*parms = nullptr;
+	char			*behaviorSet[NUM_BSETS] {nullptr};
+	char			*script_targetname = nullptr;
+	int				delayScriptTime = 0;
+	char			*fullName = nullptr;
 
 	//rww - targetname and classname are now shared as well. ICARUS needs access to them.
-	char			*targetname;
-	char			*classname;			// set in QuakeEd
+	char			*targetname = nullptr;
+	char			*classname = nullptr;			// set in QuakeEd
 
 	//rww - and yet more things to share. This is because the nav code is in the exe because it's all C++.
-	int				waypoint;			//Set once per frame, if you've moved, and if someone asks
-	int				lastWaypoint;		//To make sure you don't double-back
-	int				lastValidWaypoint;	//ALWAYS valid -used for tracking someone you lost
-	int				noWaypointTime;		//Debouncer - so don't keep checking every waypoint in existance every frame that you can't find one
-	int				combatPoint;
-	int				failedWaypoints[MAX_FAILED_NODES];
-	int				failedWaypointCheckTime;
+	int				waypoint = 0;			//Set once per frame, if you've moved, and if someone asks
+	int				lastWaypoint = 0;		//To make sure you don't double-back
+	int				lastValidWaypoint = 0;	//ALWAYS valid -used for tracking someone you lost
+	int				noWaypointTime = 0;		//Debouncer - so don't keep checking every waypoint in existance every frame that you can't find one
+	int				combatPoint = 0;
+	int				failedWaypoints[MAX_FAILED_NODES] {0};
+	int				failedWaypointCheckTime = 0;
 
-	int				next_roff_time; //rww - npc's need to know when they're getting roff'd
+	int				next_roff_time = 0; //rww - npc's need to know when they're getting roff'd
 };
 
 #if !defined(_GAME) && defined(__cplusplus)

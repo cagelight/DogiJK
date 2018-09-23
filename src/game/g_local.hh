@@ -175,198 +175,201 @@ extern qboolean gEscaping;
 extern int gEscapeTime;
 
 struct gentity_t : public sharedEntity_t {
+	
+	gentity_t();
+	~gentity_t();
 
-	gclient_t	*client;			// NULL if not a client
+	gclient_t	*client = nullptr;			// NULL if not a client
 
-	gNPC_t		*NPC;//Only allocated if the entity becomes an NPC
-	int			cantHitEnemyCounter;//HACK - Makes them look for another enemy on the same team if the one they're after can't be hit
+	gNPC_t		*NPC = nullptr;//Only allocated if the entity becomes an NPC
+	int			cantHitEnemyCounter = 0;//HACK - Makes them look for another enemy on the same team if the one they're after can't be hit
 
-	qboolean	noLumbar; //see note in cg_local.h
+	qboolean	noLumbar = qfalse; //see note in cg_local.h
 
-	qboolean	inuse;
+	qboolean	inuse = qfalse;
 
-	int			lockCount; //used by NPCs
+	int			lockCount = 0; //used by NPCs
 
-	int			spawnflags;			// set in QuakeEd
+	int			spawnflags = 0;			// set in QuakeEd
 
-	int			teamnodmg;			// damage will be ignored if it comes from this team
+	int			teamnodmg = 0;			// damage will be ignored if it comes from this team
 
-	char		*roffname;			// set in QuakeEd
-	char		*rofftarget;		// set in QuakeEd
+	char		*roffname = nullptr;			// set in QuakeEd
+	char		*rofftarget = nullptr;		// set in QuakeEd
 
-	char		*healingclass; //set in quakeed
-	char		*healingsound; //set in quakeed
-	int			healingrate; //set in quakeed
-	int			healingDebounce; //debounce for generic object healing shiz
+	char		*healingclass = nullptr; //set in quakeed
+	char		*healingsound = nullptr; //set in quakeed
+	int			healingrate = 0; //set in quakeed
+	int			healingDebounce = 0; //debounce for generic object healing shiz
 
-	char		*ownername;
+	char		*ownername = nullptr;
 
-	int			objective;
-	int			side;
+	int			objective = 0;
+	int			side = 0;
 
-	int			passThroughNum;		// set to index to pass through (+1) for missiles
+	int			passThroughNum = 0;		// set to index to pass through (+1) for missiles
 
-	int			aimDebounceTime;
-	int			painDebounceTime;
-	int			attackDebounceTime;
-	int			alliedTeam;			// only useable by this team, never target this team
+	int			aimDebounceTime = 0;
+	int			painDebounceTime = 0;
+	int			attackDebounceTime = 0;
+	int			alliedTeam = 0;			// only useable by this team, never target this team
 
-	int			roffid;				// if roffname != NULL then set on spawn
+	int			roffid = 0;				// if roffname != NULL then set on spawn
 
-	qboolean	neverFree;			// if true, FreeEntity will only unlink
+	qboolean	neverFree = qfalse;			// if true, FreeEntity will only unlink
 									// bodyque uses this
 
-	int			flags;				// FL_* variables
+	int			flags = 0;				// FL_* variables
 
-	char		*model;
-	char		*model2;
-	int			freetime;			// level.time when the object was freed
+	char		*model = nullptr;
+	char		*model2 = nullptr;
+	int			freetime = 0;			// level.time when the object was freed
 
-	int			eventTime;			// events will be cleared EVENT_VALID_MSEC after set
-	qboolean	freeAfterEvent;
-	qboolean	unlinkAfterEvent;
+	int			eventTime = 0;			// events will be cleared EVENT_VALID_MSEC after set
+	qboolean	freeAfterEvent = qfalse;
+	qboolean	unlinkAfterEvent = qfalse;
 
-	qboolean	physicsObject;		// if true, it can be pushed by movers and fall off edges
+	qboolean	physicsObject = qfalse;		// if true, it can be pushed by movers and fall off edges
 									// all game items are physicsObjects,
-	float		physicsBounce;		// 1.0 = continuous bounce, 0.0 = no bounce
-	int			clipmask;			// brushes with this content value will be collided against
+	float		physicsBounce = 0.0f;		// 1.0 = continuous bounce, 0.0 = no bounce
+	int			clipmask = 0;			// brushes with this content value will be collided against
 									// when moving.  items and corpses do not collide against
 									// players, for instance
 
 //Only used by NPC_spawners
-	char		*NPC_type;
-	char		*NPC_targetname;
-	char		*NPC_target;
+	char		*NPC_type = nullptr;
+	char		*NPC_targetname = nullptr;
+	char		*NPC_target = nullptr;
 
 	// movers
-	moverState_t moverState;
-	int			soundPos1;
-	int			sound1to2;
-	int			sound2to1;
-	int			soundPos2;
-	int			soundLoop;
-	gentity_t	*parent;
-	gentity_t	*nextTrain;
-	gentity_t	*prevTrain;
-	vec3_t		pos1, pos2;
+	moverState_t moverState = MOVER_POS1;
+	int			soundPos1 = 0;
+	int			sound1to2 = 0;
+	int			sound2to1 = 0;
+	int			soundPos2 = 0;
+	int			soundLoop = 0;
+	gentity_t	*parent = nullptr;
+	gentity_t	*nextTrain = nullptr;
+	gentity_t	*prevTrain = nullptr;
+	vec3_t		pos1 {0, 0, 0}, pos2 {0, 0, 0};
 
 	//for npc's
-	vec3_t		pos3;
+	vec3_t		pos3 {0, 0, 0};
 
-	char		*message;
+	char		*message = nullptr;
 
-	int			timestamp;		// body queue sinking, etc
+	int			timestamp = 0;		// body queue sinking, etc
 
-	float		angle;			// set in editor, -1 = up, -2 = down
-	char		*target;
-	char		*target2;
-	char		*target3;		//For multiple targets, not used for firing/triggering/using, though, only for path branches
-	char		*target4;		//For multiple targets, not used for firing/triggering/using, though, only for path branches
-	char		*target5;		//mainly added for siege items
-	char		*target6;		//mainly added for siege items
+	float		angle = 0.0f;			// set in editor, -1 = up, -2 = down
+	char		*target = nullptr;
+	char		*target2 = nullptr;
+	char		*target3 = nullptr;		//For multiple targets, not used for firing/triggering/using, though, only for path branches
+	char		*target4 = nullptr;		//For multiple targets, not used for firing/triggering/using, though, only for path branches
+	char		*target5 = nullptr;		//mainly added for siege items
+	char		*target6 = nullptr;		//mainly added for siege items
 
-	char		*team;
-	char		*targetShaderName;
-	char		*targetShaderNewName;
-	gentity_t	*target_ent;
+	char		*team = nullptr;
+	char		*targetShaderName = nullptr;
+	char		*targetShaderNewName = nullptr;
+	gentity_t	*target_ent = nullptr;
 
-	char		*closetarget;
-	char		*opentarget;
-	char		*paintarget;
+	char		*closetarget = nullptr;
+	char		*opentarget = nullptr;
+	char		*paintarget = nullptr;
 
-	char		*goaltarget;
-	char		*idealclass;
+	char		*goaltarget = nullptr;
+	char		*idealclass = nullptr;
 
-	float		radius;
+	float		radius = 0.0f;
 
-	int			maxHealth; //used as a base for crosshair health display
+	int			maxHealth = 0; //used as a base for crosshair health display
 
-	float		speed;
-	vec3_t		movedir;
-	float		mass;
-	int			setTime;
+	float		speed = 0.0f;
+	vec3_t		movedir {0, 0, 0};
+	float		mass = 0.0f;
+	int			setTime = 0;
 
 //Think Functions
-	int			nextthink;
-	void		(*think)(gentity_t *self);
-	void		(*reached)(gentity_t *self);	// movers call this when hitting endpoint
-	void		(*blocked)(gentity_t *self, gentity_t *other);
-	void		(*touch)(gentity_t *self, gentity_t *other, trace_t *trace);
-	void		(*use)(gentity_t *self, gentity_t *other, gentity_t *activator);
-	void		(*pain)(gentity_t *self, gentity_t *attacker, int damage);
-	void		(*die)(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod);
+	int			nextthink = 0;
+	void		(*think)(gentity_t *self) = nullptr;
+	void		(*reached)(gentity_t *self) = nullptr;	// movers call this when hitting endpoint
+	void		(*blocked)(gentity_t *self, gentity_t *other) = nullptr;
+	void		(*touch)(gentity_t *self, gentity_t *other, trace_t *trace) = nullptr;
+	void		(*use)(gentity_t *self, gentity_t *other, gentity_t *activator) = nullptr;
+	void		(*pain)(gentity_t *self, gentity_t *attacker, int damage) = nullptr;
+	void		(*die)(gentity_t *self, gentity_t *inflictor, gentity_t *attacker, int damage, int mod) = nullptr;
 
-	int			pain_debounce_time;
-	int			fly_sound_debounce_time;	// wind tunnel
-	int			last_move_time;
+	int			pain_debounce_time = 0;
+	int			fly_sound_debounce_time = 0;	// wind tunnel
+	int			last_move_time = 0;
 
 //Health and damage fields
-	int			health;
-	qboolean	takedamage;
-	material_t	material;
+	int			health = 0;
+	qboolean	takedamage = qfalse;
+	material_t	material = MAT_METAL;
 
-	int			damage;
-	int			dflags;
-	int			splashDamage;	// quad will increase this without increasing radius
-	int			splashRadius;
-	int			methodOfDeath;
-	int			splashMethodOfDeath;
+	int			damage = 0;
+	int			dflags = 0;
+	int			splashDamage = 0;	// quad will increase this without increasing radius
+	int			splashRadius = 0;
+	int			methodOfDeath = 0;
+	int			splashMethodOfDeath = 0;
 
-	int			locationDamage[HL_MAX];		// Damage accumulated on different body locations
+	int			locationDamage[HL_MAX] {0};		// Damage accumulated on different body locations
 
-	int			count;
-	int			bounceCount;
-	qboolean	alt_fire;
+	int			count = 0;
+	int			bounceCount = 0;
+	qboolean	alt_fire = qfalse;
 
-	gentity_t	*chain;
-	gentity_t	*enemy;
-	gentity_t	*lastEnemy;
-	gentity_t	*activator;
-	gentity_t	*teamchain;		// next entity in team
-	gentity_t	*teammaster;	// master of the team
+	gentity_t	*chain = nullptr;
+	gentity_t	*enemy = nullptr;
+	gentity_t	*lastEnemy = nullptr;
+	gentity_t	*activator = nullptr;
+	gentity_t	*teamchain = nullptr;		// next entity in team
+	gentity_t	*teammaster = nullptr;	// master of the team
 
-	int			watertype;
-	int			waterlevel;
+	int			watertype = 0;
+	int			waterlevel = 0;
 
 	int			noise_index;
 
 	// timing variables
-	float		wait;
-	float		random;
-	int			delay;
-	int			use_timer;
+	float		wait = 0.0f;
+	float		random = 0.0f;
+	int			delay = 0;
+	int			use_timer = 0;
 
 	//generic values used by various entities for different purposes.
-	int			genericValue1;
-	int			genericValue2;
-	int			genericValue3;
-	int			genericValue4;
-	int			genericValue5;
-	int			genericValue6;
-	int			genericValue7;
-	int			genericValue8;
-	int			genericValue9;
-	int			genericValue10;
-	int			genericValue11;
-	int			genericValue12;
-	int			genericValue13;
-	int			genericValue14;
-	int			genericValue15;
+	int			genericValue1 = 0;
+	int			genericValue2 = 0;
+	int			genericValue3 = 0;
+	int			genericValue4 = 0;
+	int			genericValue5 = 0;
+	int			genericValue6 = 0;
+	int			genericValue7 = 0;
+	int			genericValue8 = 0;
+	int			genericValue9 = 0;
+	int			genericValue10 = 0;
+	int			genericValue11 = 0;
+	int			genericValue12 = 0;
+	int			genericValue13 = 0;
+	int			genericValue14 = 0;
+	int			genericValue15 = 0;
 
-	char		*soundSet;
+	char		*soundSet = nullptr;
 
-	qboolean	isSaberEntity;
+	qboolean	isSaberEntity = qfalse;
 
-	int			damageRedirect; //if entity takes damage, redirect to..
-	int			damageRedirectTo; //this entity number
+	int			damageRedirect = 0; //if entity takes damage, redirect to..
+	int			damageRedirectTo = 0; //this entity number
 
-	vec3_t		epVelocity;
-	float		epGravFactor;
+	vec3_t		epVelocity {0, 0, 0};
+	float		epGravFactor = 0.0f;
 
-	gitem_t		*item;			// for bonus items
+	gitem_t		*item = nullptr;			// for bonus items
 
 	// OpenJK add
-	int			useDebounceTime;	// for cultist_destroyer
+	int			useDebounceTime = 0;	// for cultist_destroyer
 };
 
 void G_FreeEntity( gentity_t *e );

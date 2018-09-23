@@ -801,14 +801,17 @@ sfx_t *S_FindName( const char *name ) {
 	sfx_t	*sfx;
 
 	if (!name) {
-		Com_Error (ERR_FATAL, "S_FindName: NULL");
+		Com_Printf (S_COLOR_RED "ERROR: S_FindName: NULL\n");
+		return nullptr;
 	}
 	if (!name[0]) {
-		Com_Error (ERR_FATAL, "S_FindName: empty name");
+		Com_Printf (S_COLOR_RED "ERROR: S_FindName: empty name\n");
+		return nullptr;
 	}
 
 	if (strlen(name) >= MAX_QPATH) {
-		Com_Error (ERR_FATAL, "Sound name too long: %s", name);
+		Com_Printf (S_COLOR_RED "ERROR: Sound name too long: %s\n", name);
+		return nullptr;
 	}
 
 	char sSoundNameNoExt[MAX_QPATH];
@@ -1014,6 +1017,7 @@ sfxHandle_t	S_RegisterSound( const char *name)
 	}
 
 	sfx = S_FindName( name );
+	if (!sfx) return 0;
 
 	SND_TouchSFX(sfx);
 

@@ -1036,10 +1036,13 @@ void G_FreeEntity( gentity_t * ent ) {
 		trap->SendServerCommand(-1, va("kls %i %i", ent->s.trickedentindex, ent->s.number));
 	}
 
+	*ent = {};
+	/*
 	memset (ent, 0, sizeof(*ent));
 	ent->classname = "freent";
 	ent->freetime = level.time;
 	ent->inuse = qfalse;
+	*/
 }
 
 /*
