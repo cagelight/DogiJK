@@ -3273,13 +3273,13 @@ void Cmd_TargetUse_f( gentity_t *ent )
 		gentity_t *targ;
 
 		trap->Argv( 1, sArg, sizeof( sArg ) );
-		targ = G_Find( NULL, FOFS( targetname ), sArg );
+		targ = G_Find( NULL, [sArg](gentity_t * ent){ return !Q_stricmp(ent->targetname, sArg); } );
 
 		while ( targ )
 		{
 			if ( targ->use )
 				targ->use( targ, ent, ent );
-			targ = G_Find( targ, FOFS( targetname ), sArg );
+			targ = G_Find( targ, [sArg](gentity_t * ent){ return !Q_stricmp(ent->targetname, sArg); } );
 		}
 	}
 }

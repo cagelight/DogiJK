@@ -1053,7 +1053,7 @@ qboolean	G_PlayerHasCustomSkeleton(gentity_t *ent);
 void	G_TeamCommand( team_t team, char *cmd );
 void	G_ScaleNetHealth(gentity_t *self);
 void	G_KillBox (gentity_t *ent);
-gentity_t *G_Find (gentity_t *from, int fieldofs, const char *match);
+gentity_t *G_Find (gentity_t *from, std::function<bool(gentity_t *)> test);
 int		G_RadiusList ( vec3_t origin, float radius,	gentity_t *ignore, qboolean takeDamage, gentity_t *ent_list[MAX_GENTITIES]);
 
 void	G_Throw( gentity_t *targ, vec3_t newDir, float push );
@@ -1469,8 +1469,6 @@ int BotAIStartFrame( int time );
 
 extern	level_locals_t	level;
 extern	gentity_t		g_entities[MAX_GENTITIES];
-
-#define	FOFS(x) offsetof(gentity_t, x)
 
 // userinfo validation bitflags
 // default is all except extended ascii

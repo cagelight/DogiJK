@@ -1283,7 +1283,7 @@ void FindIntermissionPoint( void ) {
 	{
 	   	if (gSiegeRoundWinningTeam == SIEGETEAM_TEAM1)
 		{
-			ent = G_Find (NULL, FOFS(classname), "info_player_intermission_red");
+			ent = G_Find (NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_intermission_red"); });
 			if ( ent && ent->target2 )
 			{
 				G_UseTargets2( ent, ent, ent->target2 );
@@ -1291,7 +1291,7 @@ void FindIntermissionPoint( void ) {
 		}
 	   	else if (gSiegeRoundWinningTeam == SIEGETEAM_TEAM2)
 		{
-			ent = G_Find (NULL, FOFS(classname), "info_player_intermission_blue");
+			ent = G_Find (NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_intermission_blue"); });
 			if ( ent && ent->target2 )
 			{
 				G_UseTargets2( ent, ent, ent->target2 );
@@ -1300,7 +1300,7 @@ void FindIntermissionPoint( void ) {
 	}
 	if ( !ent )
 	{
-		ent = G_Find (NULL, FOFS(classname), "info_player_intermission");
+		ent = G_Find (NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_intermission"); });
 	}
 	if ( !ent ) {	// the map creator forgot to put in an intermission point...
 		SelectSpawnPoint ( vec3_origin, level.intermission_origin, level.intermission_angle, TEAM_SPECTATOR, qfalse );

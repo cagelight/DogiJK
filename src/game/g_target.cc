@@ -42,7 +42,7 @@ void Use_Target_Give( gentity_t *ent, gentity_t *other, gentity_t *activator ) {
 
 	memset( &trace, 0, sizeof( trace ) );
 	t = NULL;
-	while ( (t = G_Find (t, FOFS(targetname), ent->target)) != NULL ) {
+	while ( (t = G_Find (t, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->targetname, ent->target); })) != NULL ) {
 		if ( !t->item ) {
 			continue;
 		}
@@ -392,7 +392,7 @@ void target_laser_start (gentity_t *self)
 	self->s.eType = ET_BEAM;
 
 	if (self->target) {
-		ent = G_Find (NULL, FOFS(targetname), self->target);
+		ent = G_Find (NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); });
 		if (!ent) {
 			trap->Print ("%s at %s: %s is a bad target\n", self->classname, vtos(self->s.origin), self->target);
 		}
@@ -673,7 +673,7 @@ void target_random_use(gentity_t *self, gentity_t *other, gentity_t *activator)
 		self->use = 0;
 	}
 
-	while ( (t = G_Find (t, FOFS(targetname), self->target)) != NULL )
+	while ( (t = G_Find (t, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); })) != NULL )
 	{
 		if (t != self)
 		{
@@ -695,7 +695,7 @@ void target_random_use(gentity_t *self, gentity_t *other, gentity_t *activator)
 	//FIXME: need a seed
 	pick = Q_irand(1, t_count);
 	t_count = 0;
-	while ( (t = G_Find (t, FOFS(targetname), self->target)) != NULL )
+	while ( (t = G_Find (t, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); })) != NULL )
 	{
 		if (t != self)
 		{
@@ -882,7 +882,7 @@ void SP_target_scriptrunner( gentity_t *self )
 void G_SetActiveState(char *targetstring, qboolean actState)
 {
 	gentity_t	*target = NULL;
-	while( NULL != (target = G_Find(target, FOFS(targetname), targetstring)) )
+	while( NULL != (target = G_Find(target, [targetstring](gentity_t * ent){ return !Q_stricmp(ent->targetname, targetstring); })) )
 	{
 		target->flags = actState ? (target->flags&~FL_INACTIVE) : (target->flags|FL_INACTIVE);
 	}

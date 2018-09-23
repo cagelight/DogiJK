@@ -4316,7 +4316,7 @@ void Cmd_NPC_f( gentity_t *ent )
 		}
 		else
 		{
-			if ( (thisent = G_Find( NULL, FOFS(targetname), cmd2 )) != NULL && thisent->client )
+			if ( (thisent = G_Find( NULL, [cmd2](gentity_t * ent){ return !Q_stricmp(ent->targetname, cmd2); })) != NULL && thisent->client )
 			{
 				NPC_PrintScore( thisent );
 			}

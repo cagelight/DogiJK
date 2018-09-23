@@ -1525,7 +1525,7 @@ void shipboundary_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 		return;
 	}
 
-	ent = G_Find (NULL, FOFS(targetname), self->target);
+	ent = G_Find (NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); });
 	if (!ent || !ent->inuse)
 	{ //this is bad
 		trap->Error( ERR_DROP, "trigger_shipboundary has invalid target '%s'\n", self->target );
@@ -1635,7 +1635,7 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 				//take off the flag so we only do this once
 				other->client->ps.eFlags2 &= ~EF2_HYPERSPACE;
 				//Get the offset from the local position
-				ent = G_Find (NULL, FOFS(targetname), self->target);
+				ent = G_Find (NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); });
 				if (!ent || !ent->inuse)
 				{ //this is bad
 					trap->Error( ERR_DROP, "trigger_hyperspace has invalid target '%s'\n", self->target );
@@ -1647,7 +1647,7 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 				rDiff = DotProduct( right, diff );
 				uDiff = DotProduct( up, diff );
 				//Now get the base position of the destination
-				ent = G_Find (NULL, FOFS(targetname), self->target2);
+				ent = G_Find (NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target2); });
 				if (!ent || !ent->inuse)
 				{ //this is bad
 					trap->Error( ERR_DROP, "trigger_hyperspace has invalid target2 '%s'\n", self->target2 );
@@ -1678,7 +1678,7 @@ void hyperspace_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 	}
 	else
 	{
-		ent = G_Find (NULL, FOFS(targetname), self->target);
+		ent = G_Find (NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); });
 		if (!ent || !ent->inuse)
 		{ //this is bad
 			trap->Error( ERR_DROP, "trigger_hyperspace has invalid target '%s'\n", self->target );
@@ -1814,7 +1814,7 @@ gentity_t *asteroid_pick_random_asteroid( gentity_t *self )
 	int			t_count = 0, pick;
 	gentity_t	*t = NULL;
 
-	while ( (t = G_Find (t, FOFS(targetname), self->target)) != NULL )
+	while ( (t = G_Find (t, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); })) != NULL )
 	{
 		if (t != self)
 		{
@@ -1835,7 +1835,7 @@ gentity_t *asteroid_pick_random_asteroid( gentity_t *self )
 	//FIXME: need a seed
 	pick = Q_irand(1, t_count);
 	t_count = 0;
-	while ( (t = G_Find (t, FOFS(targetname), self->target)) != NULL )
+	while ( (t = G_Find (t, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); })) != NULL )
 	{
 		if (t != self)
 		{

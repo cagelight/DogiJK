@@ -240,7 +240,7 @@ NULL will be returned if the end of the list is reached.
 
 =============
 */
-gentity_t *G_Find (gentity_t *from, int fieldofs, const char *match)
+gentity_t *G_Find (gentity_t *from, std::function<bool(gentity_t *)> test)
 {
 	char	*s;
 
@@ -253,11 +253,7 @@ gentity_t *G_Find (gentity_t *from, int fieldofs, const char *match)
 	{
 		if (!from->inuse)
 			continue;
-		s = *(char **) ((byte *)from + fieldofs);
-		if (!s)
-			continue;
-		if (!Q_stricmp (s, match))
-			return from;
+		if (test(from)) return from;
 	}
 
 	return NULL;
@@ -541,7 +537,7 @@ gentity_t *G_PickTarget (char *targetname)
 
 	while(1)
 	{
-		ent = G_Find (ent, FOFS(targetname), targetname);
+		ent = G_Find (ent, [targetname](gentity_t * ent){ return !Q_stricmp(ent->targetname, targetname); });
 		if (!ent)
 			break;
 		choice[num_choices++] = ent;
@@ -590,7 +586,7 @@ void G_UseTargets2( gentity_t *ent, gentity_t *activator, const char *string ) {
 	}
 
 	t = NULL;
-	while ( (t = G_Find (t, FOFS(targetname), string)) != NULL ) {
+	while ( (t = G_Find (t, [string](gentity_t * ent){ return !Q_stricmp(ent->targetname, string); })) != NULL ) {
 		if ( t == ent ) {
 			trap->Print ("WARNING: Entity used itself.\n");
 		} else {

@@ -1733,7 +1733,7 @@ gentity_t *GetObjectThatTargets(gentity_t *ent)
 		return NULL;
 	}
 
-	next = G_Find( next, FOFS(target), ent->targetname );
+	next = G_Find( next, [ent](gentity_t * ent2){ return !Q_stricmp(ent->targetname, ent2->target); } );
 
 	if (next)
 	{
@@ -3065,7 +3065,7 @@ void G_RMGPathing(void)
 #endif
 	vec3_t downVec, trMins, trMaxs;
 	trace_t tr;
-	gentity_t *terrain = G_Find( NULL, FOFS(classname), "terrain" );
+	gentity_t *terrain = G_Find( NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "terrain"); } );
 
 	if (!terrain || !terrain->inuse || terrain->s.eType != ET_TERRAIN)
 	{

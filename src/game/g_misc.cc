@@ -2451,7 +2451,7 @@ void fx_runner_link( gentity_t *ent )
 		// try to use the target to override the orientation
 		gentity_t	*target = NULL;
 
-		target = G_Find( target, FOFS(targetname), ent->target );
+		target = G_Find( target, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->targetname, ent->target); } );
 
 		if ( !target )
 		{
@@ -2473,7 +2473,7 @@ void fx_runner_link( gentity_t *ent )
 	{
 		gentity_t	*target = NULL;
 
-		target = G_Find( target, FOFS(targetname), ent->target2 );
+		target = G_Find( target, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->targetname, ent->target2); } );
 
 		if ( !target )
 		{
@@ -3432,7 +3432,7 @@ void ref_link ( gentity_t *ent )
 	if ( ent->target )
 	{
 		//TODO: Find the target and set our angles to that direction
-		gentity_t	*target = G_Find( NULL, FOFS(targetname), ent->target );
+		gentity_t	*target = G_Find( NULL, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->targetname, ent->target); } );
 		vec3_t	dir;
 
 		if ( target )
@@ -3580,7 +3580,7 @@ void misc_weapon_shooter_aim( gentity_t *self )
 	//update my aim
 	if ( self->target )
 	{
-		gentity_t *targ = G_Find( NULL, FOFS(targetname), self->target );
+		gentity_t *targ = G_Find( NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); } );
 		if ( targ )
 		{
 			self->enemy = targ;

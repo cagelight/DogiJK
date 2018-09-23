@@ -451,7 +451,7 @@ void Team_FragBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 		carrier = NULL;
 	}
 	flag = NULL;
-	while ((flag = G_Find (flag, FOFS(classname), c)) != NULL) {
+	while ((flag = G_Find (flag, [c](gentity_t * ent){ return !Q_stricmp(ent->classname, c); })) != NULL) {
 		if (!(flag->flags & FL_DROPPED_ITEM))
 			break;
 	}
@@ -552,7 +552,7 @@ gentity_t *Team_ResetFlag( int team ) {
 	}
 
 	ent = NULL;
-	while ((ent = G_Find (ent, FOFS(classname), c)) != NULL) {
+	while ((ent = G_Find (ent, [c](gentity_t * ent){ return !Q_stricmp(ent->classname, c); })) != NULL) {
 		if (ent->flags & FL_DROPPED_ITEM)
 			G_FreeEntity(ent);
 		else {
@@ -1072,7 +1072,7 @@ gentity_t *SelectRandomTeamSpawnPoint( int teamstate, team_t team, int siegeClas
 
 	spot = NULL;
 
-	while ((spot = G_Find (spot, FOFS(classname), classname)) != NULL) {
+	while ((spot = G_Find (spot, [classname](gentity_t * ent){ return !Q_stricmp(ent->classname, classname); })) != NULL) {
 		if ( SpotWouldTelefrag( spot ) ) {
 			continue;
 		}
@@ -1088,7 +1088,7 @@ gentity_t *SelectRandomTeamSpawnPoint( int teamstate, team_t team, int siegeClas
 	}
 
 	if ( !count ) {	// no spots that won't telefrag
-		return G_Find( NULL, FOFS(classname), classname);
+		return G_Find( NULL, [classname](gentity_t * ent){ return !Q_stricmp(ent->classname, classname); });
 	}
 
 	if (level.gametype == GT_SIEGE && siegeClass >= 0 &&

@@ -1027,7 +1027,7 @@ void Q3_Kill( int entID, const char *name )
 	}
 	else
 	{
-		victim = G_Find (NULL, FOFS(targetname), (char *) name );
+		victim = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 	}
 
 	if ( !victim )
@@ -1157,7 +1157,7 @@ void Q3_Remove( int entID, const char *name )
 	}
 	else
 	{
-		victim = G_Find( NULL, FOFS(targetname), (char *) name );
+		victim = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 		if ( !victim )
 		{
 			G_DebugPrint( WL_WARNING, "Q3_Remove: can't find %s\n", name );
@@ -1167,7 +1167,7 @@ void Q3_Remove( int entID, const char *name )
 		while ( victim )
 		{
 			Q3_RemoveEnt( victim );
-			victim = G_Find( victim, FOFS(targetname), (char *) name );
+			victim = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 		}
 	}
 }
@@ -1977,7 +1977,7 @@ Copies origin of found ent into ent running script
 */
 static void Q3_SetCopyOrigin( int entID, const char *name )
 {
-	gentity_t	*found = G_Find( NULL, FOFS(targetname), (char *) name);
+	gentity_t	*found = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 
 	if(found)
 	{
@@ -2177,7 +2177,7 @@ static void Q3_SetEnemy( int entID, const char *name )
 	}
 	else
 	{
-		gentity_t	*enemy = G_Find( NULL, FOFS(targetname), (char *) name);
+		gentity_t	*enemy = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 
 		if(enemy == NULL)
 		{
@@ -2234,7 +2234,7 @@ static void Q3_SetLeader( int entID, const char *name )
 	}
 	else
 	{
-		gentity_t	*leader = G_Find( NULL, FOFS(targetname), (char *) name);
+		gentity_t	*leader = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 
 		if(leader == NULL)
 		{
@@ -2297,7 +2297,7 @@ static qboolean Q3_SetNavGoal( int entID, const char *name )
 		//Get the position of the goal
 		if ( TAG_GetOrigin2( NULL, name, goalPos ) == qfalse )
 		{
-			gentity_t	*targ = G_Find(NULL, FOFS(targetname), (char*)name);
+			gentity_t	*targ = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 			if ( !targ )
 			{
 				G_DebugPrint( WL_ERROR, "Q3_SetNavGoal: can't find NAVGOAL \"%s\"\n", name );
@@ -3177,7 +3177,7 @@ Q3_SetViewTarget
 static void Q3_SetViewTarget (int entID, const char *name)
 {
 	gentity_t	*self  = &g_entities[entID];
-	gentity_t	*viewtarget = G_Find( NULL, FOFS(targetname), (char *) name);
+	gentity_t	*viewtarget = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 	vec3_t		viewspot, selfspot, viewvec, viewangles;
 
 	if ( !self )
@@ -3253,7 +3253,7 @@ static void Q3_SetWatchTarget (int entID, const char *name)
 		self->NPC->watchTarget = NULL;
 	}
 
-	watchTarget = G_Find( NULL, FOFS(targetname), (char *) name);
+	watchTarget = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 	if ( watchTarget == NULL )
 	{
 		G_DebugPrint( WL_WARNING, "Q3_SetWatchTarget: can't find WatchTarget: '%s'\n", name );
@@ -3290,10 +3290,10 @@ void Q3_SetLoopSound(int entID, const char *name)
 
 void Q3_SetICARUSFreeze( int entID, const char *name, qboolean freeze )
 {
-	gentity_t	*self  = G_Find( NULL, FOFS(targetname), name );
+	gentity_t	*self  = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 	if ( !self )
 	{//hmm, targetname failed, try script_targetname?
-		self = G_Find( NULL, FOFS(script_targetname), name );
+		self = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->script_targetname, name); } );
 	}
 
 	if ( !self )
@@ -4051,7 +4051,7 @@ Sets the capture spot goal of an entity
 static void Q3_SetCaptureGoal( int entID, const char *name )
 {
 	gentity_t	*ent  = &g_entities[entID];
-	gentity_t	*goal = G_Find( NULL, FOFS(targetname), (char *) name);
+	gentity_t	*goal = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 
 	if ( !ent )
 	{
@@ -5360,13 +5360,13 @@ static void Q3_LookTarget( int entID, char *targetName)
 		return;
 	}
 
-	targ = G_Find(NULL, FOFS(targetname), targetName);
+	targ = G_Find (NULL, [targetName](gentity_t * ent){ return !Q_stricmp(ent->targetname, targetName); } );
 	if(!targ)
 	{
-		targ  = G_Find(NULL, FOFS(script_targetname), targetName);
+		targ  = G_Find (NULL, [targetName](gentity_t * ent){ return !Q_stricmp(ent->script_targetname, targetName); } );
 		if (!targ)
 		{
-			targ  = G_Find(NULL, FOFS(NPC_targetname), targetName);
+			targ  = G_Find (NULL, [targetName](gentity_t * ent){ return !Q_stricmp(ent->NPC_targetname, targetName); } );
 			if (!targ)
 			{
 				G_DebugPrint( WL_ERROR, "Q3_LookTarget: Can't find ent %s\n", targetName );

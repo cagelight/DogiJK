@@ -529,7 +529,7 @@ void UseSiegeTarget(gentity_t *other, gentity_t *en, char *target)
 	}
 
 	t = NULL;
-	while ( (t = G_Find (t, FOFS(targetname), target)) != NULL )
+	while ( (t = G_Find (t, [target](gentity_t * ent){ return !Q_stricmp(ent->targetname, target); })) != NULL )
 	{
 		if ( t == ent )
 		{
@@ -1670,7 +1670,7 @@ void SiegeItemUse(gentity_t *ent, gentity_t *other, gentity_t *activator)
 
 	if (ent->paintarget && ent->paintarget[0])
 	{ //want to be on this guy's origin now then
-		gentity_t *targ = G_Find (NULL, FOFS(targetname), ent->paintarget);
+		gentity_t *targ = G_Find (NULL, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->targetname, ent->paintarget); });
 
 		if (targ && targ->inuse)
 		{

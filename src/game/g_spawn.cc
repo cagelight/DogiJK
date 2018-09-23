@@ -105,7 +105,7 @@ void Q3_SetParm ( int entID, int parmNum, const char *parmValue );
 #define FAHK(f) [](gentity_t * ent, char const * str){ VectorClear(ent->f); ent->f[1] = std::strtod(str, nullptr); }
 #define FPRM(n) [](gentity_t * ent, char const * str){ Q3_SetParm( ent->s.number, n, str ); }
 
-std::unordered_map<istring, std::function<void(gentity_t * ent, char const * str)>> fields {
+static const std::unordered_map<istring, std::function<void(gentity_t * ent, char const * str)>> fields {
 	{ "alliedteam",				FINT( alliedTeam ) },//for misc_turrets
 	{ "angerscript",			FSTR( behaviorSet[BSET_ANGER] ) },//name of script to run
 	{ "angle",					FAHK( s.angles ) },

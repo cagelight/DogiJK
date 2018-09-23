@@ -1289,7 +1289,7 @@ gentity_t *G_FindDoorTrigger( gentity_t *ent )
 	if ( door->targetname )
 	{//find out what is targeting it
 		//FIXME: if ent->targetname, check what kind of trigger/ent is targetting it?  If a normal trigger (active, etc), then it's okay?
-		while ( (owner = G_Find( owner, FOFS( target ), door->targetname )) != NULL )
+		while ( (owner = G_Find( owner, [door](gentity_t * ent){ return !Q_stricmp(ent->target, door->targetname); } )) != NULL )
 		{
 			if ( owner && (owner->r.contents&CONTENTS_TRIGGER) )
 			{
@@ -1297,7 +1297,7 @@ gentity_t *G_FindDoorTrigger( gentity_t *ent )
 			}
 		}
 		owner = NULL;
-		while ( (owner = G_Find( owner, FOFS( target2 ), door->targetname )) != NULL )
+		while ( (owner = G_Find( owner, [door](gentity_t * ent){ return !Q_stricmp(ent->target2, door->targetname); } )) != NULL )
 		{
 			if ( owner && (owner->r.contents&CONTENTS_TRIGGER) )
 			{
@@ -1307,7 +1307,7 @@ gentity_t *G_FindDoorTrigger( gentity_t *ent )
 	}
 
 	owner = NULL;
-	while ( (owner = G_Find( owner, FOFS( classname ), "trigger_door" )) != NULL )
+	while ( (owner = G_Find( owner, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "trigger_door"); } )) != NULL )
 	{
 		if ( owner->parent == door )
 		{
@@ -1340,7 +1340,7 @@ qboolean G_EntIsUnlockedDoor( int entityNum )
 		{//find out what is targetting it
 			owner = NULL;
 			//FIXME: if ent->targetname, check what kind of trigger/ent is targetting it?  If a normal trigger (active, etc), then it's okay?
-			while ( (owner = G_Find( owner, FOFS( target ), ent->targetname )) != NULL )
+			while ( (owner = G_Find( owner, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->target, ent->targetname); } )) != NULL )
 			{
 				if ( !Q_stricmp( "trigger_multiple", owner->classname ) )//FIXME: other triggers okay too?
 				{
@@ -1351,7 +1351,7 @@ qboolean G_EntIsUnlockedDoor( int entityNum )
 				}
 			}
 			owner = NULL;
-			while ( (owner = G_Find( owner, FOFS( target2 ), ent->targetname )) != NULL )
+			while ( (owner = G_Find( owner, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->target2, ent->targetname); } )) != NULL )
 			{
 				if ( !Q_stricmp( "trigger_multiple", owner->classname ) )//FIXME: other triggers okay too?
 				{
@@ -1841,7 +1841,7 @@ Link all the corners together
 void Think_SetupTrainTargets( gentity_t *ent ) {
 	gentity_t		*path, *next, *start;
 
-	ent->nextTrain = G_Find( NULL, FOFS(targetname), ent->target );
+	ent->nextTrain = G_Find( NULL, [ent](gentity_t * ent2){ return !Q_stricmp(ent->target, ent2->targetname); } );
 	if ( !ent->nextTrain ) {
 		Com_Printf( "func_train at %s with an unfound target\n",
 			vtos(ent->r.absmin) );
@@ -1872,7 +1872,7 @@ void Think_SetupTrainTargets( gentity_t *ent ) {
 		// is reached
 		next = NULL;
 		do {
-			next = G_Find( next, FOFS(targetname), path->target );
+			next = G_Find( next, [path](gentity_t * ent){ return !Q_stricmp(ent->targetname, path->target); } );
 			if ( !next ) {
 //				trap->Printf( "Train corner at %s without a target path_corner\n",
 //					vtos(path->s.origin) );
