@@ -451,7 +451,7 @@ void Team_FragBonuses(gentity_t *targ, gentity_t *inflictor, gentity_t *attacker
 		carrier = NULL;
 	}
 	flag = NULL;
-	while ((flag = G_Find (flag, [c](gentity_t * ent){ return !Q_stricmp(ent->classname, c); })) != NULL) {
+	while ((flag = G_Find (flag, [c](gentity_t * ent){ return ent->classname == c; })) != NULL) {
 		if (!(flag->flags & FL_DROPPED_ITEM))
 			break;
 	}
@@ -552,7 +552,7 @@ gentity_t *Team_ResetFlag( int team ) {
 	}
 
 	ent = NULL;
-	while ((ent = G_Find (ent, [c](gentity_t * ent){ return !Q_stricmp(ent->classname, c); })) != NULL) {
+	while ((ent = G_Find (ent, [c](gentity_t * ent){ return (ent->classname == c); })) != NULL) {
 		if (ent->flags & FL_DROPPED_ITEM)
 			G_FreeEntity(ent);
 		else {
@@ -929,13 +929,13 @@ int Pickup_Team( gentity_t *ent, gentity_t *other ) {
 	gclient_t *cl = other->client;
 
 	// figure out what team this flag is
-	if( strcmp(ent->classname, "team_CTF_redflag") == 0 ) {
+	if( ent->classname == "team_CTF_redflag" ) {
 		team = TEAM_RED;
 	}
-	else if( strcmp(ent->classname, "team_CTF_blueflag") == 0 ) {
+	else if( ent->classname == "team_CTF_blueflag" ) {
 		team = TEAM_BLUE;
 	}
-	else if( strcmp(ent->classname, "team_CTF_neutralflag") == 0  ) {
+	else if( ent->classname == "team_CTF_neutralflag"  ) {
 		team = TEAM_FREE;
 	}
 	else {
@@ -1072,7 +1072,7 @@ gentity_t *SelectRandomTeamSpawnPoint( int teamstate, team_t team, int siegeClas
 
 	spot = NULL;
 
-	while ((spot = G_Find (spot, [classname](gentity_t * ent){ return !Q_stricmp(ent->classname, classname); })) != NULL) {
+	while ((spot = G_Find (spot, [classname](gentity_t * ent){ return (ent->classname == classname); })) != NULL) {
 		if ( SpotWouldTelefrag( spot ) ) {
 			continue;
 		}
@@ -1088,7 +1088,7 @@ gentity_t *SelectRandomTeamSpawnPoint( int teamstate, team_t team, int siegeClas
 	}
 
 	if ( !count ) {	// no spots that won't telefrag
-		return G_Find( NULL, [classname](gentity_t * ent){ return !Q_stricmp(ent->classname, classname); });
+		return G_Find( NULL, [classname](gentity_t * ent){ return (ent->classname == classname); });
 	}
 
 	if (level.gametype == GT_SIEGE && siegeClass >= 0 &&

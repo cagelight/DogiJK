@@ -1282,7 +1282,7 @@ void FindIntermissionPoint( void ) {
 	{
 	   	if (gSiegeRoundWinningTeam == SIEGETEAM_TEAM1)
 		{
-			ent = G_Find (NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_intermission_red"); });
+			ent = G_Find (NULL, [](gentity_t * ent){ return (ent->classname =="info_player_intermission_red"); });
 			if ( ent && ent->target2 )
 			{
 				G_UseTargets2( ent, ent, ent->target2 );
@@ -1290,7 +1290,7 @@ void FindIntermissionPoint( void ) {
 		}
 	   	else if (gSiegeRoundWinningTeam == SIEGETEAM_TEAM2)
 		{
-			ent = G_Find (NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_intermission_blue"); });
+			ent = G_Find (NULL, [](gentity_t * ent){ return (ent->classname == "info_player_intermission_blue"); });
 			if ( ent && ent->target2 )
 			{
 				G_UseTargets2( ent, ent, ent->target2 );
@@ -1299,7 +1299,7 @@ void FindIntermissionPoint( void ) {
 	}
 	if ( !ent )
 	{
-		ent = G_Find (NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_intermission"); });
+		ent = G_Find (NULL, [](gentity_t * ent){ return (ent->classname == "info_player_intermission"); });
 	}
 	if ( !ent ) {	// the map creator forgot to put in an intermission point...
 		SelectSpawnPoint ( vec3_origin, level.intermission_origin, level.intermission_angle, TEAM_SPECTATOR, qfalse );
@@ -3140,7 +3140,7 @@ void G_RunFrame( int levelTime ) {
 		//fix for self-deactivating areaportals in Siege
 		if ( ent->s.eType == ET_MOVER && level.gametype == GT_SIEGE && level.intermissiontime)
 		{
-			if ( !Q_stricmp("func_door", ent->classname) && ent->moverState != MOVER_POS1 )
+			if ( ("func_door" == ent->classname) && ent->moverState != MOVER_POS1 )
 			{
 				SetMoverState( ent, MOVER_POS1, level.time );
 				if ( ent->teammaster == ent || !ent->teammaster )

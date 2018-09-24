@@ -754,9 +754,9 @@ static void G_SpewEntList(void)
 #endif
 			}
 
-			if (ent->classname && ent->classname[0])
+			if (ent->classname.size())
 			{
-				strcpy(className, ent->classname);
+				strcpy(className, ent->classname.c_str());
 			}
 			else
 			{

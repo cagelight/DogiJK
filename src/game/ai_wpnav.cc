@@ -1457,7 +1457,7 @@ int DoorBlockingSection(int start, int end)
 		return 0;
 	}
 
-	if (!strstr(testdoor->classname, "func_"))
+	if (!strstr(testdoor->classname.c_str(), "func_"))
 	{
 		return 0;
 	}
@@ -1758,7 +1758,7 @@ void CalculateSiegeGoals(void)
 
 		tent = NULL;
 
-		if (ent && ent->classname && strcmp(ent->classname, "info_siege_objective") == 0)
+		if (ent && ent->classname == "info_siege_objective")
 		{
 			tent = ent;
 			t2ent = GetObjectThatTargets(tent);
@@ -1902,41 +1902,34 @@ void CalculateWeightGoals(void)
 
 		weight = 0;
 
-		if (ent && ent->classname)
+		if (ent && ent->classname.size())
 		{
-			if (strcmp(ent->classname, "item_seeker") == 0)
+			if (ent->classname == "item_seeker")
 			{
 				weight = 2;
 			}
-			else if (strcmp(ent->classname, "item_shield") == 0)
-			{
+			else if (ent->classname == "item_shield") {
 				weight = 2;
 			}
-			else if (strcmp(ent->classname, "item_medpac") == 0)
-			{
+			else if (ent->classname == "item_medpac") {
 				weight = 2;
 			}
-			else if (strcmp(ent->classname, "item_sentry_gun") == 0)
-			{
+			else if (ent->classname == "item_sentry_gun") {
 				weight = 2;
 			}
-			else if (strcmp(ent->classname, "item_force_enlighten_dark") == 0)
-			{
+			else if (ent->classname == "item_force_enlighten_dark") {
 				weight = 5;
 			}
-			else if (strcmp(ent->classname, "item_force_enlighten_light") == 0)
-			{
+			else if (ent->classname == "item_force_enlighten_light") {
 				weight = 5;
 			}
-			else if (strcmp(ent->classname, "item_force_boon") == 0)
-			{
+			else if (ent->classname == "item_force_boon") {
 				weight = 5;
 			}
-			else if (strcmp(ent->classname, "item_ysalimari") == 0)
-			{
+			else if (ent->classname == "item_ysalimari") {
 				weight = 2;
 			}
-			else if (strstr(ent->classname, "weapon_") && ent->item)
+			else if (strstr(ent->classname.c_str(), "weapon_") && ent->item)
 			{
 				weight = botGlobalNavWeaponWeights[ent->item->giTag];
 			}
@@ -2284,13 +2277,13 @@ void FlagObjects(void)
 	{
 		ent = &g_entities[i];
 
-		if (ent && ent->inuse && ent->classname)
+		if (ent && ent->inuse && ent->classname.size())
 		{
-			if (!flag_red && strcmp(ent->classname, "team_CTF_redflag") == 0)
+			if (!flag_red && (ent->classname == "team_CTF_redflag"))
 			{
 				flag_red = ent;
 			}
-			else if (!flag_blue && strcmp(ent->classname, "team_CTF_blueflag") == 0)
+			else if (!flag_blue && (ent->classname == "team_CTF_blueflag"))
 			{
 				flag_blue = ent;
 			}
@@ -3065,7 +3058,7 @@ void G_RMGPathing(void)
 #endif
 	vec3_t downVec, trMins, trMaxs;
 	trace_t tr;
-	gentity_t *terrain = G_Find( NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "terrain"); } );
+	gentity_t *terrain = G_Find( NULL, [](gentity_t * ent){ return (ent->classname == "terrain"); } );
 
 	if (!terrain || !terrain->inuse || terrain->s.eType != ET_TERRAIN)
 	{
@@ -3232,7 +3225,7 @@ void BeginAutoPathRoutine(void)
 	{
 		ent = &g_entities[i];
 
-		if (ent && ent->inuse && ent->classname && ent->classname[0] && !Q_stricmp(ent->classname, "info_player_deathmatch"))
+		if (ent && ent->inuse && ent->classname == "info_player_deathmatch")
 		{
 			if (ent->s.origin[2] < 1280)
 			{ //h4x
@@ -3328,13 +3321,13 @@ void LoadPath_ThisLevel(void)
 	{
 		ent = &g_entities[i];
 
-		if (ent && ent->inuse && ent->classname)
+		if (ent && ent->inuse && ent->classname.size())
 		{
-			if (!eFlagRed && strcmp(ent->classname, "team_CTF_redflag") == 0)
+			if (!eFlagRed && ent->classname == "team_CTF_redflag")
 			{
 				eFlagRed = ent;
 			}
-			else if (!eFlagBlue && strcmp(ent->classname, "team_CTF_blueflag") == 0)
+			else if (!eFlagBlue && ent->classname == "team_CTF_blueflag")
 			{
 				eFlagBlue = ent;
 			}
@@ -3362,7 +3355,7 @@ gentity_t *GetClosestSpawn(gentity_t *ent)
 	{
 		spawn = &g_entities[i];
 
-		if (spawn && spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
+		if (spawn && spawn->inuse && ((spawn->classname == "info_player_start") || (spawn->classname == "info_player_deathmatch")))
 		{
 			float checkDist;
 			vec3_t vSub;
@@ -3395,7 +3388,7 @@ gentity_t *GetNextSpawnInIndex(gentity_t *currentSpawn)
 	{
 		spawn = &g_entities[i];
 
-		if (spawn && spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
+		if (spawn && spawn->inuse && ((spawn->classname == "info_player_start") || (spawn->classname == "info_player_deathmatch")) )
 		{
 			nextSpawn = spawn;
 			break;
@@ -3412,7 +3405,7 @@ gentity_t *GetNextSpawnInIndex(gentity_t *currentSpawn)
 		{
 			spawn = &g_entities[i];
 
-			if (spawn && spawn->inuse && (!Q_stricmp(spawn->classname, "info_player_start") || !Q_stricmp(spawn->classname, "info_player_deathmatch")) )
+			if (spawn && spawn->inuse && ((spawn->classname == "info_player_start") || (spawn->classname == "info_player_deathmatch")) )
 			{
 				nextSpawn = spawn;
 				break;

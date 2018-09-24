@@ -1072,7 +1072,7 @@ void AimAtTarget( gentity_t *self ) {
 		return;
 	}
 
-	if ( self->classname && !Q_stricmp( "trigger_push", self->classname ) )
+	if ( "trigger_push" == self->classname )
 	{
 		if ( (self->spawnflags&PUSH_RELATIVE) )
 		{//relative, not an arc or linear
@@ -1087,7 +1087,7 @@ void AimAtTarget( gentity_t *self ) {
 		}
 	}
 
-	if ( self->classname && !Q_stricmp( "target_push", self->classname ) )
+	if ( "target_push" == self->classname )
 	{
 		if( self->spawnflags & PUSH_CONSTANT )
 		{

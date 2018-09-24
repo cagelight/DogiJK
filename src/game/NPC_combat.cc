@@ -1071,8 +1071,7 @@ qboolean HaveWeapon( int weapon )
 
 qboolean EntIsGlass (gentity_t *check)
 {
-	if(check->classname &&
-		!Q_stricmp("func_breakable", check->classname) &&
+	if(("func_breakable" == check->classname) &&
 		check->count == 1 && check->health <= 100)
 	{
 		return qtrue;

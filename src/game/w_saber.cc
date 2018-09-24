@@ -579,8 +579,7 @@ void WP_SaberInitBladeData( gentity_t *ent )
 
 		if (checkEnt->inuse && checkEnt->neverFree &&
 			checkEnt->r.ownerNum == ent->s.number &&
-			checkEnt->classname && checkEnt->classname[0] &&
-			!Q_stricmp(checkEnt->classname, "lightsaber"))
+			(checkEnt->classname == "lightsaber"))
 		{
 			if (saberent)
 			{ //already have one

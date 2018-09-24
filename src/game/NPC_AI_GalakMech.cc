@@ -886,7 +886,7 @@ void NPC_BSGM_Attack( void )
 			NPC_GM_StartLaser();
 		}
 		else if ( enemyDist4 < MIN_LOB_DIST_SQUARED
-			&& (NPCS.NPC->enemy->s.weapon != WP_TURRET || Q_stricmp( "PAS", NPCS.NPC->enemy->classname ))
+			&& (NPCS.NPC->enemy->s.weapon != WP_TURRET || "PAS" != NPCS.NPC->enemy->classname )
 			&& TIMER_Done( NPCS.NPC, "noRapid" ) )//256
 		{//enemy within 256
 			if ( (NPCS.NPC->client->ps.weapon == WP_REPEATER) && (NPCS.NPCInfo->scriptFlags & SCF_ALT_FIRE) )
@@ -897,7 +897,7 @@ void NPC_BSGM_Attack( void )
 				NPC_ChangeWeapon( WP_REPEATER );
 			}
 		}
-		else if ( (enemyDist4 > MAX_LOB_DIST_SQUARED || (NPCS.NPC->enemy->s.weapon == WP_TURRET && !Q_stricmp( "PAS", NPCS.NPC->enemy->classname )))
+		else if ( (enemyDist4 > MAX_LOB_DIST_SQUARED || (NPCS.NPC->enemy->s.weapon == WP_TURRET && "PAS" == NPCS.NPC->enemy->classname ))
 			&& TIMER_Done( NPCS.NPC, "noLob" ) )//448
 		{//enemy more than 448 away and we are ready to try lob fire again
 			if ( (NPCS.NPC->client->ps.weapon == WP_REPEATER) && !(NPCS.NPCInfo->scriptFlags & SCF_ALT_FIRE) )
@@ -1174,7 +1174,7 @@ void NPC_BSGM_Attack( void )
 	}
 
 	//also:
-	if ( NPCS.NPC->enemy->s.weapon == WP_TURRET && !Q_stricmp( "PAS", NPCS.NPC->enemy->classname ) )
+	if ( NPCS.NPC->enemy->s.weapon == WP_TURRET && ( "PAS" == NPCS.NPC->enemy->classname ))
 	{//crush turrets
 		if ( G_BoundsOverlap( NPCS.NPC->r.absmin, NPCS.NPC->r.absmax, NPCS.NPC->enemy->r.absmin, NPCS.NPC->enemy->r.absmax ) )
 		{//have to do this test because placed turrets are not solid to NPCs (so they don't obstruct navigation)

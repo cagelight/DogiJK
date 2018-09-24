@@ -249,8 +249,8 @@ static qboolean VEH_TurretFindEnemies( Vehicle_t *pVeh,
 				|| (target->NPC_targetname&&parent->targetname&&Q_stricmp(target->NPC_targetname,parent->targetname)!=0) )//not in invicible bbrush, but can only be broken by an NPC that is not me
 			{
 				if ( target->s.weapon == WP_TURRET
-					&& target->classname
-					&& Q_strncmp( "misc_turret", target->classname, 11 ) == 0 )
+					&& target->classname.size()
+					&& Q_strncmp( "misc_turret", target->classname.c_str(), 11 ) == 0 )
 				{//these guys we want to shoot at
 				}
 				else

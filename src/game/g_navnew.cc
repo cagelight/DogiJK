@@ -424,7 +424,7 @@ qboolean NAVNEW_ResolveEntityCollision( gentity_t *self, gentity_t *blocker, vec
 	float blocked_dist;
 
 	//Doors are ignored
-	if ( Q_stricmp( blocker->classname, "func_door" ) == 0 )
+	if ( blocker->classname == "func_door" )
 	{
 		vec3_t center;
 		CalcTeamDoorCenter ( blocker, center );

@@ -605,7 +605,7 @@ void NPC_ShowDebugInfo (void)
 		gentity_t	*found = NULL;
 		vec3_t		mins, maxs;
 
-		while ((found = G_Find( found, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "NPC"); } )) != NULL )
+		while ((found = G_Find( found, [](gentity_t * ent){ return (ent->classname == "NPC"); } )) != NULL )
 		{
 			if ( trap->InPVS( found->r.currentOrigin, g_entities[0].r.currentOrigin ) )
 			{

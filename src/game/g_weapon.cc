@@ -2653,7 +2653,7 @@ void WP_PlaceLaserTrap( gentity_t *ent, qboolean alt_fire )
 
 	//limit to 10 placed at any one time
 	//see how many there are now
-	while ( (found = G_Find( found, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "laserTrap"); } )) != NULL )
+	while ( (found = G_Find( found, [](gentity_t * ent){ return (ent->classname == "laserTrap"); } )) != NULL )
 	{
 		if ( found->parent != ent )
 		{
@@ -2968,7 +2968,7 @@ void BlowDetpacks(gentity_t *ent)
 
 	if ( ent->client->ps.hasDetPackPlanted )
 	{
-		while ( (found = G_Find( found, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "detpack"); }) ) != NULL )
+		while ( (found = G_Find( found, [](gentity_t * ent){ return (ent->classname == "detpack"); }) ) != NULL )
 		{//loop through all ents and blow the crap out of them!
 			if ( found->parent == ent )
 			{
@@ -2987,7 +2987,7 @@ void RemoveDetpacks(gentity_t *ent)
 
 	if ( ent->client->ps.hasDetPackPlanted )
 	{
-		while ( (found = G_Find( found, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "detpack"); }) ) != NULL )
+		while ( (found = G_Find( found, [](gentity_t * ent){ return (ent->classname == "detpack"); }) ) != NULL )
 		{//loop through all ents and blow the crap out of them!
 			if ( found->parent == ent )
 			{
@@ -3027,7 +3027,7 @@ void WP_DropDetPack( gentity_t *ent, qboolean alt_fire )
 
 	//limit to 10 placed at any one time
 	//see how many there are now
-	while ( (found = G_Find( found, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "detpack"); } )) != NULL )
+	while ( (found = G_Find( found, [](gentity_t * ent){ return (ent->classname == "detpack"); } )) != NULL )
 	{
 		if ( found->parent != ent )
 		{
@@ -3218,7 +3218,7 @@ static void WP_FireConcussionAlt( gentity_t *ent )
 				if ( render_impact )
 				{
 					if (( tr.entityNum < ENTITYNUM_WORLD && traceEnt->takedamage )
-						|| !Q_stricmp( traceEnt->classname, "misc_model_breakable" )
+						|| traceEnt->classname == "misc_model_breakable"
 						|| traceEnt->s.eType == ET_MOVER )
 					{
 						qboolean noKnockBack;

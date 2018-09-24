@@ -620,7 +620,7 @@ gentity_t *SelectNearestDeathmatchSpawnPoint( vec3_t from ) {
 	nearestSpot = NULL;
 	spot = NULL;
 
-	while ((spot = G_Find (spot, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); })) != NULL) {
+	while ((spot = G_Find (spot, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); })) != NULL) {
 
 		VectorSubtract( spot->s.origin, from, delta );
 		dist = VectorLength( delta );
@@ -651,7 +651,7 @@ gentity_t *SelectRandomDeathmatchSpawnPoint( qboolean isbot ) {
 	count = 0;
 	spot = NULL;
 
-	while ((spot = G_Find (spot, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); })) != NULL && count < MAX_SPAWN_POINTS) {
+	while ((spot = G_Find (spot, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); })) != NULL && count < MAX_SPAWN_POINTS) {
 		if ( SpotWouldTelefrag( spot ) ) {
 			continue;
 		}
@@ -668,7 +668,7 @@ gentity_t *SelectRandomDeathmatchSpawnPoint( qboolean isbot ) {
 	}
 
 	if ( !count ) {	// no spots that won't telefrag
-		return G_Find (spot, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); });
+		return G_Find (spot, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); });
 	}
 
 	selection = rand() % count;
@@ -707,7 +707,7 @@ gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, ve
 		{
 			classname = "info_player_start_blue";
 		}
-		while ((spot = G_Find (spot, [classname](gentity_t * ent){ return !Q_stricmp(ent->classname, classname); })) != NULL) {
+		while ((spot = G_Find (spot, [classname](gentity_t * ent){ return (ent->classname == classname); })) != NULL) {
 			if ( SpotWouldTelefrag( spot ) ) {
 				continue;
 			}
@@ -745,7 +745,7 @@ gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, ve
 
 	if ( !numSpots )
 	{//couldn't find any of the above
-		while ((spot = G_Find (spot, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); })) != NULL) {
+		while ((spot = G_Find (spot, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); })) != NULL) {
 			if ( SpotWouldTelefrag( spot ) ) {
 				continue;
 			}
@@ -780,7 +780,7 @@ gentity_t *SelectRandomFurthestSpawnPoint ( vec3_t avoidPoint, vec3_t origin, ve
 			}
 		}
 		if (!numSpots) {
-			spot = G_Find( NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); });
+			spot = G_Find( NULL, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); });
 			if (!spot)
 				trap->Error( ERR_DROP, "Couldn't find a spawn point" );
 			VectorCopy (spot->s.origin, origin);
@@ -831,7 +831,7 @@ tryAgain:
 	numSpots = 0;
 	spot = NULL;
 
-	while ((spot = G_Find (spot, [spotName](gentity_t * ent){ return !Q_stricmp(ent->classname, spotName); })) != NULL) {
+	while ((spot = G_Find (spot, [spotName](gentity_t * ent){ return (ent->classname == spotName); })) != NULL) {
 		if ( SpotWouldTelefrag( spot ) ) {
 			continue;
 		}
@@ -874,7 +874,7 @@ tryAgain:
 		}
 
 		//If we got here we found no free duel or DM spots, just try the first DM spot
-		spot = G_Find( NULL, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); });
+		spot = G_Find( NULL, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); });
 		if (!spot)
 			trap->Error( ERR_DROP, "Couldn't find a spawn point" );
 		VectorCopy (spot->s.origin, origin);
@@ -944,7 +944,7 @@ gentity_t *SelectInitialSpawnPoint( vec3_t origin, vec3_t angles, team_t team, q
 	gentity_t	*spot;
 
 	spot = NULL;
-	while ((spot = G_Find (spot, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "info_player_deathmatch"); })) != NULL) {
+	while ((spot = G_Find (spot, [](gentity_t * ent){ return (ent->classname == "info_player_deathmatch"); })) != NULL) {
 		if(((spot->flags & FL_NO_BOTS) && isbot) ||
 		   ((spot->flags & FL_NO_HUMANS) && !isbot))
 		{

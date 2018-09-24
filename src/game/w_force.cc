@@ -3203,7 +3203,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			if ( ent->s.eType != ET_ITEM )
 			{
 				//FIXME: need pushable objects
-				if ( Q_stricmp( "func_button", ent->classname ) == 0 )
+				if (  "func_button" == ent->classname )
 				{//we might push it
 					if ( pull || !(ent->spawnflags&SPF_BUTTON_FPUSHABLE) )
 					{//not force-pushable, never pullable
@@ -3218,13 +3218,13 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					}
 					if ( !ent->client )
 					{
-						if ( Q_stricmp( "lightsaber", ent->classname ) != 0 )
+						if ( ent->classname != "lightsaber" )
 						{//not a lightsaber
-							if ( Q_stricmp( "func_door", ent->classname ) != 0 || !(ent->spawnflags & 2/*MOVER_FORCE_ACTIVATE*/) )
+							if ( ent->classname != "func_door" || !(ent->spawnflags & 2/*MOVER_FORCE_ACTIVATE*/) )
 							{//not a force-usable door
-								if ( Q_stricmp( "func_static", ent->classname ) != 0 || (!(ent->spawnflags&1/*F_PUSH*/)&&!(ent->spawnflags&2/*F_PULL*/)) )
+								if ( ent->classname != "func_static" || (!(ent->spawnflags&1/*F_PUSH*/)&&!(ent->spawnflags&2/*F_PULL*/)) )
 								{//not a force-usable func_static
-									if ( Q_stricmp( "limb", ent->classname ) )
+									if ( ent->classname != "limb" )
 									{//not a limb
 										continue;
 									}
@@ -3564,7 +3564,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					G_ReflectMissile( self, push_list[x], forward );
 				}
 			}
-			else if ( !Q_stricmp( "func_static", push_list[x]->classname ) )
+			else if ( "func_static" == push_list[x]->classname )
 			{//force-usable func_static
 				if ( !pull && (push_list[x]->spawnflags&1/*F_PUSH*/) )
 				{
@@ -3575,7 +3575,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					GEntity_UseFunc( push_list[x], self, self );
 				}
 			}
-			else if ( !Q_stricmp( "func_door", push_list[x]->classname ) && (push_list[x]->spawnflags&2) )
+			else if (( "func_door" == push_list[x]->classname ) && (push_list[x]->spawnflags&2) )
 			{//push/pull the door
 				vec3_t	pos1, pos2;
 				vec3_t	trFrom;
@@ -3650,7 +3650,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				}
 				GEntity_UseFunc( push_list[x], self, self );
 			}
-			else if ( Q_stricmp( "func_button", push_list[x]->classname ) == 0 )
+			else if ( "func_button" == push_list[x]->classname )
 			{//pretend you pushed it
 				Touch_Button( push_list[x], self, NULL );
 				continue;

@@ -139,7 +139,7 @@ void PM_VehicleImpact(bgEntity_t *pEnt, trace_t *trace)
 		&& hitEnt->s.eType == ET_MOVER
 		&& hitEnt->s.apos.trType != TR_STATIONARY//rotating
 		&& (hitEnt->spawnflags&16) //IMPACT
-		&& Q_stricmp( "func_rotating", hitEnt->classname ) == 0 )
+		&& "func_rotating" == hitEnt->classname )
 	{//hit a func_rotating that is supposed to destroy anything it touches!
 		//guarantee the hit will happen, thereby taking off a piece of the ship
 		forceSurfDestruction = qtrue;

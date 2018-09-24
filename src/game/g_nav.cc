@@ -551,7 +551,7 @@ qboolean NAV_CheckAhead( gentity_t *self, vec3_t end, trace_t *trace, int clipma
 	{
 		gentity_t	*blocker = &g_entities[trace->entityNum];
 
-		if ( VALIDSTRING( blocker->classname ) )
+		if ( blocker->classname.size() )
 		{
 			if ( G_EntIsUnlockedDoor( blocker->s.number ) )
 			//if ( Q_stricmp( blocker->classname, "func_door" ) == 0 )
@@ -1038,7 +1038,7 @@ int NAV_TestBestNode( gentity_t *self, int startID, int endID, qboolean failEdge
 	{
 		gentity_t	*blocker = &g_entities[trace.entityNum];
 
-		if VALIDSTRING( blocker->classname )
+		if (blocker->classname.size())
 		{//special case: doors are architecture, but are dynamic, like entitites
 			if ( G_EntIsUnlockedDoor( blocker->s.number ) )
 			//if ( Q_stricmp( blocker->classname, "func_door" ) == 0 )

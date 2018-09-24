@@ -420,7 +420,7 @@ int Q3_PlaySound( int taskID, int entID, const char *name, const char *channel )
 	soundHandle = G_SoundIndex( (char *) finalName );
 	bBroadcast = qfalse;
 
-	if ( ( Q_stricmp( channel, "CHAN_ANNOUNCER" ) == 0 ) || (ent->classname && Q_stricmp("target_scriptrunner", ent->classname ) == 0) ) {
+	if ( ( Q_stricmp( channel, "CHAN_ANNOUNCER" ) == 0 ) || ("target_scriptrunner" == ent->classname ) ) {
 		bBroadcast = qtrue;
 	}
 
@@ -694,7 +694,7 @@ void Q3_Lerp2Start( int entID, int taskID, float duration )
 		return;
 	}
 
-	if ( ent->client || Q_stricmp(ent->classname, "target_scriptrunner") == 0 )
+	if ( ent->client || ent->classname == "target_scriptrunner" )
 	{
 		G_DebugPrint( WL_ERROR, "Q3_Lerp2Start: ent %d is NOT a mover!\n", entID);
 		return;
@@ -742,7 +742,7 @@ void Q3_Lerp2End( int entID, int taskID, float duration )
 		return;
 	}
 
-	if ( ent->client || Q_stricmp(ent->classname, "target_scriptrunner") == 0 )
+	if ( ent->client || ent->classname == "target_scriptrunner")
 	{
 		G_DebugPrint( WL_ERROR, "Q3_Lerp2End: ent %d is NOT a mover!\n", entID);
 		return;
@@ -796,7 +796,7 @@ void Q3_Lerp2Pos( int taskID, int entID, vec3_t origin, vec3_t angles, float dur
 		return;
 	}
 
-	if ( ent->client || Q_stricmp(ent->classname, "target_scriptrunner") == 0 )
+	if ( ent->client || ent->classname == "target_scriptrunner")
 	{
 		G_DebugPrint( WL_ERROR, "Q3_Lerp2Pos: ent %d is NOT a mover!\n", entID);
 		return;
@@ -906,7 +906,7 @@ void Q3_Lerp2Angles( int taskID, int entID, vec3_t angles, float duration )
 		return;
 	}
 
-	if ( ent->client || Q_stricmp(ent->classname, "target_scriptrunner") == 0 )
+	if ( ent->client || ent->classname == "target_scriptrunner" )
 	{
 		G_DebugPrint( WL_ERROR, "Q3_Lerp2Angles: ent %d is NOT a mover!\n", entID);
 		return;
@@ -2067,7 +2067,7 @@ void Q3_Lerp2Origin( int taskID, int entID, vec3_t origin, float duration )
 		return;
 	}
 
-	if ( ent->client || Q_stricmp(ent->classname, "target_scriptrunner") == 0 )
+	if ( ent->client || ent->classname == "target_scriptrunner" )
 	{
 		G_DebugPrint( WL_ERROR, "Q3_Lerp2Origin: ent %d is NOT a mover!\n", entID);
 		return;
@@ -2131,7 +2131,7 @@ static void Q3_SetOriginOffset( int entID, int axis, float offset )
 		return;
 	}
 
-	if ( ent->client || Q_stricmp(ent->classname, "target_scriptrunner") == 0 )
+	if ( ent->client || ent->classname == "target_scriptrunner")
 	{
 		G_DebugPrint( WL_ERROR, "Q3_SetOriginOffset: ent %d is NOT a mover!\n", entID);
 		return;
@@ -4997,7 +4997,7 @@ static void Q3_SetInvincible( int entID, qboolean invincible)
 		return;
 	}
 
-	if ( !Q_stricmp( "func_breakable", ent->classname ) )
+	if ( ent->classname == "func_breakable" )
 	{
 		if ( invincible )
 		{
@@ -5878,7 +5878,7 @@ qboolean Q3_Set( int taskID, int entID, const char *type_name, const char *data 
 			VectorClear( vector_data );
 		}
 		G_SetOrigin( ent, vector_data );
-		if ( Q_strncmp( "NPC_", ent->classname, 4 ) == 0 )
+		if ( Q_strncmp( "NPC_", ent->classname.c_str(), 4 ) == 0 )
 		{//hack for moving spawners
 			VectorCopy( vector_data, ent->s.origin);
 		}

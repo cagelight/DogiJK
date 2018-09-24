@@ -1105,7 +1105,7 @@ int CheckForFunc(vec3_t org, int ignore)
 		return 0;
 	}
 
-	if (strstr(fent->classname, "func_"))
+	if (strstr(fent->classname.c_str(), "func_"))
 	{
 		return 1; //there's a func brush here
 	}
@@ -5726,12 +5726,12 @@ void CTFFlagMovement(bot_state_t *bs)
 		if (bs->wpDestination == flagRed ||
 			bs->wpDestination == flagBlue)
 		{
-			if (bs->wpDestination == flagRed && droppedRedFlag && (droppedRedFlag->flags & FL_DROPPED_ITEM) && droppedRedFlag->classname && strcmp(droppedRedFlag->classname, "freed") != 0)
+			if (bs->wpDestination == flagRed && droppedRedFlag && (droppedRedFlag->flags & FL_DROPPED_ITEM) && (droppedRedFlag->classname == "freed"))
 			{
 				desiredDrop = droppedRedFlag;
 				diddrop = 1;
 			}
-			if (bs->wpDestination == flagBlue && droppedBlueFlag && (droppedBlueFlag->flags & FL_DROPPED_ITEM) && droppedBlueFlag->classname && strcmp(droppedBlueFlag->classname, "freed") != 0)
+			if (bs->wpDestination == flagBlue && droppedBlueFlag && (droppedBlueFlag->flags & FL_DROPPED_ITEM) && (droppedBlueFlag->classname == "freed"))
 			{
 				desiredDrop = droppedBlueFlag;
 				diddrop = 1;
@@ -5766,7 +5766,7 @@ void BotCheckDetPacks(bot_state_t *bs)
 	float enLen;
 	float myLen;
 
-	while ( (dp = G_Find( dp, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "detpack"); }) ) != NULL )
+	while ( (dp = G_Find( dp, [](gentity_t * ent){ return (ent->classname == "detpack"); }) ) != NULL )
 	{
 		if (dp && dp->parent && dp->parent->s.number == bs->client)
 		{

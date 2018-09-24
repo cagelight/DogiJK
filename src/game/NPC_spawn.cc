@@ -1481,7 +1481,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 	}
 
 	// If this is a vehicle we need to see what kind it is so we properlly allocate it.
-	if ( Q_stricmp( ent->classname, "NPC_Vehicle" ) == 0 )
+	if ( ent->classname == "NPC_Vehicle" )
 	{
 		// Get the vehicle entry index.
 		int iVehIndex = BG_VehicleGetIndex( ent->NPC_type );
@@ -2181,7 +2181,7 @@ void SP_NPC_Vehicle( gentity_t *self)
 		self->NPC_type = "swoop";
 	}
 
-	if ( !self->classname )
+	if ( !self->classname.size() )
 	{
 		self->classname = "NPC_Vehicle";
 	}
@@ -4210,7 +4210,7 @@ void NPC_Kill_f( void )
 						}
 					}
 				}
-				else if ( player->NPC_type && player->classname && player->classname[0] && Q_stricmp( "NPC_starfleet", player->classname ) != 0 )
+				else if ( player->NPC_type && player->classname.size() && "NPC_starfleet" != player->classname  )
 				{//A spawner, remove it
 					Com_Printf( S_COLOR_GREEN"Removing NPC spawner %s with NPC named %s\n", player->NPC_type, player->NPC_targetname );
 					G_FreeEntity( player );

@@ -371,8 +371,8 @@ void	Svcmd_EntityList_f (void) {
 			break;
 		}
 
-		if ( check->classname ) {
-			trap->Print("%s", check->classname);
+		if ( check->classname.size() ) {
+			trap->Print("%s", check->classname.c_str());
 		}
 		trap->Print("\n");
 	}

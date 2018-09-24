@@ -6003,7 +6003,7 @@ static void Jedi_Attack( void )
 	}
 
 	//If we don't have an enemy, just idle
-	if ( NPCS.NPC->enemy->s.weapon == WP_TURRET && !Q_stricmp( "PAS", NPCS.NPC->enemy->classname ) )
+	if ( NPCS.NPC->enemy->s.weapon == WP_TURRET && ( "PAS" == NPCS.NPC->enemy->classname ) )
 	{
 		if ( NPCS.NPC->enemy->count <= 0 )
 		{//it's out of ammo

@@ -240,7 +240,7 @@ struct sharedEntity_t {
 
 	//rww - targetname and classname are now shared as well. ICARUS needs access to them.
 	char			*targetname = nullptr;
-	char			*classname = nullptr;			// set in QuakeEd
+	istring			classname;			// set in QuakeEd
 
 	//rww - and yet more things to share. This is because the nav code is in the exe because it's all C++.
 	int				waypoint = 0;			//Set once per frame, if you've moved, and if someone asks

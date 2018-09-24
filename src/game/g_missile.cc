@@ -729,7 +729,7 @@ void G_MissileImpact( gentity_t *ent, trace_t *trace ) {
 				if ( other->m_pVehicle //valid vehicle ent
 					&& other->m_pVehicle->m_pVehicleInfo//valid stats
 					&& (other->m_pVehicle->m_pVehicleInfo->type == VH_SPEEDER//always affect speeders
-						||(other->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER && ent->classname && Q_stricmp("vehicle_proj", ent->classname ) == 0) )//only vehicle ion weapons affect a fighter in this manner
+						||(other->m_pVehicle->m_pVehicleInfo->type == VH_FIGHTER && ent->classname.size() && "vehicle_proj" == ent->classname ) )//only vehicle ion weapons affect a fighter in this manner
 					&& !FighterIsLanded( other->m_pVehicle , &other->client->ps )//not landed
 					&& !(other->spawnflags&2) )//and not suspended
 				{//vehicles hit by "ion cannons" lose control

@@ -684,7 +684,7 @@ qboolean G_CallSpawn( gentity_t *ent ) {
 	spawn_t	*s;
 	gitem_t	*item;
 
-	if ( !ent->classname ) {
+	if ( !ent->classname.size() ) {
 		trap->Print( "G_CallSpawn: NULL classname\n" );
 		return qfalse;
 	}
@@ -692,14 +692,14 @@ qboolean G_CallSpawn( gentity_t *ent ) {
 	// check item spawn functions
 	//TODO: cant reorder items because compat so....?
 	for ( item=bg_itemlist+1 ; item->classname ; item++ ) {
-		if ( !strcmp(item->classname, ent->classname) ) {
+		if ( item->classname == ent->classname ) {
 			G_SpawnItem( ent, item );
 			return qtrue;
 		}
 	}
 
 	// check normal spawn functions
-	s = (spawn_t *)Q_LinearSearch( ent->classname, spawns, ARRAY_LEN( spawns ), sizeof( spawn_t ), spawncmp );
+	s = (spawn_t *)Q_LinearSearch( ent->classname.c_str(), spawns, ARRAY_LEN( spawns ), sizeof( spawn_t ), spawncmp );
 	if ( s )
 	{// found it
 		if ( VALIDSTRING( ent->healingsound ) )
@@ -709,7 +709,7 @@ qboolean G_CallSpawn( gentity_t *ent ) {
 		return qtrue;
 	}
 
-	trap->Print( "%s doesn't have a spawn function\n", ent->classname );
+	trap->Print( "%s doesn't have a spawn function\n", ent->classname.c_str() );
 	return qfalse;
 }
 
@@ -874,9 +874,9 @@ void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	{
 		trap->ICARUS_InitEnt( (sharedEntity_t *)ent );
 
-		if ( ent->classname && ent->classname[0] )
+		if ( ent->classname.size() )
 		{
-			if ( Q_strncmp( "NPC_", ent->classname, 4 ) != 0 )
+			if ( Q_strncmp( "NPC_", ent->classname.c_str(), 4 ) != 0 )
 			{//Not an NPC_spawner (rww - probably don't even care for MP, but whatever)
 				G_ActivateBehavior( ent, BSET_SPAWN );
 			}

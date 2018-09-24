@@ -2849,7 +2849,7 @@ void maglock_link( gentity_t *self )
 		return;
 	}
 	traceEnt = &g_entities[trace.entityNum];
-	if ( trace.entityNum >= ENTITYNUM_WORLD || !traceEnt || Q_stricmp( "func_door", traceEnt->classname ) )
+	if ( trace.entityNum >= ENTITYNUM_WORLD || !traceEnt || "func_door" != traceEnt->classname )
 	{
 		self->think = maglock_link;
 		self->nextthink = level.time + 100;

@@ -191,7 +191,7 @@ qboolean	G_TryPushingEntity( gentity_t *check, gentity_t *pusher, vec3_t move, v
 	*/
 	if ( pusher->s.apos.trType != TR_STATIONARY//rotating
 		&& (pusher->spawnflags&16) //IMPACT
-		&& Q_stricmp( "func_rotating", pusher->classname ) == 0 )
+		&& ( "func_rotating" == pusher->classname ) )
 	{//just blow the fuck out of them
 		G_Damage( check, pusher, pusher, NULL, NULL, pusher->damage, DAMAGE_NO_KNOCKBACK, MOD_CRUSH );
 		return qtrue;
@@ -1268,7 +1268,7 @@ qboolean G_EntIsDoor( int entityNum )
 	}
 
 	ent = &g_entities[entityNum];
-	if ( ent && !Q_stricmp( "func_door", ent->classname ) )
+	if ( ent && ( "func_door" == ent->classname ) )
 	{//blocked by a door
 		return qtrue;
 	}
@@ -1307,7 +1307,7 @@ gentity_t *G_FindDoorTrigger( gentity_t *ent )
 	}
 
 	owner = NULL;
-	while ( (owner = G_Find( owner, [](gentity_t * ent){ return !Q_stricmp(ent->classname, "trigger_door"); } )) != NULL )
+	while ( (owner = G_Find( owner, [](gentity_t * ent){ return (ent->classname == "trigger_door"); } )) != NULL )
 	{
 		if ( owner->parent == door )
 		{
@@ -1342,7 +1342,7 @@ qboolean G_EntIsUnlockedDoor( int entityNum )
 			//FIXME: if ent->targetname, check what kind of trigger/ent is targetting it?  If a normal trigger (active, etc), then it's okay?
 			while ( (owner = G_Find( owner, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->target, ent->targetname); } )) != NULL )
 			{
-				if ( !Q_stricmp( "trigger_multiple", owner->classname ) )//FIXME: other triggers okay too?
+				if ( ( "trigger_multiple" == owner->classname ) )//FIXME: other triggers okay too?
 				{
 					if ( !(owner->flags & FL_INACTIVE) )
 					{
@@ -1353,7 +1353,7 @@ qboolean G_EntIsUnlockedDoor( int entityNum )
 			owner = NULL;
 			while ( (owner = G_Find( owner, [ent](gentity_t * ent2){ return !Q_stricmp(ent2->target2, ent->targetname); } )) != NULL )
 			{
-				if ( !Q_stricmp( "trigger_multiple", owner->classname ) )//FIXME: other triggers okay too?
+				if ( ( "trigger_multiple" == owner->classname ) )//FIXME: other triggers okay too?
 				{
 					if ( !(owner->flags & FL_INACTIVE) )
 					{
@@ -1879,7 +1879,7 @@ void Think_SetupTrainTargets( gentity_t *ent ) {
 				//end of path
 				break;
 			}
-		} while ( strcmp( next->classname, "path_corner" ) );
+		} while ( next->classname != "path_corner" );
 
 		if ( next )
 		{
@@ -2873,16 +2873,16 @@ qboolean G_EntIsBreakable( int entityNum )
 		return qtrue;
 	}
 	*/
-	if ( !Q_stricmp( "func_breakable", ent->classname ) )
+	if ( ( "func_breakable" == ent->classname ) )
 	{
 		return qtrue;
 	}
 
-	if ( !Q_stricmp( "misc_model_breakable", ent->classname ) )
+	if ( ( "misc_model_breakable" == ent->classname ) )
 	{
 		return qtrue;
 	}
-	if ( !Q_stricmp( "misc_maglock", ent->classname ) )
+	if ( ( "misc_maglock" == ent->classname ) )
 	{
 		return qtrue;
 	}
@@ -3062,7 +3062,7 @@ void func_usable_think( gentity_t *self )
 qboolean G_EntIsRemovableUsable( int entNum )
 {
 	gentity_t *ent = &g_entities[entNum];
-	if ( ent->classname && !Q_stricmp( "func_usable", ent->classname ) )
+	if ( "func_usable" == ent->classname )
 	{
 		if ( !(ent->s.eFlags&EF_SHADER_ANIM) && !(ent->spawnflags&8) && ent->targetname )
 		{//not just a shader-animator and not ALWAYS_ON, so it must be removable somehow
