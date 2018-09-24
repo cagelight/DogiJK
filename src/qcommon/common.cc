@@ -285,7 +285,7 @@ void NORETURN QDECL Com_Error( int code, const char *fmt, ... ) {
 	}
 	
 	if (code == ERR_FATAL) {
-		Com_Printf ("%s", com_errorMessage);
+		Sys_Error ("%s", com_errorMessage);
 		std::terminate();
 	}
 

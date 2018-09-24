@@ -331,7 +331,7 @@ struct gentity_t : public sharedEntity_t {
 	int			watertype = 0;
 	int			waterlevel = 0;
 
-	int			noise_index;
+	int			noise_index = 0;
 
 	// timing variables
 	float		wait = 0.0f;
