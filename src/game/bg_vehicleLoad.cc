@@ -45,13 +45,23 @@ std::unordered_map<istring, std::string> VehWeaponParms;
 std::unordered_map<istring, std::string> VehicleParms;
 
 void BG_ListVehicleWeapons() {
+	std::vector<istring> NPCs;
 	for (auto const & i : VehWeaponParms) 
-		Com_Printf("\t%s\n", i.first.c_str());
+		NPCs.push_back(i.first);
+	std::sort(NPCs.begin(), NPCs.end());
+	for (auto const & i : NPCs) {
+		Com_Printf("\t%s\n", i.c_str());
+	}
 }
 
 void BG_ListVehicles() {
+	std::vector<istring> NPCs;
 	for (auto const & i : VehicleParms) 
-		Com_Printf("\t%s\n", i.first.c_str());
+		NPCs.push_back(i.first);
+	std::sort(NPCs.begin(), NPCs.end());
+	for (auto const & i : NPCs) {
+		Com_Printf("\t%s\n", i.c_str());
+	}
 }
 
 void BG_ClearVehicleParseParms(void)
@@ -909,7 +919,7 @@ int VEH_LoadVehicle( const char *vehicleName )
 	}
 
 	auto const & weapf = VehicleParms.find(vehicleName);
-	if (weapf == VehicleParms.end()) return qfalse;
+	if (weapf == VehicleParms.end()) return VEHICLE_NONE;
 	p = weapf->second.c_str();
 
 	COM_BeginParseSession("vehicles");
