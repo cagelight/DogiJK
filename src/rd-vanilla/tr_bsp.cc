@@ -1767,7 +1767,7 @@ static	void R_LoadFogs( lump_t *l, lump_t *brushesLump, lump_t *sidesLump, world
 
 		if (!shader->fogParms)
 		{//bad shader!!
-			assert(shader->fogParms);
+			Com_Printf(S_COLOR_YELLOW "WARNING: shader '%s' used as fog is missing fogParms!\n", shader->name);
 			out->parms.color[0] = 1.0f;
 			out->parms.color[1] = 0.0f;
 			out->parms.color[2] = 0.0f;

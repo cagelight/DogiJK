@@ -1167,7 +1167,7 @@ void Q3_Remove( int entID, const char *name )
 		while ( victim )
 		{
 			Q3_RemoveEnt( victim );
-			victim = G_Find (NULL, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
+			victim = G_Find (victim, [name](gentity_t * ent){ return !Q_stricmp(ent->targetname, name); } );
 		}
 	}
 }
