@@ -577,6 +577,7 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	// G2 stuff
 	re.GetModelByHandle						= R_GetModelByHandle;
 	re.GetSkinByHandle						= R_GetSkinByHandle;
+	re.ShaderHashTableExists				= ShaderHashTableExists;
 	re.InitSkins							= R_InitSkins;
 	re.InitShaders							= R_InitShaders;
 	re.SVModelInit							= R_SVModelInit;

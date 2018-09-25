@@ -139,6 +139,9 @@ struct refexport_t{
 	
 	model_t	*			(*GetModelByHandle)						( qhandle_t index );
 	skin_t	*			(*GetSkinByHandle)						( qhandle_t hSkin );
+	
+	// Hacky bullshit
+	qboolean			(*ShaderHashTableExists)				( void );
 
 	// AVI recording
 	void				(*TakeVideoFrame)						( int h, int w, byte* captureBuffer, byte *encodeBuffer, qboolean motionJpeg );

@@ -775,7 +775,7 @@ qboolean G2_ShouldRegisterServer(void)
 	if ( currentVM && currentVM->slot == VM_GAME )
 	{
 		if ( g2_ri.Cvar_VariableIntegerValue( "cl_running" ) &&
-			g2_ri.Com_TheHunkMarkHasBeenMade() /* HACK HACK HACK&& ShaderHashTableExists()*/)
+			g2_ri.Com_TheHunkMarkHasBeenMade() && /*HACK BULLSHIT*/g2_re.ShaderHashTableExists())
 		{ //if the hunk has been marked then we are now loading client assets so don't load on server.
 			return qfalse;
 		}
