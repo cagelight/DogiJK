@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/g_public.hh"
 #include "game/bg_public.hh"
 #include "rd-common/tr_public.hh"
+#include "ghoul2/g2_public.hh"
 
 //=============================================================================
 
@@ -232,9 +233,8 @@ extern	serverStatic_t	svs;				// persistant server info across maps
 extern	server_t		sv;					// cleared each map
 
 //FIXME: dedi server probably can't have this..
-#ifndef G2_NOSERVERREF
 extern	refexport_t		*re;					// interface to refresh .dll
-#endif
+extern  g2export_t		*g2api;
 
 extern	cvar_t	*sv_snapsMin;
 extern	cvar_t	*sv_snapsMax;

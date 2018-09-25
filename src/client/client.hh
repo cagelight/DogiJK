@@ -33,6 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_public.hh"
 #include "cgame/cg_public.hh"
 #include "ui/ui_public.hh"
+#include "ghoul2/g2_public.hh"
 
 #define	RETRANSMIT_TIMEOUT	3000	// time between connection packet retransmits
 
@@ -357,9 +358,8 @@ typedef struct console_s {
 
 extern	clientStatic_t		cls;
 
-#ifndef G2_NOCLIENTREF
 extern	refexport_t		*re;		// interface to refresh .dll
-#endif
+extern  g2export_t		*g2api;
 
 //
 // cvars

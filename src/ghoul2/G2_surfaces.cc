@@ -24,29 +24,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "G2.hh"
 #include "g2_verylocal.hh"
 
-class CConstructBoneList
-{
-public:
-	int				surfaceNum;
-	int				*boneUsedList;
-	surfaceInfo_v	&rootSList;
-	model_t			*currentModel;
-	boneInfo_v		&boneList;
-
-	CConstructBoneList(
-	int				initsurfaceNum,
-	int				*initboneUsedList,
-	surfaceInfo_v	&initrootSList,
-	model_t			*initcurrentModel,
-	boneInfo_v		&initboneList):
-
-	surfaceNum(initsurfaceNum),
-	boneUsedList(initboneUsedList),
-	rootSList(initrootSList),
-	currentModel(initcurrentModel),
-	boneList(initboneList) { }
-};
-
 extern void G2_ConstructUsedBoneList(CConstructBoneList &CBL);
 
 

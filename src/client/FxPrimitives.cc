@@ -152,7 +152,7 @@ bool CParticle::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -671,7 +671,7 @@ bool COrientedParticle::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -777,7 +777,7 @@ bool CLine::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -869,7 +869,7 @@ bool CElectricity::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -937,7 +937,7 @@ bool CTail::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -1234,7 +1234,7 @@ bool CCylinder::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -1377,7 +1377,7 @@ bool CEmitter::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}
@@ -1474,7 +1474,7 @@ bool CLight::Update(void)
 
 	if ( mFlags & FX_RELATIVE )
 	{
-		if ( !re->G2API_IsGhoul2InfovValid (*mGhoul2))
+		if ( !g2api->G2API_IsGhoul2InfovValid (*mGhoul2))
 		{	// the thing we are bolted to is no longer valid, so we may as well just die.
 			return false;
 		}

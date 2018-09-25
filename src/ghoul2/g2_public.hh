@@ -7,11 +7,6 @@
 #include "rd-common/tr_public.hh"
 
 typedef struct g2export_s {
-	// called before the library is unloaded
-	// if the system is just reconfiguring, pass destroyWindow = qfalse,
-	// which will keep the screen from flashing to the desktop.
-	void				(*Shutdown)								( qboolean destroyWindow, qboolean restarting );
-	
 	// G2API
 	int					(*G2API_AddBolt)						( CGhoul2Info_v &ghoul2, const int modelIndex, const char *boneName );
 	int					(*G2API_AddBoltSurfNum)					( CGhoul2Info *ghlInfo, const int surfIndex );
@@ -105,8 +100,13 @@ typedef struct g2export_s {
 	int					(*G2API_GetNumGoreMarks)				( CGhoul2Info_v& ghoul2, int modelIndex );
 	void				(*G2API_AddSkinGore)					( CGhoul2Info_v &ghoul2, SSkinGoreData &gore );
 	void				(*G2API_ClearSkinGore)					( CGhoul2Info_v &ghoul2 );
+	GoreTextureCoordinates * (*G2API_FindGoreRecord)			( int tag );
+	void				(*G2API_DeleteGoreTextureCoords)		( GoreTextureCoordinates * tex );
 	#endif // _G2_GORE
+	
+	void *				(*G2_FindSurface)						( void *mod, int index, int lod );
 
 } g2export_t;
 
-void G2_Init(refimport_t * ri, refexport_t * re);
+Q_EXPORT g2export_t * QDECL G2_GetInterface();
+Q_EXPORT void QDECL G2_Init(refimport_t * ri, refexport_t * re);

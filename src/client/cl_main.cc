@@ -118,7 +118,10 @@ char cl_reconnectArgs[MAX_OSPATH] = {0};
 
 // Structure containing functions exported from refresh DLL
 refexport_t	*re = NULL;
+g2export_t * g2api = NULL;
+
 static void	*rendererLib = NULL;
+static void	*g2Lib = NULL;
 
 ping_t	cl_pinglist[MAX_PINGREQUESTS];
 
@@ -2386,6 +2389,12 @@ void CL_InitRef( void ) {
 	if ( !rendererLib ) {
 		Com_Error( ERR_FATAL, "Failed to load renderer\n" );
 	}
+	
+	g2Lib = Sys_LoadDll( "ghoul2.so", qfalse );
+
+	if ( !g2Lib ) {
+		Com_Error( ERR_FATAL, "Failed to load ghoul2\n" );
+	}
 
 	memset( &ri, 0, sizeof( ri ) );
 
@@ -2476,8 +2485,22 @@ void CL_InitRef( void ) {
 
 	ri.PD_Store = PD_Store;
 	ri.PD_Load = PD_Load;
+	
+	typedef g2export_t *(*G2_GetInterface_f)();
+	G2_GetInterface_f g2gi = (G2_GetInterface_f)Sys_LoadFunction( rendererLib, "G2_GetInterface" );
+	g2api = g2gi();
+	
+	ri.G2_FindSurface = g2api->G2_FindSurface;
+	ri.G2API_GetTime = g2api->G2API_GetTime;
+	ri.G2API_FindGoreRecord = g2api->G2API_FindGoreRecord;
+	ri.G2API_DeleteGoreTextureCoords = g2api->G2API_DeleteGoreTextureCoords;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
+	
+	typedef void(*G2_Init_f)(refimport_t * ri, refexport_t * re);
+	G2_Init_f g2init = (G2_Init_f)Sys_LoadFunction( rendererLib, "G2_Init" );
+	g2init(&ri, ret);
+	
 
 //	Com_Printf( "-------------------------------\n");
 

@@ -346,7 +346,7 @@ static qboolean CGFX_PlayBoltedEffectID( int id, vec3_t org, void *ghoul2, const
 
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
 	int boltInfo=0;
-	if ( re->G2API_AttachEnt( &boltInfo, g2, modelNum, boltNum, entNum, modelNum ) )
+	if ( g2api->G2API_AttachEnt( &boltInfo, g2, modelNum, boltNum, entNum, modelNum ) )
 	{
 		FX_PlayBoltedEffectID(id, org, boltInfo, &g2, iLooptime, isRelative );
 		return qtrue;
@@ -371,85 +371,85 @@ static qboolean CL_SE_GetStringTextString( const char *text, char *buffer, int b
 }
 
 static void CL_G2API_ListModelSurfaces( void *ghlInfo ) {
-	re->G2API_ListSurfaces( (CGhoul2Info *)ghlInfo );
+	g2api->G2API_ListSurfaces( (CGhoul2Info *)ghlInfo );
 }
 
 static void CL_G2API_ListModelBones( void *ghlInfo, int frame ) {
-	re->G2API_ListBones( (CGhoul2Info *)ghlInfo, frame );
+	g2api->G2API_ListBones( (CGhoul2Info *)ghlInfo, frame );
 }
 
 static void CL_G2API_SetGhoul2ModelIndexes( void *ghoul2, qhandle_t *modelList, qhandle_t *skinList ) {
 	if ( !ghoul2 ) return;
-	re->G2API_SetGhoul2ModelIndexes( *((CGhoul2Info_v *)ghoul2), modelList, skinList );
+	g2api->G2API_SetGhoul2ModelIndexes( *((CGhoul2Info_v *)ghoul2), modelList, skinList );
 }
 
 static qboolean CL_G2API_HaveWeGhoul2Models( void *ghoul2) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_HaveWeGhoul2Models( *((CGhoul2Info_v *)ghoul2) );
+	return g2api->G2API_HaveWeGhoul2Models( *((CGhoul2Info_v *)ghoul2) );
 }
 
 static qboolean CL_G2API_GetBoltMatrix( void *ghoul2, const int modelIndex, const int boltIndex, mdxaBone_t *matrix, const vec3_t angles, const vec3_t position, const int frameNum, qhandle_t *modelList, vec3_t scale ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
+	return g2api->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
 }
 
 static qboolean CL_G2API_GetBoltMatrix_NoReconstruct( void *ghoul2, const int modelIndex, const int boltIndex, mdxaBone_t *matrix, const vec3_t angles, const vec3_t position, const int frameNum, qhandle_t *modelList, vec3_t scale ) {
 	if ( !ghoul2 ) return qfalse;
-	re->G2API_BoltMatrixReconstruction( qfalse );
-	return re->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
+	g2api->G2API_BoltMatrixReconstruction( qfalse );
+	return g2api->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
 }
 
 static qboolean CL_G2API_GetBoltMatrix_NoRecNoRot( void *ghoul2, const int modelIndex, const int boltIndex, mdxaBone_t *matrix, const vec3_t angles, const vec3_t position, const int frameNum, qhandle_t *modelList, vec3_t scale ) {
 	if ( !ghoul2 ) return qfalse;
 	// Intentionally not setting bolt matrix reconstruction state per original code comments
-	re->G2API_BoltMatrixSPMethod( qtrue );
-	return re->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
+	g2api->G2API_BoltMatrixSPMethod( qtrue );
+	return g2api->G2API_GetBoltMatrix( *((CGhoul2Info_v *)ghoul2), modelIndex, boltIndex, matrix, angles, position, frameNum, modelList, scale );
 }
 
 static int CL_G2API_InitGhoul2Model( void **ghoul2Ptr, const char *fileName, int modelIndex, qhandle_t customSkin, qhandle_t customShader, int modelFlags, int lodBias ) {
 #ifdef _FULL_G2_LEAK_CHECKING
 		g_G2AllocServer = 0;
 #endif
-	return re->G2API_InitGhoul2Model( (CGhoul2Info_v **)ghoul2Ptr, fileName, modelIndex, customSkin, customShader, modelFlags, lodBias );
+	return g2api->G2API_InitGhoul2Model( (CGhoul2Info_v **)ghoul2Ptr, fileName, modelIndex, customSkin, customShader, modelFlags, lodBias );
 }
 
 static qboolean CL_G2API_SetSkin( void *ghoul2, int modelIndex, qhandle_t customSkin, qhandle_t renderSkin ) {
 	if ( !ghoul2 ) return qfalse;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_SetSkin( g2, modelIndex, customSkin, renderSkin );
+	return g2api->G2API_SetSkin( g2, modelIndex, customSkin, renderSkin );
 }
 
 static void CL_G2API_CollisionDetect( CollisionRecord_t *collRecMap, void* ghoul2, const vec3_t angles, const vec3_t position, int frameNumber, int entNum, vec3_t rayStart, vec3_t rayEnd, vec3_t scale, int traceFlags, int useLod, float fRadius ) {
 	if ( !ghoul2 ) return;
-	re->G2API_CollisionDetect( collRecMap, *((CGhoul2Info_v *)ghoul2), angles, position, frameNumber, entNum, rayStart, rayEnd, scale, G2VertSpaceClient, traceFlags, useLod, fRadius );
+	g2api->G2API_CollisionDetect( collRecMap, *((CGhoul2Info_v *)ghoul2), angles, position, frameNumber, entNum, rayStart, rayEnd, scale, G2VertSpaceClient, traceFlags, useLod, fRadius );
 }
 
 static void CL_G2API_CollisionDetectCache( CollisionRecord_t *collRecMap, void* ghoul2, const vec3_t angles, const vec3_t position, int frameNumber, int entNum, vec3_t rayStart, vec3_t rayEnd, vec3_t scale, int traceFlags, int useLod, float fRadius ) {
 	if ( !ghoul2 ) return;
-	re->G2API_CollisionDetectCache( collRecMap, *((CGhoul2Info_v *)ghoul2), angles, position, frameNumber, entNum, rayStart, rayEnd, scale, G2VertSpaceClient, traceFlags, useLod, fRadius );
+	g2api->G2API_CollisionDetectCache( collRecMap, *((CGhoul2Info_v *)ghoul2), angles, position, frameNumber, entNum, rayStart, rayEnd, scale, G2VertSpaceClient, traceFlags, useLod, fRadius );
 }
 
 static void CL_G2API_CleanGhoul2Models( void **ghoul2Ptr ) {
 #ifdef _FULL_G2_LEAK_CHECKING
 		g_G2AllocServer = 0;
 #endif
-	re->G2API_CleanGhoul2Models( (CGhoul2Info_v **)ghoul2Ptr );
+	g2api->G2API_CleanGhoul2Models( (CGhoul2Info_v **)ghoul2Ptr );
 }
 
 static qboolean CL_G2API_SetBoneAngles( void *ghoul2, int modelIndex, const char *boneName, const vec3_t angles, const int flags, const int up, const int right, const int forward, qhandle_t *modelList, int blendTime , int currentTime ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_SetBoneAngles( *((CGhoul2Info_v *)ghoul2), modelIndex, boneName, angles, flags, (const Eorientations)up, (const Eorientations)right, (const Eorientations)forward, modelList, blendTime , currentTime );
+	return g2api->G2API_SetBoneAngles( *((CGhoul2Info_v *)ghoul2), modelIndex, boneName, angles, flags, (const Eorientations)up, (const Eorientations)right, (const Eorientations)forward, modelList, blendTime , currentTime );
 }
 
 static qboolean CL_G2API_SetBoneAnim( void *ghoul2, const int modelIndex, const char *boneName, const int startFrame, const int endFrame, const int flags, const float animSpeed, const int currentTime, const float setFrame, const int blendTime ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_SetBoneAnim( *((CGhoul2Info_v *)ghoul2), modelIndex, boneName, startFrame, endFrame, flags, animSpeed, currentTime, setFrame, blendTime );
+	return g2api->G2API_SetBoneAnim( *((CGhoul2Info_v *)ghoul2), modelIndex, boneName, startFrame, endFrame, flags, animSpeed, currentTime, setFrame, blendTime );
 }
 
 static qboolean CL_G2API_GetBoneAnim( void *ghoul2, const char *boneName, const int currentTime, float *currentFrame, int *startFrame, int *endFrame, int *flags, float *animSpeed, int *modelList, const int modelIndex ) {
 	if ( !ghoul2 ) return qfalse;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_GetBoneAnim( g2, modelIndex, boneName, currentTime, currentFrame, startFrame, endFrame, flags, animSpeed, modelList );
+	return g2api->G2API_GetBoneAnim( g2, modelIndex, boneName, currentTime, currentFrame, startFrame, endFrame, flags, animSpeed, modelList );
 }
 
 static qboolean CL_G2API_GetBoneFrame( void *ghoul2, const char *boneName, const int currentTime, float *currentFrame, int *modelList, const int modelIndex ) {
@@ -458,7 +458,7 @@ static qboolean CL_G2API_GetBoneFrame( void *ghoul2, const char *boneName, const
 	int iDontCare1 = 0, iDontCare2 = 0, iDontCare3 = 0;
 	float fDontCare1 = 0;
 
-	return re->G2API_GetBoneAnim(g2, modelIndex, boneName, currentTime, currentFrame, &iDontCare1, &iDontCare2, &iDontCare3, &fDontCare1, modelList);
+	return g2api->G2API_GetBoneAnim(g2, modelIndex, boneName, currentTime, currentFrame, &iDontCare1, &iDontCare2, &iDontCare3, &fDontCare1, modelList);
 }
 
 static void CL_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
@@ -468,7 +468,7 @@ static void CL_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 		return;
 	}
 
-	char *tmp = re->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
+	char *tmp = g2api->G2API_GetGLAName( *((CGhoul2Info_v *)ghoul2), modelIndex );
 	if ( tmp )
 		strcpy( fillBuf, tmp );
 	else
@@ -478,12 +478,12 @@ static void CL_G2API_GetGLAName( void *ghoul2, int modelIndex, char *fillBuf ) {
 static int CL_G2API_CopyGhoul2Instance( void *g2From, void *g2To, int modelIndex ) {
 	if ( !g2From || !g2To ) return 0;
 
-	return re->G2API_CopyGhoul2Instance( *((CGhoul2Info_v *)g2From), *((CGhoul2Info_v *)g2To), modelIndex );
+	return g2api->G2API_CopyGhoul2Instance( *((CGhoul2Info_v *)g2From), *((CGhoul2Info_v *)g2To), modelIndex );
 }
 
 static void CL_G2API_CopySpecificGhoul2Model( void *g2From, int modelFrom, void *g2To, int modelTo ) {
 	if ( !g2From || !g2To) return;
-	re->G2API_CopySpecificG2Model( *((CGhoul2Info_v *)g2From), modelFrom, *((CGhoul2Info_v *)g2To), modelTo );
+	g2api->G2API_CopySpecificG2Model( *((CGhoul2Info_v *)g2From), modelFrom, *((CGhoul2Info_v *)g2To), modelTo );
 }
 
 static void CL_G2API_DuplicateGhoul2Instance( void *g2From, void **g2To ) {
@@ -491,32 +491,32 @@ static void CL_G2API_DuplicateGhoul2Instance( void *g2From, void **g2To ) {
 		g_G2AllocServer = 0;
 #endif
 	if ( !g2From || !g2To ) return;
-	re->G2API_DuplicateGhoul2Instance( *((CGhoul2Info_v *)g2From), (CGhoul2Info_v **)g2To );
+	g2api->G2API_DuplicateGhoul2Instance( *((CGhoul2Info_v *)g2From), (CGhoul2Info_v **)g2To );
 }
 
 static qboolean CL_G2API_HasGhoul2ModelOnIndex( void *ghlInfo, int modelIndex ) {
-	return re->G2API_HasGhoul2ModelOnIndex( (CGhoul2Info_v **)ghlInfo, modelIndex );
+	return g2api->G2API_HasGhoul2ModelOnIndex( (CGhoul2Info_v **)ghlInfo, modelIndex );
 }
 
 static qboolean CL_G2API_RemoveGhoul2Model( void *ghlInfo, int modelIndex ) {
 #ifdef _FULL_G2_LEAK_CHECKING
 		g_G2AllocServer = 0;
 #endif
-	return re->G2API_RemoveGhoul2Model( (CGhoul2Info_v **)ghlInfo, modelIndex );
+	return g2api->G2API_RemoveGhoul2Model( (CGhoul2Info_v **)ghlInfo, modelIndex );
 }
 
 static qboolean CL_G2API_SkinlessModel( void *ghlInfo, int modelIndex ) {
 	if ( !ghlInfo ) return qfalse;
 
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghlInfo);
-	return re->G2API_SkinlessModel( g2, modelIndex );
+	return g2api->G2API_SkinlessModel( g2, modelIndex );
 }
 
 static int CL_G2API_GetNumGoreMarks( void *ghlInfo, int modelIndex ) {
 #ifdef _G2_GORE
 	if ( !ghlInfo ) return 0;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghlInfo);
-	return re->G2API_GetNumGoreMarks( g2, modelIndex );
+	return g2api->G2API_GetNumGoreMarks( g2, modelIndex );
 #else
 	return 0;
 #endif
@@ -525,77 +525,77 @@ static int CL_G2API_GetNumGoreMarks( void *ghlInfo, int modelIndex ) {
 static void CL_G2API_AddSkinGore( void *ghlInfo, SSkinGoreData *gore ) {
 #ifdef _G2_GORE
 	if ( !ghlInfo ) return;
-	re->G2API_AddSkinGore( *((CGhoul2Info_v *)ghlInfo), *(SSkinGoreData *)gore );
+	g2api->G2API_AddSkinGore( *((CGhoul2Info_v *)ghlInfo), *(SSkinGoreData *)gore );
 #endif
 }
 
 static void CL_G2API_ClearSkinGore( void *ghlInfo ) {
 #ifdef _G2_GORE
 	if ( !ghlInfo ) return;
-	re->G2API_ClearSkinGore( *((CGhoul2Info_v *)ghlInfo) );
+	g2api->G2API_ClearSkinGore( *((CGhoul2Info_v *)ghlInfo) );
 #endif
 }
 
 static int CL_G2API_Ghoul2Size( void *ghlInfo ) {
 	if ( !ghlInfo ) return 0;
-	return re->G2API_Ghoul2Size( *((CGhoul2Info_v *)ghlInfo) );
+	return g2api->G2API_Ghoul2Size( *((CGhoul2Info_v *)ghlInfo) );
 }
 
 static int CL_G2API_AddBolt( void *ghoul2, int modelIndex, const char *boneName ) {
 	if ( !ghoul2 ) return -1;
-	return re->G2API_AddBolt( *((CGhoul2Info_v *)ghoul2), modelIndex, boneName );
+	return g2api->G2API_AddBolt( *((CGhoul2Info_v *)ghoul2), modelIndex, boneName );
 }
 
 static qboolean CL_G2API_AttachEnt( int *boltInfo, void *ghlInfoTo, int toBoltIndex, int entNum, int toModelNum ) {
 	if ( !ghlInfoTo ) return qfalse;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghlInfoTo);
-	return re->G2API_AttachEnt( boltInfo, g2, 0, toBoltIndex, entNum, toModelNum );
+	return g2api->G2API_AttachEnt( boltInfo, g2, 0, toBoltIndex, entNum, toModelNum );
 }
 
 static void CL_G2API_SetBoltInfo( void *ghoul2, int modelIndex, int boltInfo ) {
 	if ( !ghoul2 ) return;
-	re->G2API_SetBoltInfo( *((CGhoul2Info_v *)ghoul2), modelIndex, boltInfo );
+	g2api->G2API_SetBoltInfo( *((CGhoul2Info_v *)ghoul2), modelIndex, boltInfo );
 }
 
 static qboolean CL_G2API_SetRootSurface( void *ghoul2, const int modelIndex, const char *surfaceName ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_SetRootSurface( *((CGhoul2Info_v *)ghoul2), modelIndex, surfaceName );
+	return g2api->G2API_SetRootSurface( *((CGhoul2Info_v *)ghoul2), modelIndex, surfaceName );
 }
 
 static qboolean CL_G2API_SetSurfaceOnOff( void *ghoul2, const char *surfaceName, const int flags ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_SetSurfaceOnOff( *((CGhoul2Info_v *)ghoul2), surfaceName, flags );
+	return g2api->G2API_SetSurfaceOnOff( *((CGhoul2Info_v *)ghoul2), surfaceName, flags );
 }
 
 static qboolean CL_G2API_SetNewOrigin( void *ghoul2, const int boltIndex ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_SetNewOrigin( *((CGhoul2Info_v *)ghoul2), boltIndex );
+	return g2api->G2API_SetNewOrigin( *((CGhoul2Info_v *)ghoul2), boltIndex );
 }
 
 static qboolean CL_G2API_DoesBoneExist( void *ghoul2, int modelIndex, const char *boneName ) {
 	if ( !ghoul2 ) return qfalse;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_DoesBoneExist( g2, modelIndex, boneName );
+	return g2api->G2API_DoesBoneExist( g2, modelIndex, boneName );
 }
 
 static int CL_G2API_GetSurfaceRenderStatus( void *ghoul2, const int modelIndex, const char *surfaceName ) {
 	if ( !ghoul2 ) return -1;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_GetSurfaceRenderStatus( g2, modelIndex, surfaceName );
+	return g2api->G2API_GetSurfaceRenderStatus( g2, modelIndex, surfaceName );
 }
 
 static int CL_G2API_GetTime( void ) {
-	return re->G2API_GetTime( 0 );
+	return g2api->G2API_GetTime( 0 );
 }
 
 static void CL_G2API_SetTime( int time, int clock ) {
-	re->G2API_SetTime( time, clock );
+	g2api->G2API_SetTime( time, clock );
 }
 
 static void CL_G2API_AbsurdSmoothing( void *ghoul2, qboolean status ) {
 	if ( !ghoul2 ) return;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	re->G2API_AbsurdSmoothing( g2, status );
+	g2api->G2API_AbsurdSmoothing( g2, status );
 }
 
 static void CL_G2API_SetRagDoll( void *ghoul2, sharedRagDollParams_t *params ) {
@@ -603,7 +603,7 @@ static void CL_G2API_SetRagDoll( void *ghoul2, sharedRagDollParams_t *params ) {
 
 	CRagDollParams rdParams;
 	if ( !params ) {
-		re->G2API_ResetRagDoll( *((CGhoul2Info_v *)ghoul2) );
+		g2api->G2API_ResetRagDoll( *((CGhoul2Info_v *)ghoul2) );
 		return;
 	}
 
@@ -626,7 +626,7 @@ static void CL_G2API_SetRagDoll( void *ghoul2, sharedRagDollParams_t *params ) {
 	rdParams.RagPhase = (CRagDollParams::ERagPhase)params->RagPhase;
 	rdParams.effectorsToTurnOff = (CRagDollParams::ERagEffector)params->effectorsToTurnOff;
 
-	re->G2API_SetRagDoll( *((CGhoul2Info_v *)ghoul2), &rdParams );
+	g2api->G2API_SetRagDoll( *((CGhoul2Info_v *)ghoul2), &rdParams );
 }
 
 static void CL_G2API_AnimateG2Models( void *ghoul2, int time, sharedRagDollUpdateParams_t *params ) {
@@ -642,78 +642,78 @@ static void CL_G2API_AnimateG2Models( void *ghoul2, int time, sharedRagDollUpdat
 	rduParams.me = params->me;
 	rduParams.settleFrame = params->settleFrame;
 
-	re->G2API_AnimateG2ModelsRag( *((CGhoul2Info_v *)ghoul2), time, &rduParams );
+	g2api->G2API_AnimateG2ModelsRag( *((CGhoul2Info_v *)ghoul2), time, &rduParams );
 }
 
 static qboolean CL_G2API_RagPCJConstraint( void *ghoul2, const char *boneName, vec3_t min, vec3_t max ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_RagPCJConstraint( *((CGhoul2Info_v *)ghoul2), boneName, min, max );
+	return g2api->G2API_RagPCJConstraint( *((CGhoul2Info_v *)ghoul2), boneName, min, max );
 }
 
 static qboolean CL_G2API_RagPCJGradientSpeed( void *ghoul2, const char *boneName, const float speed ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_RagPCJGradientSpeed( *((CGhoul2Info_v *)ghoul2), boneName, speed );
+	return g2api->G2API_RagPCJGradientSpeed( *((CGhoul2Info_v *)ghoul2), boneName, speed );
 }
 
 static qboolean CL_G2API_RagEffectorGoal( void *ghoul2, const char *boneName, vec3_t pos ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_RagEffectorGoal( *((CGhoul2Info_v *)ghoul2), boneName, pos );
+	return g2api->G2API_RagEffectorGoal( *((CGhoul2Info_v *)ghoul2), boneName, pos );
 }
 
 static qboolean CL_G2API_GetRagBonePos( void *ghoul2, const char *boneName, vec3_t pos, vec3_t entAngles, vec3_t entPos, vec3_t entScale ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_GetRagBonePos( *((CGhoul2Info_v *)ghoul2), boneName, pos, entAngles, entPos, entScale );
+	return g2api->G2API_GetRagBonePos( *((CGhoul2Info_v *)ghoul2), boneName, pos, entAngles, entPos, entScale );
 }
 
 static qboolean CL_G2API_RagEffectorKick( void *ghoul2, const char *boneName, vec3_t velocity ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_RagEffectorKick( *((CGhoul2Info_v *)ghoul2), boneName, velocity );
+	return g2api->G2API_RagEffectorKick( *((CGhoul2Info_v *)ghoul2), boneName, velocity );
 }
 
 static qboolean CL_G2API_RagForceSolve( void *ghoul2, qboolean force ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_RagForceSolve( *((CGhoul2Info_v *)ghoul2), force );
+	return g2api->G2API_RagForceSolve( *((CGhoul2Info_v *)ghoul2), force );
 }
 
 static qboolean CL_G2API_SetBoneIKState( void *ghoul2, int time, const char *boneName, int ikState, sharedSetBoneIKStateParams_t *params ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_SetBoneIKState( *((CGhoul2Info_v *)ghoul2), time, boneName, ikState, params );
+	return g2api->G2API_SetBoneIKState( *((CGhoul2Info_v *)ghoul2), time, boneName, ikState, params );
 }
 
 static qboolean CL_G2API_IKMove( void *ghoul2, int time, sharedIKMoveParams_t *params ) {
 	if ( !ghoul2 ) return qfalse;
-	return re->G2API_IKMove( *((CGhoul2Info_v *)ghoul2), time, params );
+	return g2api->G2API_IKMove( *((CGhoul2Info_v *)ghoul2), time, params );
 }
 
 static qboolean CL_G2API_RemoveBone( void *ghoul2, const char *boneName, int modelIndex ) {
 	if ( !ghoul2 ) return qfalse;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	return re->G2API_RemoveBone( g2, modelIndex, boneName );
+	return g2api->G2API_RemoveBone( g2, modelIndex, boneName );
 }
 
 static void CL_G2API_AttachInstanceToEntNum( void *ghoul2, int entityNum, qboolean server ) {
 	if ( !ghoul2 ) return;
-	re->G2API_AttachInstanceToEntNum( *((CGhoul2Info_v *)ghoul2), entityNum, server );
+	g2api->G2API_AttachInstanceToEntNum( *((CGhoul2Info_v *)ghoul2), entityNum, server );
 }
 
 static void CL_G2API_ClearAttachedInstance( int entityNum ) {
-	re->G2API_ClearAttachedInstance( entityNum );
+	g2api->G2API_ClearAttachedInstance( entityNum );
 }
 
 static void CL_G2API_CleanEntAttachments( void ) {
-	re->G2API_CleanEntAttachments();
+	g2api->G2API_CleanEntAttachments();
 }
 
 static qboolean CL_G2API_OverrideServer( void *serverInstance ) {
 	if ( !serverInstance ) return qfalse;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)serverInstance);
-	return re->G2API_OverrideServerWithClientData( g2, 0 );
+	return g2api->G2API_OverrideServerWithClientData( g2, 0 );
 }
 
 static void CL_G2API_GetSurfaceName( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf ) {
 	if ( !ghoul2 ) return;
 	CGhoul2Info_v &g2 = *((CGhoul2Info_v *)ghoul2);
-	char *tmp = re->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
+	char *tmp = g2api->G2API_GetSurfaceName( g2, modelIndex, surfNumber );
 	strcpy( fillBuf, tmp );
 }
 

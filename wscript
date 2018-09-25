@@ -121,7 +121,7 @@ def build(bld):
 		server_files += bld.path.ant_glob('src/null/*.cc')
 		
 		#TEMPORARY
-		server_files += bld.path.ant_glob('src/ghoul2/*.cc')
+		#server_files += bld.path.ant_glob('src/ghoul2/*.cc')
 
 		server = bld (
 			features = 'cxx cxxprogram',
@@ -228,9 +228,6 @@ def build(bld):
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cc')
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cc')
-		
-		#TEMPORARY
-		rdvan_files += bld.path.ant_glob('src/ghoul2/**.cc')
 			
 		rdvan = bld (
 			features = 'cxx cxxshlib',
@@ -246,22 +243,22 @@ def build(bld):
 	# GHOUL2
 	if build_ghoul2:
 	
-		rdvan_files = bld.path.ant_glob('src/ghoul2new/*.cc')
-		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
-		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
-		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cc')
-		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cc')
+		g2_files = bld.path.ant_glob('src/ghoul2/*.cc')
+		g2_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
+		g2_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
+		g2_files += bld.path.ant_glob('src/qcommon/q_math.cc')
+		g2_files += bld.path.ant_glob('src/qcommon/q_string.cc')
 			
-		rdvan = bld (
+		g2 = bld (
 			features = 'cxx cxxshlib',
 			target = 'ghoul2',
-			includes = ['src', 'src/ghoul3'],
-			source = rdvan_files,
+			includes = ['src', 'src/ghoul2'],
+			source = g2_files,
 			uselib = ['PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)
 		
-		rdvan.env.cxxshlib_PATTERN = '%s.so'
+		g2.env.cxxshlib_PATTERN = '%s.so'
 		
 def clean(ctx):
 	pass

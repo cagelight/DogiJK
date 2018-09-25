@@ -40,6 +40,8 @@ struct model_s;
 
 //rww - RAGDOLL_END
 
+void Multiply_3x4Matrix(mdxaBone_t *out, mdxaBone_t *in2, mdxaBone_t *in);
+
 //===================================================================
 //
 //   G H O U L  I I  D E F I N E S
@@ -336,5 +338,354 @@ enum EG2_Collision
 	G2_RETURNONHIT
 };
 
+
+class CConstructBoneList
+{
+public:
+	int				surfaceNum;
+	int				*boneUsedList;
+	surfaceInfo_v	&rootSList;
+	model_t			*currentModel;
+	boneInfo_v		&boneList;
+
+	CConstructBoneList(
+	int				initsurfaceNum,
+	int				*initboneUsedList,
+	surfaceInfo_v	&initrootSList,
+	model_t			*initcurrentModel,
+	boneInfo_v		&initboneList):
+
+	surfaceNum(initsurfaceNum),
+	boneUsedList(initboneUsedList),
+	rootSList(initrootSList),
+	currentModel(initcurrentModel),
+	boneList(initboneList) { }
+
+};
+
+class CTransformBone
+{
+public:
+	int				touch; // for minimal recalculation
+	//rww - RAGDOLL_BEGIN
+	int				touchRender;
+	//rww - RAGDOLL_END
+	mdxaBone_t		boneMatrix; //final matrix
+	int				parent; // only set once
+
+	CTransformBone()
+	{
+		touch=0;
+	//rww - RAGDOLL_BEGIN
+		touchRender = 0;
+	//rww - RAGDOLL_END
+	}
+
+};
+
+struct SBoneCalc
+{
+	int				newFrame;
+	int				currentFrame;
+	float			backlerp;
+	float			blendFrame;
+	int				blendOldFrame;
+	bool			blendMode;
+	float			blendLerp;
+};
+
+
+class CBoneCache;
+void G2_TransformBone(int index,CBoneCache &CB);
+
+class CBoneCache
+{
+	void SetRenderMatrix(CTransformBone *bone) {
+	}
+
+	void EvalLow(int index)
+	{
+		assert(index>=0&&index<(int)mBones.size());
+		if (mFinalBones[index].touch!=mCurrentTouch)
+		{
+			// need to evaluate the bone
+			assert((mFinalBones[index].parent>=0&&mFinalBones[index].parent<(int)mFinalBones.size())||(index==0&&mFinalBones[index].parent==-1));
+			if (mFinalBones[index].parent>=0)
+			{
+				EvalLow(mFinalBones[index].parent); // make sure parent is evaluated
+				SBoneCalc &par=mBones[mFinalBones[index].parent];
+				mBones[index].newFrame=par.newFrame;
+				mBones[index].currentFrame=par.currentFrame;
+				mBones[index].backlerp=par.backlerp;
+				mBones[index].blendFrame=par.blendFrame;
+				mBones[index].blendOldFrame=par.blendOldFrame;
+				mBones[index].blendMode=par.blendMode;
+				mBones[index].blendLerp=par.blendLerp;
+			}
+			G2_TransformBone(index,*this);
+			mFinalBones[index].touch=mCurrentTouch;
+		}
+	}
+//rww - RAGDOLL_BEGIN
+	void SmoothLow(int index)
+	{
+		if (mSmoothBones[index].touch==mLastTouch)
+		{
+			int i;
+			float *oldM=&mSmoothBones[index].boneMatrix.matrix[0][0];
+			float *newM=&mFinalBones[index].boneMatrix.matrix[0][0];
+#if 0 //this is just too slow. I need a better way.
+			static float smoothFactor;
+
+			smoothFactor = mSmoothFactor;
+
+			//Special rag smoothing -rww
+			if (smoothFactor < 0)
+			{ //I need a faster way to do this but I do not want to store more in the bonecache
+				static int blistIndex;
+				assert(mod);
+				assert(rootBoneList);
+				blistIndex = G2_Find_Bone_ByNum(mod, *rootBoneList, index);
+
+				assert(blistIndex != -1);
+
+				boneInfo_t &bone = (*rootBoneList)[blistIndex];
+
+				if (bone.flags & BONE_ANGLES_RAGDOLL)
+				{
+					if ((bone.RagFlags & (0x00008)) || //pelvis
+                        (bone.RagFlags & (0x00004))) //model_root
+					{ //pelvis and root do not smooth much
+						smoothFactor = 0.2f;
+					}
+					else if (bone.solidCount > 4)
+					{ //if stuck in solid a lot then snap out quickly
+						smoothFactor = 0.1f;
+					}
+					else
+					{ //otherwise smooth a bunch
+						smoothFactor = 0.8f;
+					}
+				}
+				else
+				{ //not a rag bone
+					smoothFactor = 0.3f;
+				}
+			}
+#endif
+
+			for (i=0;i<12;i++,oldM++,newM++)
+			{
+				*oldM=mSmoothFactor*(*oldM-*newM)+*newM;
+			}
+		}
+		else
+		{
+			memcpy(&mSmoothBones[index].boneMatrix,&mFinalBones[index].boneMatrix,sizeof(mdxaBone_t));
+		}
+		mdxaSkelOffsets_t *offsets = (mdxaSkelOffsets_t *)((byte *)header + sizeof(mdxaHeader_t));
+		mdxaSkel_t *skel = (mdxaSkel_t *)((byte *)header + sizeof(mdxaHeader_t) + offsets->offsets[index]);
+		mdxaBone_t tempMatrix;
+		Multiply_3x4Matrix(&tempMatrix,&mSmoothBones[index].boneMatrix, &skel->BasePoseMat);
+		float maxl;
+		maxl=VectorLength(&skel->BasePoseMat.matrix[0][0]);
+		VectorNormalize(&tempMatrix.matrix[0][0]);
+		VectorNormalize(&tempMatrix.matrix[1][0]);
+		VectorNormalize(&tempMatrix.matrix[2][0]);
+
+		VectorScale(&tempMatrix.matrix[0][0],maxl,&tempMatrix.matrix[0][0]);
+		VectorScale(&tempMatrix.matrix[1][0],maxl,&tempMatrix.matrix[1][0]);
+		VectorScale(&tempMatrix.matrix[2][0],maxl,&tempMatrix.matrix[2][0]);
+		Multiply_3x4Matrix(&mSmoothBones[index].boneMatrix,&tempMatrix,&skel->BasePoseMatInv);
+		mSmoothBones[index].touch=mCurrentTouch;
+#ifdef _DEBUG
+		for ( int i = 0; i < 3; i++ )
+		{
+			for ( int j = 0; j < 4; j++ )
+			{
+				assert( !Q_isnan(mSmoothBones[index].boneMatrix.matrix[i][j]));
+			}
+		}
+#endif// _DEBUG
+	}
+//rww - RAGDOLL_END
+public:
+	int					frameSize;
+	const mdxaHeader_t	*header;
+	const model_t		*mod;
+
+	// these are split for better cpu cache behavior
+	std::vector<SBoneCalc> mBones;
+	std::vector<CTransformBone> mFinalBones;
+
+	std::vector<CTransformBone> mSmoothBones; // for render smoothing
+	//vector<mdxaSkel_t *>   mSkels;
+
+	boneInfo_v		*rootBoneList;
+	mdxaBone_t		rootMatrix;
+	int				incomingTime;
+
+	int				mCurrentTouch;
+	//rww - RAGDOLL_BEGIN
+	int				mCurrentTouchRender;
+	int				mLastTouch;
+	int				mLastLastTouch;
+	//rww - RAGDOLL_END
+
+	// for render smoothing
+	bool			mSmoothingActive;
+	bool			mUnsquash;
+	float			mSmoothFactor;
+
+	CBoneCache(const model_t *amod,const mdxaHeader_t *aheader) :
+		header(aheader),
+		mod(amod)
+	{
+		assert(amod);
+		assert(aheader);
+		mSmoothingActive=false;
+		mUnsquash=false;
+		mSmoothFactor=0.0f;
+
+		int numBones=header->numBones;
+		mBones.resize(numBones);
+		mFinalBones.resize(numBones);
+		mSmoothBones.resize(numBones);
+//		mSkels.resize(numBones);
+		//rww - removed mSkels
+		mdxaSkelOffsets_t *offsets;
+		mdxaSkel_t		*skel;
+		offsets = (mdxaSkelOffsets_t *)((byte *)header + sizeof(mdxaHeader_t));
+
+		int i;
+		for (i=0;i<numBones;i++)
+		{
+			skel = (mdxaSkel_t *)((byte *)header + sizeof(mdxaHeader_t) + offsets->offsets[i]);
+			//mSkels[i]=skel;
+			//ditto
+			mFinalBones[i].parent=skel->parent;
+		}
+		mCurrentTouch=3;
+//rww - RAGDOLL_BEGIN
+		mLastTouch=2;
+		mLastLastTouch=1;
+//rww - RAGDOLL_END
+	}
+
+	SBoneCalc &Root()
+	{
+		assert(mBones.size());
+		return mBones[0];
+	}
+	const mdxaBone_t &EvalUnsmooth(int index)
+	{
+		EvalLow(index);
+		if (mSmoothingActive&&mSmoothBones[index].touch)
+		{
+			return mSmoothBones[index].boneMatrix;
+		}
+		return mFinalBones[index].boneMatrix;
+	}
+	const mdxaBone_t &Eval(int index)
+	{
+		/*
+		bool wasEval=EvalLow(index);
+		if (mSmoothingActive)
+		{
+			if (mSmoothBones[index].touch!=incomingTime||wasEval)
+			{
+				float dif=float(incomingTime)-float(mSmoothBones[index].touch);
+				if (mSmoothBones[index].touch&&dif<300.0f)
+				{
+
+					if (dif<16.0f)  // 60 fps
+					{
+						dif=16.0f;
+					}
+					if (dif>100.0f) // 10 fps
+					{
+						dif=100.0f;
+					}
+					float f=1.0f-pow(1.0f-mSmoothFactor,16.0f/dif);
+
+					int i;
+					float *oldM=&mSmoothBones[index].boneMatrix.matrix[0][0];
+					float *newM=&mFinalBones[index].boneMatrix.matrix[0][0];
+					for (i=0;i<12;i++,oldM++,newM++)
+					{
+						*oldM=f*(*oldM-*newM)+*newM;
+					}
+					if (mUnsquash)
+					{
+						mdxaBone_t tempMatrix;
+						Multiply_3x4Matrix(&tempMatrix,&mSmoothBones[index].boneMatrix, &mSkels[index]->BasePoseMat);
+						float maxl;
+						maxl=VectorLength(&mSkels[index]->BasePoseMat.matrix[0][0]);
+						VectorNormalize(&tempMatrix.matrix[0][0]);
+						VectorNormalize(&tempMatrix.matrix[1][0]);
+						VectorNormalize(&tempMatrix.matrix[2][0]);
+
+						VectorScale(&tempMatrix.matrix[0][0],maxl,&tempMatrix.matrix[0][0]);
+						VectorScale(&tempMatrix.matrix[1][0],maxl,&tempMatrix.matrix[1][0]);
+						VectorScale(&tempMatrix.matrix[2][0],maxl,&tempMatrix.matrix[2][0]);
+						Multiply_3x4Matrix(&mSmoothBones[index].boneMatrix,&tempMatrix,&mSkels[index]->BasePoseMatInv);
+					}
+				}
+				else
+				{
+					memcpy(&mSmoothBones[index].boneMatrix,&mFinalBones[index].boneMatrix,sizeof(mdxaBone_t));
+				}
+				mSmoothBones[index].touch=incomingTime;
+			}
+			return mSmoothBones[index].boneMatrix;
+		}
+		return mFinalBones[index].boneMatrix;
+		*/
+
+		//Hey, this is what sof2 does. Let's try it out.
+		assert(index>=0&&index<(int)mBones.size());
+		if (mFinalBones[index].touch!=mCurrentTouch)
+		{
+			EvalLow(index);
+		}
+		return mFinalBones[index].boneMatrix;
+	}
+	//rww - RAGDOLL_BEGIN
+	const inline mdxaBone_t &EvalRender(int index)
+	{
+		assert(index>=0&&index<(int)mBones.size());
+		if (mFinalBones[index].touch!=mCurrentTouch)
+		{
+			mFinalBones[index].touchRender=mCurrentTouchRender;
+			EvalLow(index);
+		}
+		if (mSmoothingActive)
+		{
+			if (mSmoothBones[index].touch!=mCurrentTouch)
+			{
+				SmoothLow(index);
+			}
+			return mSmoothBones[index].boneMatrix;
+		}
+		return mFinalBones[index].boneMatrix;
+	}
+	//rww - RAGDOLL_END
+	//rww - RAGDOLL_BEGIN
+	bool WasRendered(int index)
+	{
+		assert(index>=0&&index<(int)mBones.size());
+		return mFinalBones[index].touchRender==mCurrentTouchRender;
+	}
+	int GetParent(int index)
+	{
+		if (index==0)
+		{
+			return -1;
+		}
+		assert(index>=0&&index<(int)mBones.size());
+		return mFinalBones[index].parent;
+	}
+	//rww - RAGDOLL_END
+};
 
 //====================================================================

@@ -579,7 +579,7 @@ Ghoul2 Insert End
 	}
 
 	//rww - RAGDOLL_BEGIN
-	re->G2API_SetTime(sv.time,0);
+	g2api->G2API_SetTime(sv.time,0);
 	//rww - RAGDOLL_END
 
 	// make sure we are not paused
@@ -624,7 +624,7 @@ Ghoul2 Insert End
 	// run a few frames to allow everything to settle
 	for ( i = 0 ;i < 3 ; i++ ) {
 		//rww - RAGDOLL_BEGIN
-		re->G2API_SetTime(sv.time,0);
+		g2api->G2API_SetTime(sv.time,0);
 		//rww - RAGDOLL_END
 		GVM_RunFrame( sv.time );
 		SV_BotFrame( sv.time );
@@ -632,7 +632,7 @@ Ghoul2 Insert End
 		svs.time += 100;
 	}
 	//rww - RAGDOLL_BEGIN
-	re->G2API_SetTime(sv.time,0);
+	g2api->G2API_SetTime(sv.time,0);
 	//rww - RAGDOLL_END
 
 	// create a baseline for more efficient communications
@@ -691,7 +691,7 @@ Ghoul2 Insert End
 	sv.time += 100;
 	svs.time += 100;
 	//rww - RAGDOLL_BEGIN
-	re->G2API_SetTime(sv.time,0);
+	g2api->G2API_SetTime(sv.time,0);
 	//rww - RAGDOLL_END
 
 	if ( sv_pure->integer ) {
@@ -824,6 +824,7 @@ static IHeapAllocator *GetG2VertSpaceServer( void ) {
 }
 
 refexport_t	*re = NULL;
+g2export_t * g2api = NULL;
 
 static void SV_InitRef( void ) {
 	static refimport_t ri;
@@ -910,6 +911,7 @@ static void SV_InitRef( void ) {
 	G2VertSpaceServer = &IHeapAllocator_singleton;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
+	
 
 //	Com_Printf( "-------------------------------\n");
 
