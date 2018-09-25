@@ -572,8 +572,11 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	re.RegisterModels_LevelLoadEnd			= RE_RegisterModels_LevelLoadEnd;
 
 	re.RegisterServerSkin					= RE_RegisterServerSkin;
+	re.RegisterServerModel					= RE_RegisterServerModel;
 
 	// G2 stuff
+	re.GetModelByHandle						= R_GetModelByHandle;
+	re.GetSkinByHandle						= R_GetSkinByHandle;
 	re.InitSkins							= R_InitSkins;
 	re.InitShaders							= R_InitShaders;
 	re.SVModelInit							= R_SVModelInit;
@@ -673,6 +676,8 @@ refexport_t *GetRefAPI ( int apiVersion, refimport_t *rimp ) {
 	re.G2API_AddSkinGore					= G2API_AddSkinGore;
 	re.G2API_ClearSkinGore					= G2API_ClearSkinGore;
 	#endif // _SOF2
+	
+	G2_Init(rimp, &re);
 
 	return &re;
 }

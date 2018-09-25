@@ -232,7 +232,9 @@ extern	serverStatic_t	svs;				// persistant server info across maps
 extern	server_t		sv;					// cleared each map
 
 //FIXME: dedi server probably can't have this..
+#ifndef G2_NOSERVERREF
 extern	refexport_t		*re;					// interface to refresh .dll
+#endif
 
 extern	cvar_t	*sv_snapsMin;
 extern	cvar_t	*sv_snapsMax;

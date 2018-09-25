@@ -22,8 +22,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/matcomp.hh"
 
-#include "ghoul2/G2.hh"
-#include "ghoul2/g2_local.hh"
+#include "G2.hh"
+#include "g2_verylocal.hh"
 
 //rww - RAGDOLL_BEGIN
 #ifndef __linux__
@@ -31,12 +31,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #else
 #include <math.h>
 #endif
-#include "ghoul2/G2_gore.hh"
-#include "tr_local.hh"
+#include "G2_gore.hh"
 
-//#define RAG_TRACE_DEBUG_LINES
+#define G2_NOCLIENTREF
+#include "client/client.hh"
 
-#include "client/client.hh" //while this is all "shared" code, there are some places where we want to make cgame callbacks (for ragdoll) only if the cgvm exists
 //rww - RAGDOLL_END
 
 //=====================================================================================================================
@@ -103,9 +102,9 @@ int G2_Add_Bone (const model_t *mod, boneInfo_v &blist, const char *boneName)
 	if (x == mod->mdxa->numBones)
 	{
 		#ifdef _RAG_PRINT_TEST
-			ri.Printf( PRINT_ALL, "WARNING: Failed to add bone %s\n", boneName);
+			g2_ri.Printf( PRINT_ALL, "WARNING: Failed to add bone %s\n", boneName);
 		#else
-			ri.Printf( PRINT_DEVELOPER, "WARNING: Failed to add bone %s\n", boneName);
+			g2_ri.Printf( PRINT_DEVELOPER, "WARNING: Failed to add bone %s\n", boneName);
 		#endif
 		return -1;
 	}
@@ -580,13 +579,13 @@ qboolean G2_Set_Bone_Angles_Matrix(const char *fileName, boneInfo_v &blist, cons
 		model_t		*mod_m;
 	if (!fileName[0])
 	{
-		mod_m = R_GetModelByHandle(modelList[modelIndex]);
+		mod_m = g2_re.GetModelByHandle(modelList[modelIndex]);
 	}
 	else
 	{
-		mod_m = R_GetModelByHandle(RE_RegisterModel(fileName));
+		mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
 	}
-	model_t		*mod_a = R_GetModelByHandle(mod_m->mdxm->animIndex);
+	model_t		*mod_a = g2_re.GetModelByHandle(mod_m->mdxm->animIndex);
 	int			index = G2_Find_Bone(mod_a, blist, boneName);
 
 	if (index != -1)
@@ -980,8 +979,8 @@ qboolean G2_Pause_Bone_Anim(CGhoul2Info *ghlInfo, boneInfo_v &blist, const char 
 
 qboolean	G2_IsPaused(const char *fileName, boneInfo_v &blist, const char *boneName)
 {
-  	model_t		*mod_m = R_GetModelByHandle(RE_RegisterModel(fileName));
-	model_t		*mod_a = R_GetModelByHandle(mod_m->mdxm->animIndex);
+  	model_t		*mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
+	model_t		*mod_a = g2_re.GetModelByHandle(mod_m->mdxm->animIndex);
 	int			index = G2_Find_Bone(mod_a, blist, boneName);
 
 	// did we find it?
@@ -1018,8 +1017,8 @@ qboolean G2_Stop_Bone_Anim_Index(boneInfo_v &blist, const int index)
 // given a model, bonelist and bonename, lets stop an anim if it's playing.
 qboolean G2_Stop_Bone_Anim(const char *fileName, boneInfo_v &blist, const char *boneName)
 {
-  	model_t		*mod_m = R_GetModelByHandle(RE_RegisterModel(fileName));
-	model_t		*mod_a = R_GetModelByHandle(mod_m->mdxm->animIndex);
+  	model_t		*mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
+	model_t		*mod_a = g2_re.GetModelByHandle(mod_m->mdxm->animIndex);
 	int			index = G2_Find_Bone(mod_a, blist, boneName);
 
 	// did we find it?
@@ -1054,8 +1053,8 @@ qboolean G2_Stop_Bone_Angles_Index(boneInfo_v &blist, const int index)
 // given a model, bonelist and bonename, lets stop an anim if it's playing.
 qboolean G2_Stop_Bone_Angles(const char *fileName, boneInfo_v &blist, const char *boneName)
 {
-  	model_t		*mod_m = R_GetModelByHandle(RE_RegisterModel(fileName));
-	model_t		*mod_a = R_GetModelByHandle(mod_m->mdxm->animIndex);
+  	model_t		*mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
+	model_t		*mod_a = g2_re.GetModelByHandle(mod_m->mdxm->animIndex);
 	int			index = G2_Find_Bone(mod_a, blist, boneName);
 
 	// did we find it?
@@ -2689,11 +2688,11 @@ int ragTraceCount = 0;
 void Rag_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const vec3_t maxs, const vec3_t end, const int passEntityNum, const int contentmask, const EG2_Collision eG2TraceType, const int useLod )
 {
 #ifdef _DEBUG
-	int ragPreTrace = ri.Milliseconds();
+	int ragPreTrace = g2_ri.Milliseconds();
 #endif
-	if ( ri.CGVMLoaded() )
+	if ( g2_ri.CGVMLoaded() )
 	{
-		ragCallbackTraceLine_t *callData = (ragCallbackTraceLine_t *)ri.GetSharedMemory();
+		ragCallbackTraceLine_t *callData = (ragCallbackTraceLine_t *)g2_ri.GetSharedMemory();
 
 		VectorCopy(start, callData->start);
 		VectorCopy(end, callData->end);
@@ -2702,7 +2701,7 @@ void Rag_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const v
 		callData->ignore = passEntityNum;
 		callData->mask = contentmask;
 
-		ri.CGVM_RagCallback( RAG_CALLBACK_TRACELINE );
+		g2_ri.CGVM_RagCallback( RAG_CALLBACK_TRACELINE );
 
 		*results = callData->tr;
 	}
@@ -2710,12 +2709,12 @@ void Rag_Trace( trace_t *results, const vec3_t start, const vec3_t mins, const v
 	{
 		results->entityNum = ENTITYNUM_NONE;
 		//SV_Trace(results, start, mins, maxs, end, passEntityNum, contentmask, eG2TraceType, useLod);
-		ri.CM_BoxTrace(results, start, end, mins, maxs, 0, contentmask, 0);
+		g2_ri.CM_BoxTrace(results, start, end, mins, maxs, 0, contentmask, 0);
 		results->entityNum = results->fraction != 1.0 ? ENTITYNUM_WORLD : ENTITYNUM_NONE;
 	}
 
 #ifdef _DEBUG
-	int ragPostTrace = ri.Milliseconds();
+	int ragPostTrace = g2_ri.Milliseconds();
 
 	ragTraceTime += (ragPostTrace - ragPreTrace);
 	if (results->startsolid)
@@ -2886,24 +2885,24 @@ static inline bool G2_ApplyRealBonePhysics(boneInfo_t &bone, SRagEffector &e, CR
 #ifdef _DEBUG_BONE_NAMES
 static inline void G2_RagDebugBox(vec3_t mins, vec3_t maxs, int duration)
 {
-	if ( !ri.CGVMLoaded() )
+	if ( !g2_ri.CGVMLoaded() )
 		return;
 
-	ragCallbackDebugBox_t *callData = (ragCallbackDebugBox_t *)ri.GetSharedMemory();
+	ragCallbackDebugBox_t *callData = (ragCallbackDebugBox_t *)g2_ri.GetSharedMemory();
 
 	callData->duration = duration;
 	VectorCopy(mins, callData->mins);
 	VectorCopy(maxs, callData->maxs);
 
-	ri.CGVM_RagCallback( RAG_CALLBACK_DEBUGBOX );
+	g2_ri.CGVM_RagCallback( RAG_CALLBACK_DEBUGBOX );
 }
 
 static inline void G2_RagDebugLine(vec3_t start, vec3_t end, int time, int color, int radius)
 {
-	if ( !ri.CGVMLoaded() )
+	if ( !g2_ri.CGVMLoaded() )
 		return;
 
-	ragCallbackDebugLine_t *callData = (ragCallbackDebugLine_t *)ri.GetSharedMemory();
+	ragCallbackDebugLine_t *callData = (ragCallbackDebugLine_t *)g2_ri.GetSharedMemory();
 
 	VectorCopy(start, callData->start);
 	VectorCopy(end, callData->end);
@@ -2911,7 +2910,7 @@ static inline void G2_RagDebugLine(vec3_t start, vec3_t end, int time, int color
 	callData->color = color;
 	callData->radius = radius;
 
-	ri.CGVM_RagCallback( RAG_CALLBACK_DEBUGLINE );
+	g2_ri.CGVM_RagCallback( RAG_CALLBACK_DEBUGLINE );
 }
 #endif
 
@@ -3834,7 +3833,7 @@ static bool G2_RagDollSettlePositionNumeroTrois(CGhoul2Info_v &ghoul2V, const ve
 
 				assert(debugBoneName);
 
-				ri.Printf( PRINT_ALL, "High bone (%s, %i) solid count: %i\n", debugBoneName, bone.boneNumber, bone.solidCount);
+				g2_ri.Printf( PRINT_ALL, "High bone (%s, %i) solid count: %i\n", debugBoneName, bone.boneNumber, bone.solidCount);
 
 				VectorAdd(e.currentOrigin, testMins, absmin);
 				VectorAdd(e.currentOrigin, testMaxs, absmax);
@@ -3931,17 +3930,17 @@ static float AngleNormZero(float theta)
 
 static inline void G2_BoneSnap(CGhoul2Info_v &ghoul2V, boneInfo_t &bone, CRagDollUpdateParams *params)
 {
-	if ( !ri.CGVMLoaded() || !params )
+	if ( !g2_ri.CGVMLoaded() || !params )
 	{
 		return;
 	}
 
-	ragCallbackBoneSnap_t *callData = (ragCallbackBoneSnap_t *)ri.GetSharedMemory();
+	ragCallbackBoneSnap_t *callData = (ragCallbackBoneSnap_t *)g2_ri.GetSharedMemory();
 
 	callData->entNum = params->me;
 	strcpy(callData->boneName, G2_Get_Bone_Name(&ghoul2V[0], ghoul2V[0].mBlist, bone.boneNumber));
 
-	ri.CGVM_RagCallback( RAG_CALLBACK_BONESNAP );
+	g2_ri.CGVM_RagCallback( RAG_CALLBACK_BONESNAP );
 }
 
 static void G2_RagDollSolve(CGhoul2Info_v &ghoul2V,int g2Index,float decay,int frameNum,const vec3_t currentOrg,bool limitAngles,CRagDollUpdateParams *params)
@@ -4878,8 +4877,8 @@ void G2_RemoveRedundantBoneOverrides(boneInfo_v &blist, int *activeBones)
 
 int	G2_Get_Bone_Index(CGhoul2Info *ghoul2, const char *boneName)
 {
-  	model_t		*mod_m = R_GetModelByHandle(RE_RegisterModel(ghoul2->mFileName));
-	model_t		*mod_a = R_GetModelByHandle(mod_m->mdxm->animIndex);
+  	model_t		*mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(ghoul2->mFileName));
+	model_t		*mod_a = g2_re.GetModelByHandle(mod_m->mdxm->animIndex);
 
 	return (G2_Find_Bone(mod_a, ghoul2->mBlist, boneName));
 }

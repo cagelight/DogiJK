@@ -1990,6 +1990,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.TakeVideoFrame						= RE_TakeVideoFrame;
 
 	// G2 stuff
+	re.GetModelByHandle						= R_GetModelByHandle;
+	re.GetSkinByHandle						= R_GetSkinByHandle;
 	re.InitSkins							= R_InitSkins;
 	re.InitShaders							= R_InitShaders;
 	re.SVModelInit							= R_SVModelInit;
@@ -2094,6 +2096,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	//re.G2VertSpaceServer	= G2VertSpaceServer;
 
 	re.ext.Font_StrLenPixels				= RE_Font_StrLenPixelsNew;
+	
+	G2_Init(rimp, &re);
 
 	return &re;
 }

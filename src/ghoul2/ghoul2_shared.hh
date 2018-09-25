@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "rd-common/mdx_format.hh"
 #include "rd-common/tr_types.hh"
 #include "qcommon/matcomp.hh"
-#include "ghoul2/G2_gore.hh"
+#include "G2_gore.hh"
 
 struct model_s;
 

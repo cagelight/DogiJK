@@ -72,7 +72,8 @@ def build(bld):
 	build_game = build_server or build_client
 	build_cgame = build_server or build_client
 	build_ui = build_server or build_client
-	build_rdvan = build_server or build_client
+	build_rdvan = build_client
+	build_ghoul2 = build_server or build_client
 
 	# MINIZIP
 	if build_server or build_client:
@@ -118,6 +119,8 @@ def build(bld):
 	
 		server_files = bld.path.ant_glob('src/rd-dedicated/*.cc')
 		server_files += bld.path.ant_glob('src/null/*.cc')
+		
+		#TEMPORARY
 		server_files += bld.path.ant_glob('src/ghoul2/*.cc')
 
 		server = bld (
@@ -221,11 +224,13 @@ def build(bld):
 	
 		rdvan_files = bld.path.ant_glob('src/rd-vanilla/*.cc')
 		rdvan_files += bld.path.ant_glob('src/rd-common/*.cc')
-		rdvan_files += bld.path.ant_glob('src/ghoul2/*.cc')
 		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cc')
 		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cc')
+		
+		#TEMPORARY
+		rdvan_files += bld.path.ant_glob('src/ghoul2/**.cc')
 			
 		rdvan = bld (
 			features = 'cxx cxxshlib',
@@ -237,6 +242,26 @@ def build(bld):
 		)
 		
 		rdvan.env.cxxshlib_PATTERN = '%s_x86_64.so'
+		
+	# GHOUL2
+	if build_ghoul2:
+	
+		rdvan_files = bld.path.ant_glob('src/ghoul2new/*.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_math.cc')
+		rdvan_files += bld.path.ant_glob('src/qcommon/q_string.cc')
+			
+		rdvan = bld (
+			features = 'cxx cxxshlib',
+			target = 'ghoul2',
+			includes = ['src', 'src/ghoul3'],
+			source = rdvan_files,
+			uselib = ['PTHREAD'],
+			install_path = os.path.join(top, 'install')
+		)
+		
+		rdvan.env.cxxshlib_PATTERN = '%s.so'
 		
 def clean(ctx):
 	pass

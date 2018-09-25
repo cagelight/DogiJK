@@ -22,8 +22,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "../ghoul2/ghoul2_shared.hh"
-#include "../qcommon/q_shared.hh"
+#include "qcommon/q_shared.hh"
+
+#include <map>
 
 #ifdef _G2_GORE
 

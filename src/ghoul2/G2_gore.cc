@@ -21,7 +21,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "G2_gore.hh"
-#include "../rd-common/tr_common.hh"
 
 GoreTextureCoordinates::GoreTextureCoordinates()
 {
@@ -34,7 +33,7 @@ GoreTextureCoordinates::~GoreTextureCoordinates()
 	{
 		if ( tex[i] )
 		{
-			ri.Z_Free(tex[i]);
+			// FIXME ri.Z_Free(tex[i]);
 			tex[i] = NULL;
 		}
 	}

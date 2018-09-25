@@ -21,9 +21,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "rd-common/tr_types.hh"
-#include "ghoul2/G2.hh"
-#include "ghoul2/g2_local.hh"
-#include "tr_local.hh"
+#include "G2.hh"
+#include "g2_verylocal.hh"
 
 class CConstructBoneList
 {
@@ -209,7 +208,7 @@ qboolean G2_SetSurfaceOnOff (CGhoul2Info *ghlInfo, surfaceInfo_v &slist, const c
 void G2_SetSurfaceOnOffFromSkin (CGhoul2Info *ghlInfo, qhandle_t renderSkin)
 {
 	int j;
-	const skin_t *skin = R_GetSkinByHandle( renderSkin );
+	const skin_t *skin = g2_re.GetSkinByHandle( renderSkin );
 
 	ghlInfo->mSlist.clear();	//remove any overrides we had before.
 	ghlInfo->mMeshFrameNum = 0;
@@ -218,7 +217,8 @@ void G2_SetSurfaceOnOffFromSkin (CGhoul2Info *ghlInfo, qhandle_t renderSkin)
 	{
 		// the names have both been lowercased
 		//FIXME: why is this using the shader name and not the surface name?
-		if ( !strcmp( ((shader_t *)skin->surfaces[j]->shader)->name, "*off") ) {
+		//FIXME eh???? if ( !strcmp( ((shader_t *)skin->surfaces[j]->shader)->name, "*off") ) {
+		if ( !strcmp(skin->surfaces[j]->name, "*off") ) {
 			G2_SetSurfaceOnOff(ghlInfo, ghlInfo->mSlist, skin->surfaces[j]->name, G2SURFACEFLAG_OFF);
 		}
 		else

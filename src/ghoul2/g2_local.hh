@@ -24,7 +24,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // defines to setup the
 
-#include "ghoul2/ghoul2_shared.hh"
+#include "g2_public.hh"
+#include "rd-common/tr_public.hh"
 
 //rww - RAGDOLL_BEGIN
 class CRagDollUpdateParams;
@@ -378,3 +379,5 @@ int			G2API_Ghoul2Size ( CGhoul2Info_v &ghoul2 );
 void		RemoveBoneCache( CBoneCache *boneCache );
 
 const char	*G2API_GetModelName ( CGhoul2Info_v& ghoul2, int modelIndex );
+
+void Multiply_3x4Matrix(mdxaBone_t *out, mdxaBone_t *in2, mdxaBone_t *in);

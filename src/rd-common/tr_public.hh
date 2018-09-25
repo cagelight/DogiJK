@@ -36,7 +36,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // these are the functions exported by the refresh module
 //
 
-typedef struct refexport_s {
+struct refexport_t{
 	// called before the library is unloaded
 	// if the system is just reconfiguring, pass destroyWindow = qfalse,
 	// which will keep the screen from flashing to the desktop.
@@ -136,6 +136,9 @@ typedef struct refexport_s {
 	int					(*RegisterMedia_GetLevel)				( void );
 	qboolean			(*RegisterImages_LevelLoadEnd)			( void );
 	qboolean			(*RegisterModels_LevelLoadEnd)			( qboolean bDeleteEverythingNotUsedThisLevel );
+	
+	model_t	*			(*GetModelByHandle)						( qhandle_t index );
+	skin_t	*			(*GetSkinByHandle)						( qhandle_t hSkin );
 
 	// AVI recording
 	void				(*TakeVideoFrame)						( int h, int w, byte* captureBuffer, byte *encodeBuffer, qboolean motionJpeg );
@@ -245,7 +248,7 @@ typedef struct refexport_s {
 		float				(*Font_StrLenPixels)					( const char *text, const int iFontIndex, const float scale );
 	} ext;
 
-} refexport_t;
+};
 
 //
 // these are the functions imported by the refresh module

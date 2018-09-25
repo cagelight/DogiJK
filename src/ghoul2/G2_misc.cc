@@ -21,15 +21,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "qcommon/matcomp.hh"
-#include "ghoul2/G2.hh"
+#include "G2.hh"
 #include "qcommon/MiniHeap.hh"
+#define G2_NOSERVERREF
 #include "server/server.hh"
-#include "ghoul2/g2_local.hh"
+#include "g2_verylocal.hh"
 
 #ifdef _G2_GORE
-#include "ghoul2/G2_gore.hh"
-
-#include "tr_local.hh"
+#include "G2_gore.hh"
 
 #define GORE_TAG_UPPER (256)
 #define GORE_TAG_MASK (~255)
@@ -175,6 +174,8 @@ CGoreSet::~CGoreSet()
 };
 #endif // _SOF2
 
+struct shader_t;
+
 const mdxaBone_t &EvalBoneCache(int index,CBoneCache *boneCache);
 class CTraceSurface
 {
@@ -189,7 +190,7 @@ public:
 	int					entNum;
 	int					modelIndex;
 	skin_t				*skin;
-    shader_t            *cust_shader;
+    shader_t			*cust_shader;
 	size_t				*TransformedVertsArray;
 	int					traceFlags;
 	bool				hitOne;
@@ -268,7 +269,7 @@ public:
 void G2_List_Model_Surfaces(const char *fileName)
 {
 	int			i, x;
-  	model_t		*mod_m = R_GetModelByHandle(RE_RegisterModel(fileName));
+  	model_t		*mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
 	mdxmSurfHierarchy_t	*surf;
 
 	surf = (mdxmSurfHierarchy_t *) ( (byte *)mod_m->mdxm + mod_m->mdxm->ofsSurfHierarchy );
@@ -276,13 +277,13 @@ void G2_List_Model_Surfaces(const char *fileName)
 
 	for ( x = 0 ; x < mod_m->mdxm->numSurfaces ; x++)
 	{
-		Com_Printf("Surface %i Name %s\n", x, surf->name);
-		if ( r_verbose->integer )
+		g2_ri.Printf( PRINT_ALL, "Surface %i Name %s\n", x, surf->name);
+		if ( /* HACK HACK HACK r_verbose->integer*/ true )
 		{
-			Com_Printf("Num Descendants %i\n",  surf->numChildren);
+			g2_ri.Printf( PRINT_ALL, "Num Descendants %i\n",  surf->numChildren);
 			for (i=0; i<surf->numChildren; i++)
 			{
-				Com_Printf("Descendant %i\n", surf->childIndexes[i]);
+				g2_ri.Printf( PRINT_ALL, "Descendant %i\n", surf->childIndexes[i]);
 			}
 		}
 		// find the next surface
@@ -298,8 +299,8 @@ void G2_List_Model_Bones(const char *fileName, int frame)
 	int				x, i;
 	mdxaSkel_t		*skel;
 	mdxaSkelOffsets_t	*offsets;
-  	model_t			*mod_m = R_GetModelByHandle(RE_RegisterModel(fileName));
-	model_t			*mod_a = R_GetModelByHandle(mod_m->mdxm->animIndex);
+  	model_t			*mod_m = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
+	model_t			*mod_a = g2_re.GetModelByHandle(mod_m->mdxm->animIndex);
 // 	mdxaFrame_t		*aframe=0;
 //	int				frameSize;
 	mdxaHeader_t	*header = mod_a->mdxa;
@@ -314,17 +315,17 @@ void G2_List_Model_Bones(const char *fileName, int frame)
 	for (x=0; x< mod_a->mdxa->numBones; x++)
 	{
 		skel = (mdxaSkel_t *)((byte *)header + sizeof(mdxaHeader_t) + offsets->offsets[x]);
-		Com_Printf("Bone %i Name %s\n", x, skel->name);
+		g2_ri.Printf( PRINT_ALL, "Bone %i Name %s\n", x, skel->name);
 
-		Com_Printf("X pos %f, Y pos %f, Z pos %f\n", skel->BasePoseMat.matrix[0][3], skel->BasePoseMat.matrix[1][3], skel->BasePoseMat.matrix[2][3]);
+		g2_ri.Printf( PRINT_ALL, "X pos %f, Y pos %f, Z pos %f\n", skel->BasePoseMat.matrix[0][3], skel->BasePoseMat.matrix[1][3], skel->BasePoseMat.matrix[2][3]);
 
 		// if we are in verbose mode give us more details
-		if ( r_verbose->integer )
+		if ( /* HACK HACK HACK r_verbose->integer*/ true )
 		{
-			Com_Printf("Num Descendants %i\n",  skel->numChildren);
+			g2_ri.Printf( PRINT_ALL, "Num Descendants %i\n",  skel->numChildren);
 			for (i=0; i<skel->numChildren; i++)
 			{
-				Com_Printf("Num Descendants %i\n",  skel->numChildren);
+				g2_ri.Printf( PRINT_ALL, "Num Descendants %i\n",  skel->numChildren);
 			}
 		}
 	}
@@ -345,7 +346,7 @@ void G2_List_Model_Bones(const char *fileName, int frame)
 qboolean G2_GetAnimFileName(const char *fileName, char **filename)
 {
 	// find the model we want
-	model_t				*mod = R_GetModelByHandle(RE_RegisterModel(fileName));
+	model_t				*mod = g2_re.GetModelByHandle(g2_re.RegisterModel(fileName));
 
 	if (mod && mod->mdxm && (mod->mdxm->animName[0] != 0))
 	{
@@ -551,7 +552,7 @@ void G2_TransformModel(CGhoul2Info_v &ghoul2, const int frameNum, vec3_t scale, 
 
 	if ( cg_g2MarksAllModels == NULL )
 	{
-		cg_g2MarksAllModels = ri.Cvar_Get( "cg_g2MarksAllModels", "0", 0, "" );
+		cg_g2MarksAllModels = g2_ri.Cvar_Get( "cg_g2MarksAllModels", "0", 0, "" );
 	}
 
 	if (cg_g2MarksAllModels == NULL
@@ -626,7 +627,7 @@ void G2_TransformModel(CGhoul2Info_v &ghoul2, const int frameNum, vec3_t scale, 
 			}
 		}
 
-		memset(g.mTransformedVertsArray, 0, g.currentModel->mdxm->numSurfaces * sizeof (size_t));
+		memset(g.mTransformedVertsArray, 0,g.currentModel->mdxm->numSurfaces * sizeof (size_t));
 
 		G2_FindOverrideSurface(-1,g.mSlist); //reset the quick surface override lookup;
 		// recursively call the model surface transform
@@ -962,7 +963,7 @@ void G2_GorePolys( const mdxmSurface_t *surface, CTraceSurface &TS, const mdxmSu
 			add.mDeleteTime=G2API_GetTime(0) + TS.gore->lifeTime;
 		}
 		add.mFadeTime = TS.gore->fadeOutTime;
-		add.mFadeRGB = !!(TS.gore->fadeRGB);
+		add.mFadeRGB = (TS.gore->fadeRGB != qfalse);
 		add.mGoreTag = newTag;
 
 		add.mGoreGrowStartTime=G2API_GetTime(0);
@@ -1001,6 +1002,7 @@ void G2_GorePolys( const mdxmSurface_t *surface, CTraceSurface &TS, const mdxmSu
 			sizeof(int)*newNumTris*3;  // new indecies
 
 		int *data=(int *)Z_Malloc ( sizeof(int)*size, TAG_GHOUL2_GORE, qtrue );
+
 
 		if ( gore->tex[TS.lod] )
 		{
@@ -1161,7 +1163,7 @@ static bool G2_TracePolys(const mdxmSurface_t *surface, const mdxmSurfHierarchy_
 							newCol.mLocation = *(hitMatReg[shader->hitLocation].loc +
 												((int)(y_pos * hitMatReg[shader->hitLocation].height) * hitMatReg[shader->hitLocation].width) +
 												((int)(x_pos * hitMatReg[shader->hitLocation].width)));
-							Com_Printf("G2_TracePolys hit location: %d\n", newCol.mLocation);
+							ri.Printf( PRINT_ALL, "G2_TracePolys hit location: %d\n", newCol.mLocation);
 						}
 
 						if (shader->hitMaterial)
@@ -1499,7 +1501,7 @@ void G2_TraceModels(CGhoul2Info_v &ghoul2, vec3_t rayStart, vec3_t rayEnd, Colli
 
 	if ( cg_g2MarksAllModels == NULL )
 	{
-		cg_g2MarksAllModels = ri.Cvar_Get( "cg_g2MarksAllModels", "0", 0, "" );
+		cg_g2MarksAllModels = g2_ri.Cvar_Get( "cg_g2MarksAllModels", "0", 0, "" );
 	}
 
 	if (cg_g2MarksAllModels == NULL
@@ -1534,7 +1536,7 @@ void G2_TraceModels(CGhoul2Info_v &ghoul2, vec3_t rayStart, vec3_t rayEnd, Colli
 
 		if (ghoul2[i].mCustomShader && ghoul2[i].mCustomShader != -20) //rww - -20 is a server instance (hack)
 		{
-			cust_shader = (shader_t *)R_GetShaderByHandle( ghoul2[i].mCustomShader );
+			cust_shader = 0 /* HACK HACK HACK (shader_t *)R_GetShaderByHandle( ghoul2[i].mCustomShader )*/;
 		}
 		else
 		{
@@ -1542,9 +1544,9 @@ void G2_TraceModels(CGhoul2Info_v &ghoul2, vec3_t rayStart, vec3_t rayEnd, Colli
 		}
 
 		// figure out the custom skin thing
-		if ( ghoul2[i].mSkin > 0 && ghoul2[i].mSkin < tr.numSkins )
+		if ( ghoul2[i].mSkin > 0 /*&& ghoul2[i].mSkin HACK HACK HACK< tr.numSkins*/ )
 		{
-			skin = R_GetSkinByHandle( ghoul2[i].mSkin );
+			skin = g2_re.GetSkinByHandle( ghoul2[i].mSkin );
 		}
 		else
 		{
@@ -1605,7 +1607,7 @@ void TransformAndTranslatePoint (const vec3_t in, vec3_t out, mdxaBone_t *mat) {
 // create a matrix using a set of angles
 void Create_Matrix(const float *angle, mdxaBone_t *matrix)
 {
-	matrix3_t		axis;
+	matrix3_t	axis;
 
 	// convert angles to axis
 	AnglesToAxis( angle, axis );
@@ -1742,7 +1744,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 	for (i=0; i<ghoul2.size();i++)
 	{
 		// first save out the ghoul2 details themselves
-//		Com_OPrintf("G2_SaveGhoul2Models(): ghoul2[%d].mModelindex = %d\n",i,ghoul2[i].mModelindex);
+//		OutputDebugString(va("G2_SaveGhoul2Models(): ghoul2[%d].mModelindex = %d\n",i,ghoul2[i].mModelindex));
 		memcpy(tempBuffer, &ghoul2[i].mModelindex, ghoul2BlockSize);
 		tempBuffer += ghoul2BlockSize;
 
@@ -1818,7 +1820,7 @@ void G2_LoadGhoul2Model(CGhoul2Info_v &ghoul2, char *buffer)
 		ghoul2[i].mValid=false;
 		// load the ghoul2 info from the buffer
 		memcpy(&ghoul2[i].mModelindex, buffer, ghoul2BlockSize);
-//		Com_OPrintf("G2_LoadGhoul2Model(): ghoul2[%d].mModelindex = %d\n",i,ghoul2[i].mModelindex);
+//		OutputDebugString(va("G2_LoadGhoul2Model(): ghoul2[%d].mModelindex = %d\n",i,ghoul2[i].mModelindex));
 		buffer +=ghoul2BlockSize;
 
 		if (ghoul2[i].mModelindex!=-1&&ghoul2[i].mFileName[0])
