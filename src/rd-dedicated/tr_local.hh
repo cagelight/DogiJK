@@ -1831,7 +1831,6 @@ void RE_TakeVideoFrame( int width, int height, byte *captureBuffer, byte *encode
 Ghoul2 Insert Start
 */
 // tr_ghoul2.cpp
-void		Multiply_3x4Matrix(mdxaBone_t *out, mdxaBone_t *in2, mdxaBone_t *in);
 extern qboolean R_LoadMDXM (model_t *mod, void *buffer, const char *name, qboolean &bAlreadyCached );
 extern qboolean R_LoadMDXA (model_t *mod, void *buffer, const char *name, qboolean &bAlreadyCached );
 void		RE_InsertModelIntoHash(const char *name, model_t *mod);
