@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // tr_main.c -- main control flow for each frame
 #include "tr_local.hh"
-#include "ghoul2/g2_local.hh"
+#include "ghoul2/g2_public.hh"
 
 trGlobals_t		tr;
 
@@ -1275,7 +1275,7 @@ Ghoul2 Insert Start
 						}
 					}
 
-  					if (ent->e.ghoul2 && G2API_HaveWeGhoul2Models(*((CGhoul2Info_v *)ent->e.ghoul2)))
+  					if (ent->e.ghoul2 && ri.G2API_HaveWeGhoul2Models(*((CGhoul2Info_v *)ent->e.ghoul2)))
   					{
   						R_AddGhoulSurfaces( ent);
   						break;

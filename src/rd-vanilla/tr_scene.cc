@@ -23,8 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.hh"
 
-#include "ghoul2/G2.hh"
-#include "ghoul2/g2_local.hh"
+#include "ghoul2/g2_public.hh"
 #include "qcommon/matcomp.hh"
 #include "qcommon/disablewarnings.hh"
 
@@ -243,7 +242,7 @@ void RE_AddRefEntityToScene( const refEntity_t *ent ) {
 	{
 		CGhoul2Info_v	&ghoul2 = *((CGhoul2Info_v *)ent->ghoul2);
 
-		if (!ghoul2[0].mModel)
+		if (!ri.G2_At(ghoul2, 0).mModel)
 		{
 			ri.Printf( PRINT_ALL, "Your ghoul2 instance has no model!\n");
 		}

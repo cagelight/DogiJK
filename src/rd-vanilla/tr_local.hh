@@ -1233,8 +1233,6 @@ Ghoul2 Insert Start
 #ifdef _DEBUG
 extern	cvar_t	*r_noPrecacheGLA;
 #endif
-
-extern	cvar_t	*r_noServerGhoul2;
 /*
 Ghoul2 Insert End
 */
@@ -1870,3 +1868,5 @@ void R_AddDecals( void );
 void RB_DrawSurfaceSprites( shaderStage_t *stage, shaderCommands_t *input);
 
 qboolean ShaderHashTableExists(void);
+
+qboolean G2_HackadelicOnClient();

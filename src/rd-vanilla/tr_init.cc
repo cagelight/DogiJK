@@ -29,7 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "../rd-common/tr_common.hh"
 #include "tr_WorldEffects.hh"
 #include "qcommon/MiniHeap.hh"
-#include "ghoul2/g2_local.hh"
+#include "ghoul2/g2_public.hh"
 
 glconfig_t	glConfig;
 glconfigExt_t glConfigExt;
@@ -184,28 +184,11 @@ Ghoul2 Insert Start
 cvar_t	*r_noPrecacheGLA;
 #endif
 
-cvar_t	*r_noServerGhoul2;
-cvar_t	*r_Ghoul2AnimSmooth=0;
-cvar_t	*r_Ghoul2UnSqashAfterSmooth=0;
 //cvar_t	*r_Ghoul2UnSqash;
 //cvar_t	*r_Ghoul2TimeBase=0; from single player
 //cvar_t	*r_Ghoul2NoLerp;
 //cvar_t	*r_Ghoul2NoBlend;
 //cvar_t	*r_Ghoul2BlendMultiplier=0;
-
-cvar_t	*broadsword=0;
-cvar_t	*broadsword_kickbones=0;
-cvar_t	*broadsword_kickorigin=0;
-cvar_t	*broadsword_playflop=0;
-cvar_t	*broadsword_dontstopanim=0;
-cvar_t	*broadsword_waitforshot=0;
-cvar_t	*broadsword_smallbbox=0;
-cvar_t	*broadsword_extra1=0;
-cvar_t	*broadsword_extra2=0;
-
-cvar_t	*broadsword_effcorr=0;
-cvar_t	*broadsword_ragtobase=0;
-cvar_t	*broadsword_dircap=0;
 
 /*
 Ghoul2 Insert End
@@ -1618,21 +1601,6 @@ Ghoul2 Insert Start
 #ifdef _DEBUG
 	r_noPrecacheGLA						= ri.Cvar_Get( "r_noPrecacheGLA",					"0",						CVAR_CHEAT, "" );
 #endif
-	r_noServerGhoul2					= ri.Cvar_Get( "r_noserverghoul2",					"0",						CVAR_CHEAT, "" );
-	r_Ghoul2AnimSmooth					= ri.Cvar_Get( "r_ghoul2animsmooth",				"0.3",						CVAR_NONE, "" );
-	r_Ghoul2UnSqashAfterSmooth			= ri.Cvar_Get( "r_ghoul2unsqashaftersmooth",		"1",						CVAR_NONE, "" );
-	broadsword							= ri.Cvar_Get( "broadsword",						"0",						CVAR_ARCHIVE_ND, "" );
-	broadsword_kickbones				= ri.Cvar_Get( "broadsword_kickbones",				"1",						CVAR_NONE, "" );
-	broadsword_kickorigin				= ri.Cvar_Get( "broadsword_kickorigin",			"1",						CVAR_NONE, "" );
-	broadsword_dontstopanim				= ri.Cvar_Get( "broadsword_dontstopanim",			"0",						CVAR_NONE, "" );
-	broadsword_waitforshot				= ri.Cvar_Get( "broadsword_waitforshot",			"0",						CVAR_NONE, "" );
-	broadsword_playflop					= ri.Cvar_Get( "broadsword_playflop",				"1",						CVAR_NONE, "" );
-	broadsword_smallbbox				= ri.Cvar_Get( "broadsword_smallbbox",				"0",						CVAR_NONE, "" );
-	broadsword_extra1					= ri.Cvar_Get( "broadsword_extra1",				"0",						CVAR_NONE, "" );
-	broadsword_extra2					= ri.Cvar_Get( "broadsword_extra2",				"0",						CVAR_NONE, "" );
-	broadsword_effcorr					= ri.Cvar_Get( "broadsword_effcorr",				"1",						CVAR_NONE, "" );
-	broadsword_ragtobase				= ri.Cvar_Get( "broadsword_ragtobase",				"2",						CVAR_NONE, "" );
-	broadsword_dircap					= ri.Cvar_Get( "broadsword_dircap",				"64",						CVAR_NONE, "" );
 /*
 Ghoul2 Insert End
 */
@@ -1740,7 +1708,7 @@ void R_Init( void ) {
 		ri.Printf( PRINT_ALL,  "glGetError() = 0x%x\n", err);
 #endif
 
-	RestoreGhoul2InfoArray();
+	//RestoreGhoul2InfoArray();
 	// print info
 	GfxInfo_f();
 
@@ -1814,7 +1782,7 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 
 			if ( restarting )
 			{
-				SaveGhoul2InfoArray();
+				//SaveGhoul2InfoArray();
 			}
 		}
 	}
@@ -1997,6 +1965,8 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.InitShaders							= R_InitShaders;
 	re.SVModelInit							= R_SVModelInit;
 	re.HunkClearCrap						= RE_HunkClearCrap;
+	
+	re.G2_HackadelicOnClient 				= G2_HackadelicOnClient;
 
 	// this is set in R_Init
 	//re.G2VertSpaceServer	= G2VertSpaceServer;

@@ -666,7 +666,7 @@ void RestoreGhoul2InfoArray()
 		size_t read =
 #endif
 			singleton->Deserialize ((const char *)data, size);
-		Z_Free ((void *)data);
+		g2_ri.Z_Free ((void *)data);
 
 		assert (read == size);
 	}
@@ -675,7 +675,7 @@ void RestoreGhoul2InfoArray()
 void SaveGhoul2InfoArray()
 {
 	size_t size = singleton->GetSerializedSize();
-	void *data = Z_Malloc (size, TAG_GHOUL2);
+	void *data = g2_ri.Z_Malloc (size, TAG_GHOUL2, qfalse, 4);
 #ifdef _DEBUG
 	size_t written =
 #endif
@@ -2268,7 +2268,7 @@ void G2API_CollisionDetectCache(CollisionRecord_t *collRecMap, CGhoul2Info_v &gh
 					//if we have a pointer, but not a ghoul2_zonetransalloc flag, then that means
 					//it is a miniheap pointer. Just stomp over it.
 					int iSize = g2.currentModel->mdxm->numSurfaces * 4;
-					g2.mTransformedVertsArray = (size_t *)Z_Malloc(iSize, TAG_GHOUL2, qtrue);
+					g2.mTransformedVertsArray = (size_t *)g2_ri.Z_Malloc(iSize, TAG_GHOUL2, qtrue, 4);
 				}
 
 				g2.mFlags |= GHOUL2_ZONETRANSALLOC;
@@ -2683,7 +2683,7 @@ void G2API_LoadGhoul2Models(CGhoul2Info_v &ghoul2, char *buffer)
 
 void G2API_FreeSaveBuffer(char *buffer)
 {
-	Z_Free(buffer);
+	g2_ri.Z_Free(buffer);
 }
 
 // this is kinda sad, but I need to call the destructor in this module (exe), not the game.dll...

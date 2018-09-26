@@ -1,7 +1,26 @@
 #include "g2_local.hh"
+#include "G2_gore.hh"
 
 refexport_t g2_re;
 refimport_t g2_ri;
+
+cvar_t	*r_noServerGhoul2;
+cvar_t	*r_Ghoul2AnimSmooth=0;
+cvar_t	*r_Ghoul2UnSqashAfterSmooth=0;
+
+cvar_t	*broadsword=0;
+cvar_t	*broadsword_kickbones=0;
+cvar_t	*broadsword_kickorigin=0;
+cvar_t	*broadsword_playflop=0;
+cvar_t	*broadsword_dontstopanim=0;
+cvar_t	*broadsword_waitforshot=0;
+cvar_t	*broadsword_smallbbox=0;
+cvar_t	*broadsword_extra1=0;
+cvar_t	*broadsword_extra2=0;
+
+cvar_t	*broadsword_effcorr=0;
+cvar_t	*broadsword_ragtobase=0;
+cvar_t	*broadsword_dircap=0;
 
 static g2export_t g2_ex;
 
@@ -12,7 +31,19 @@ static void G2API_DeleteGoreTextureCoords(GoreTextureCoordinates * tex) {
 	if (tex) (*tex).~GoreTextureCoordinates();
 }
 
-Q_EXPORT g2export_t * QDECL G2_GetInterface() {
+qboolean G2_IsValid( CGhoul2Info_v const & g) {
+	return g.IsValid();
+}
+
+size_t G2_Size( CGhoul2Info_v const & g) {
+	return g.size();
+}
+
+static CGhoul2Info & G2_At( CGhoul2Info_v const & g, size_t i ) {
+	return const_cast<CGhoul2Info &>(g[i]);
+}
+
+extern "C" Q_EXPORT g2export_t * QDECL G2_GetInterface() {
 	// G2API
 	g2_ex.G2API_AddBolt						= G2API_AddBolt;
 	g2_ex.G2API_AddBoltSurfNum					= G2API_AddBoltSurfNum;
@@ -111,13 +142,42 @@ Q_EXPORT g2export_t * QDECL G2_GetInterface() {
 	#endif // _SOF2
 	
 	g2_ex.G2_FindSurface = G2_FindSurface;
+	g2_ex.G2_FindOverrideSurface = G2_FindOverrideSurface;
+	g2_ex.G2_SetupModelPointers = G2_SetupModelPointers;
+	g2_ex.G2_RootMatrix = G2_RootMatrix;
+	g2_ex.G2_Sort_Models = G2_Sort_Models;
+	g2_ex.G2_GenerateWorldMatrix = G2_GenerateWorldMatrix;
+	g2_ex.G2_GetBoltMatrixLow = G2_GetBoltMatrixLow;
+	g2_ex.G2_TransformGhoulBones = G2_TransformGhoulBones;
+	g2_ex.G2_TransformBone = G2_TransformBone;
+	g2_ex.G2_FindGoreSet = FindGoreSet;
+	g2_ex.G2_IsValid = G2_IsValid;
+	g2_ex.G2_Size = G2_Size;
+	g2_ex.G2_At = G2_At;
 	
 	return &g2_ex;
 }
 
-Q_EXPORT void QDECL G2_Init(refimport_t * ri, refexport_t * re) {
+extern "C" Q_EXPORT void QDECL G2_Init(refimport_t * ri, refexport_t * re) {
 	g2_re = *re;
 	g2_ri = *ri;
+	
+	broadsword							= g2_ri.Cvar_Get( "broadsword",						"0",						CVAR_ARCHIVE_ND, "" );
+	broadsword_kickbones				= g2_ri.Cvar_Get( "broadsword_kickbones",				"1",						CVAR_NONE, "" );
+	broadsword_kickorigin			= g2_ri.Cvar_Get( "broadsword_kickog2_rigin",			"1",						CVAR_NONE, "" );
+	broadsword_dontstopanim				= g2_ri.Cvar_Get( "broadsword_dontstopanim",			"0",						CVAR_NONE, "" );
+	broadsword_waitforshot				= g2_ri.Cvar_Get( "broadsword_waitforshot",			"0",						CVAR_NONE, "" );
+	broadsword_playflop					= g2_ri.Cvar_Get( "broadsword_playflop",				"1",						CVAR_NONE, "" );
+	broadsword_smallbbox				= g2_ri.Cvar_Get( "broadsword_smallbbox",				"0",						CVAR_NONE, "" );
+	broadsword_extra1					= g2_ri.Cvar_Get( "broadsword_extra1",				"0",						CVAR_NONE, "" );
+	broadsword_extra2					= g2_ri.Cvar_Get( "broadsword_extra2",				"0",						CVAR_NONE, "" );
+	broadsword_effcorr					= g2_ri.Cvar_Get( "broadsword_effcorr",				"1",						CVAR_NONE, "" );
+	broadsword_ragtobase				= g2_ri.Cvar_Get( "broadsword_ragtobase",				"2",						CVAR_NONE, "" );
+	broadsword_dircap					= g2_ri.Cvar_Get( "broadsword_dircap",				"64",						CVAR_NONE, "" );
+	
+	r_noServerGhoul2					= g2_ri.Cvar_Get( "r_noserverghoul2",					"0",						CVAR_CHEAT, "" );
+	r_Ghoul2AnimSmooth					= g2_ri.Cvar_Get( "r_ghoul2animsmooth",				"0.3",						CVAR_NONE, "" );
+	r_Ghoul2UnSqashAfterSmooth			= g2_ri.Cvar_Get( "r_ghoul2unsqashaftersmooth",		"1",						CVAR_NONE, "" );
 }
 
 void QDECL Com_Printf( const char *msg, ... )

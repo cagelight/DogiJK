@@ -996,12 +996,12 @@ void G2_GorePolys( const mdxmSurface_t *surface, CTraceSurface &TS, const mdxmSu
 			sizeof(float)*2*newNumVerts+ // texture coordinates
 			sizeof(int)*newNumTris*3;  // new indecies
 
-		int *data=(int *)Z_Malloc ( sizeof(int)*size, TAG_GHOUL2_GORE, qtrue );
+		int *data=(int *)g2_ri.Z_Malloc ( sizeof(int)*size, TAG_GHOUL2_GORE, qtrue, 4 );
 
 
 		if ( gore->tex[TS.lod] )
 		{
-			Z_Free(gore->tex[TS.lod]);
+			g2_ri.Z_Free(gore->tex[TS.lod]);
 		}
 
 		gore->tex[TS.lod]=(float *)data;
@@ -1685,7 +1685,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 	// is there anything to save?
 	if (!ghoul2.size())
 	{
-		*buffer = (char *)Z_Malloc(4, TAG_GHOUL2, qtrue);
+		*buffer = (char *)g2_ri.Z_Malloc(4, TAG_GHOUL2, qtrue, 4);
 		int *tempBuffer = (int *)*buffer;
 		*tempBuffer = 0;
 		*size = 4;
@@ -1717,7 +1717,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 	}
 
 	// ok, we should know how much space we need now
-	*buffer = (char*)Z_Malloc(*size, TAG_GHOUL2, qtrue);
+	*buffer = (char*)g2_ri.Z_Malloc(*size, TAG_GHOUL2, qtrue, 4);
 
 	// now lets start putting the data we care about into the buffer
 	char *tempBuffer = *buffer;
@@ -1773,7 +1773,7 @@ qboolean G2_SaveGhoul2Models(CGhoul2Info_v &ghoul2, char **buffer, int *size)
 // have to free space malloced in the save system here because the game DLL can't.
 void G2_FreeSaveBuffer(char *buffer)
 {
-	Z_Free(buffer);
+	g2_ri.Z_Free(buffer);
 }
 
 qboolean G2_SetupModelPointers(CGhoul2Info *ghlInfo);

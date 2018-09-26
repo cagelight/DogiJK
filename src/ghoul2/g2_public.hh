@@ -21,139 +21,7 @@ public:
 	virtual const std::vector<CGhoul2Info> &Get(int handle) const=0;
 };
 
-IGhoul2InfoArray &TheGhoul2InfoArray();
-class CGhoul2Info_v
-{
-	IGhoul2InfoArray &InfoArray() const
-	{
-		return TheGhoul2InfoArray();
-	}
-
-	void Alloc()
-	{
-		assert(!mItem); //already alloced
-		mItem=InfoArray().New();
-		assert(!Array().size());
-	}
-	void Free()
-	{
-		if (mItem)
-		{
-			assert(InfoArray().IsValid(mItem));
-			InfoArray().Delete(mItem);
-			mItem=0;
-		}
-	}
-	std::vector<CGhoul2Info> &Array()
-	{
-		assert(InfoArray().IsValid(mItem));
-		return InfoArray().Get(mItem);
-	}
-	const std::vector<CGhoul2Info> &Array() const
-	{
-		assert(InfoArray().IsValid(mItem));
-		return InfoArray().Get(mItem);
-	}
-public:
-	int mItem;	//dont' be bad and muck with this
-	CGhoul2Info_v()
-	{
-		mItem=0;
-	}
-	CGhoul2Info_v(const int item)
-	{	//be VERY carefull with what you pass in here
-		mItem=item;
-	}
-	~CGhoul2Info_v()
-	{
-		Free(); //this had better be taken care of via the clean ghoul2 models call
-	}
-	void operator=(const CGhoul2Info_v &other)
-	{
-		mItem=other.mItem;
-	}
-	void operator=(const int otherItem)	//assigning one from the VM side item number
-	{
-		mItem=otherItem;
-	}
-	void DeepCopy(const CGhoul2Info_v &other)
-	{
-		Free();
-		if (other.mItem)
-		{
-			Alloc();
-			Array()=other.Array();
-			int i;
-			for (i=0;i<size();i++)
-			{
-				Array()[i].mBoneCache=0;
-				Array()[i].mTransformedVertsArray=0;
-				Array()[i].mSkelFrameNum=0;
-				Array()[i].mMeshFrameNum=0;
-			}
-		}
-	}
-	CGhoul2Info &operator[](int idx)
-	{
-		assert (mItem);
-		assert (idx >= 0 && idx < size());
-
-		return Array()[idx];
-	}
-	const CGhoul2Info &operator[](int idx) const
-	{
-		assert (mItem);
-		assert (idx >= 0 && idx < size());
-
-		return Array()[idx];
-	}
-	void resize(int num)
-	{
-		assert(num>=0);
-		if (num)
-		{
-			if (!mItem)
-			{
-				Alloc();
-			}
-		}
-		if (mItem||num)
-		{
-			Array().resize(num);
-		}
-	}
-	void clear()
-	{
-		Free();
-	}
-	void push_back(const CGhoul2Info &model)
-	{
-		if (!mItem)
-		{
-			Alloc();
-		}
-		Array().push_back(model);
-	}
-	int size() const
-	{
-		if (!IsValid())
-		{
-			return 0;
-		}
-		return Array().size();
-	}
-	bool IsValid() const
-	{
-		return InfoArray().IsValid(mItem);
-	}
-	void kill()
-	{
-		// this scary method zeros the infovector handle without actually freeing it
-		// it is used for some places where a copy is made, but we don't want to go through the trouble
-		// of making a deep copy
-		mItem=0;
-	}
-};
+class CGhoul2Info_v;
 
 typedef struct g2export_s {
 	// G2API
@@ -253,9 +121,18 @@ typedef struct g2export_s {
 	void				(*G2API_DeleteGoreTextureCoords)		( GoreTextureCoordinates * tex );
 	#endif // _G2_GORE
 	
-	void *				(*G2_FindSurface)						( void *mod, int index, int lod );
+	void *			(*G2_FindSurface)					( void *mod, int index, int lod );
+	surfaceInfo_t *	(*G2_FindOverrideSurface)			( int surfaceNum, surfaceInfo_v &surfaceList);
+	qboolean 		(*G2_SetupModelPointers)			( CGhoul2Info_v &ghoul2);
+	void 			(*G2_RootMatrix)					( CGhoul2Info_v &ghoul2,int time,const vec3_t scale,mdxaBone_t &retMatrix);
+	void 			(*G2_Sort_Models)					( CGhoul2Info_v &ghoul2, int * const modelList, int * const modelCount);
+	void 			(*G2_GenerateWorldMatrix)			( const vec3_t angles, const vec3_t origin);
+	void 			(*G2_GetBoltMatrixLow)				( CGhoul2Info &ghoul2,int boltNum,const vec3_t scale,mdxaBone_t &retMatrix);
+	void 			(*G2_TransformGhoulBones)			( boneInfo_v &rootBoneList,mdxaBone_t &rootMatrix, CGhoul2Info &ghoul2, int time,bool smooth);
+	void 			(*G2_TransformBone)					( int index,CBoneCache &CB );
+	CGoreSet *		(*G2_FindGoreSet)					( int goreSetTag );
+	qboolean 		(*G2_IsValid)						( CGhoul2Info_v const & );
+	size_t 			(*G2_Size)							( CGhoul2Info_v const & );
+	CGhoul2Info & 	(*G2_At)							( CGhoul2Info_v const &, size_t i );
 
 } g2export_t;
-
-Q_EXPORT g2export_t * QDECL G2_GetInterface();
-Q_EXPORT void QDECL G2_Init(refimport_t * ri, refexport_t * re);

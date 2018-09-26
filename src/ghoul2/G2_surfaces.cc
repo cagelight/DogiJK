@@ -351,9 +351,9 @@ qboolean G2_SetRootSurface(CGhoul2Info_v &ghoul2, const int modelIndex, const ch
 		// firstly, generate a list of active / on surfaces below the root point
 
 		// gimme some space to put this list into
-		activeSurfaces = (int *)Z_Malloc(mod_m->mdxm->numSurfaces * 4, TAG_GHOUL2, qtrue);
+		activeSurfaces = (int *)g2_ri.Z_Malloc(mod_m->mdxm->numSurfaces * 4, TAG_GHOUL2, qtrue, 4);
 		memset(activeSurfaces, 0, (mod_m->mdxm->numSurfaces * 4));
-		activeBones = (int *)Z_Malloc(mod_a->mdxa->numBones * 4, TAG_GHOUL2, qtrue);
+		activeBones = (int *)g2_ri.Z_Malloc(mod_a->mdxa->numBones * 4, TAG_GHOUL2, qtrue, 4);
 		memset(activeBones, 0, (mod_a->mdxa->numBones * 4));
 
 		G2_FindRecursiveSurface(mod_m, surf, ghoul2[modelIndex].mSlist, activeSurfaces);
@@ -397,8 +397,8 @@ qboolean G2_SetRootSurface(CGhoul2Info_v &ghoul2, const int modelIndex, const ch
 		//No support for this, for now.
 
 		// remember to free what we used
-		Z_Free(activeSurfaces);
-		Z_Free(activeBones);
+		g2_ri.Z_Free(activeSurfaces);
+		g2_ri.Z_Free(activeBones);
 
 		return (qtrue);
 	}

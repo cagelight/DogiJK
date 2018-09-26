@@ -260,7 +260,20 @@ typedef struct refimport_s {
 	int				(*G2API_GetTime)					( int argTime );
 	GoreTextureCoordinates * (*G2API_FindGoreRecord)	( int tag );
 	void			(*G2API_DeleteGoreTextureCoords)	( GoreTextureCoordinates * tex );
-
+	surfaceInfo_t *	(*G2_FindOverrideSurface)			( int surfaceNum, surfaceInfo_v &surfaceList);
+	qboolean 		(*G2_SetupModelPointers)			( CGhoul2Info_v &ghoul2);
+	void 			(*G2_RootMatrix)					( CGhoul2Info_v &ghoul2,int time,const vec3_t scale,mdxaBone_t &retMatrix);
+	void 			(*G2_Sort_Models)					( CGhoul2Info_v &ghoul2, int * const modelList, int * const modelCount);
+	void 			(*G2_GenerateWorldMatrix)			( const vec3_t angles, const vec3_t origin);
+	void 			(*G2_GetBoltMatrixLow)				( CGhoul2Info &ghoul2,int boltNum,const vec3_t scale,mdxaBone_t &retMatrix);
+	void 			(*G2_TransformGhoulBones)			( boneInfo_v &rootBoneList,mdxaBone_t &rootMatrix, CGhoul2Info &ghoul2, int time,bool smooth);
+	void 			(*G2_TransformBone)					( int index,CBoneCache &CB );
+	qboolean		(*G2API_HaveWeGhoul2Models)			( CGhoul2Info_v &ghoul2 );
+	CGoreSet *		(*G2_FindGoreSet)					( int goreSetTag );
+	qboolean 		(*G2_IsValid)						( CGhoul2Info_v const & );
+	size_t 			(*G2_Size)							( CGhoul2Info_v const & );
+	CGhoul2Info & 	(*G2_At)							( CGhoul2Info_v const &, size_t i );
+	
 	// Persistent data store
 	bool			(*PD_Store)							( const char *name, const void *data, size_t size );
 	const void *	(*PD_Load)							( const char *name, size_t *size );
