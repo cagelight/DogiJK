@@ -1,5 +1,7 @@
 # DogiJK
 
+This only compiles on Linux and that's unlikely to change any time soon.
+
 TODO:
 1. Make a new renderer from scratch.  
 	• Ghoul2 has been moved outside of the renderer so this should now be fairly easy  
