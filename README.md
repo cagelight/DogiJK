@@ -7,4 +7,4 @@ TODO:
 	• Should be easy, I've done it before, albeit poorly.  
 3. Add scripting engine  
 	• Not LUA, h8 LUA  
-	• Not Mono, too buggy jesus christ  
+	• Not Mono, too buggy (and massive) jesus christ  
