@@ -27,6 +27,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "g2_public.hh"
 #include "rd-common/tr_public.hh"
 
+extern refexport_t g2_re;
+extern refimport_t g2_ri;
+
 //rww - RAGDOLL_BEGIN
 class CRagDollUpdateParams;
 //rww - RAGDOLL_END

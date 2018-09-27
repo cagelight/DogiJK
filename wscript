@@ -27,9 +27,9 @@ def options(opt):
 	opt.load('gcc')
 	opt.load('g++')
 	
-	opt.add_option('--build_type', dest='build_type', type='string', default='RELEASE', action='store', help='DEBUG, NATIVE, RELEASE')
-	opt.add_option('--no_server', dest='bldsv', default=True, action='store_false', help='True/False')
-	opt.add_option('--no_client', dest='bldcl', default=True, action='store_false', help='True/False')
+	opt.add_option('--build-type', dest='build_type', type='string', default='RELEASE', action='store', help='DEBUG, NATIVE, RELEASE')
+	opt.add_option('--no-server', dest='bldsv', default=True, action='store_false', help='True/False')
+	opt.add_option('--no-client', dest='bldcl', default=True, action='store_false', help='True/False')
 
 def configure(ctx):
 	
@@ -73,7 +73,7 @@ def build(bld):
 	build_cgame = build_server or build_client
 	build_ui = build_server or build_client
 	build_rdvan = build_client
-	build_ghoul2 = build_server or build_client
+	build_ghoul2 = build_client
 
 	# MINIZIP
 	if build_server or build_client:
@@ -119,9 +119,7 @@ def build(bld):
 	
 		server_files = bld.path.ant_glob('src/rd-dedicated/*.cc')
 		server_files += bld.path.ant_glob('src/null/*.cc')
-		
-		#TEMPORARY
-		#server_files += bld.path.ant_glob('src/ghoul2/*.cc')
+		server_files += bld.path.ant_glob('src/ghoul2/*.cc')
 
 		server = bld (
 			features = 'cxx cxxprogram',

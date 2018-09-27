@@ -21,7 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "G2_gore.hh"
-#include "g2_verylocal.hh"
+#include "g2_local.hh"
 
 GoreTextureCoordinates::GoreTextureCoordinates()
 {

@@ -21,8 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "rd-common/tr_types.hh"
-#include "G2.hh"
-#include "g2_verylocal.hh"
+#include "g2_local.hh"
 
 extern void G2_ConstructUsedBoneList(CConstructBoneList &CBL);
 

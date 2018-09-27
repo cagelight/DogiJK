@@ -23,8 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "client/client.hh"	//FIXME!! EVIL - just include the definitions needed
 #include "qcommon/matcomp.hh"
 #include "qcommon/qcommon.hh"
-#include "ghoul2/G2.hh"
-#include "ghoul2/g2_verylocal.hh"
+#include "ghoul2/g2_local.hh"
 #ifdef _G2_GORE
 #include "ghoul2/G2_gore.hh"
 #endif

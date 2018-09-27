@@ -24,6 +24,7 @@ public:
 class CGhoul2Info_v;
 
 typedef struct g2export_s {
+	void				(*Shutdown)								( qboolean restarting );
 	// G2API
 	int					(*G2API_AddBolt)						( CGhoul2Info_v &ghoul2, const int modelIndex, const char *boneName );
 	int					(*G2API_AddBoltSurfNum)					( CGhoul2Info *ghlInfo, const int surfIndex );
@@ -136,3 +137,6 @@ typedef struct g2export_s {
 	CGhoul2Info & 	(*G2_At)							( CGhoul2Info_v const &, size_t i );
 
 } g2export_t;
+
+extern "C" Q_EXPORT g2export_t * QDECL G2_GetInterface();
+extern "C" Q_EXPORT void QDECL G2_Init(refimport_t * ri, refexport_t * re);

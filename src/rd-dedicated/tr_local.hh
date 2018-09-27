@@ -33,6 +33,8 @@ typedef unsigned int GLuint;
 #define GL_INDEX_TYPE		GL_UNSIGNED_INT
 typedef unsigned int glIndex_t;
 
+#define LL(x) x=LittleLong(x)
+
 // 14 bits
 // can't be increased without changing bit packing for drawsurfs
 // see QSORT_SHADERNUM_SHIFT
@@ -1224,8 +1226,6 @@ Ghoul2 Insert Start
 #ifdef _DEBUG
 extern	cvar_t	*r_noPrecacheGLA;
 #endif
-
-extern	cvar_t	*r_noServerGhoul2;
 /*
 Ghoul2 Insert End
 */
@@ -1853,3 +1853,5 @@ typedef struct decalPoly_s
 } decalPoly_t;
 
 qboolean ShaderHashTableExists(void);
+
+qboolean G2_HackadelicOnClient();

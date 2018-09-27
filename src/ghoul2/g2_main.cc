@@ -43,7 +43,14 @@ static CGhoul2Info & G2_At( CGhoul2Info_v const & g, size_t i ) {
 	return const_cast<CGhoul2Info &>(g[i]);
 }
 
+static void G2_Shutdown(qboolean restarting) {
+#ifndef DEDICATED
+	if (restarting) SaveGhoul2InfoArray();
+#endif
+}
+
 extern "C" Q_EXPORT g2export_t * QDECL G2_GetInterface() {
+	g2_ex.Shutdown 							= G2_Shutdown;
 	// G2API
 	g2_ex.G2API_AddBolt						= G2API_AddBolt;
 	g2_ex.G2API_AddBoltSurfNum					= G2API_AddBoltSurfNum;
@@ -178,8 +185,13 @@ extern "C" Q_EXPORT void QDECL G2_Init(refimport_t * ri, refexport_t * re) {
 	r_noServerGhoul2					= g2_ri.Cvar_Get( "r_noserverghoul2",					"0",						CVAR_CHEAT, "" );
 	r_Ghoul2AnimSmooth					= g2_ri.Cvar_Get( "r_ghoul2animsmooth",				"0.3",						CVAR_NONE, "" );
 	r_Ghoul2UnSqashAfterSmooth			= g2_ri.Cvar_Get( "r_ghoul2unsqashaftersmooth",		"1",						CVAR_NONE, "" );
+	
+#ifndef DEDICATED
+	RestoreGhoul2InfoArray();
+#endif
 }
 
+#ifndef DEDICATED
 void QDECL Com_Printf( const char *msg, ... )
 {
 	va_list         argptr;
@@ -215,3 +227,4 @@ void QDECL Com_Error( int level, const char *error, ... )
 
 	g2_ri.Error(level, "%s", text);
 }
+#endif

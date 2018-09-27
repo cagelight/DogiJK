@@ -630,6 +630,8 @@ void CL_ShutdownAll( qboolean shutdownRef ) {
 	if ( re && re->Shutdown ) {
 		re->Shutdown( qfalse, qfalse );		// don't destroy window or context
 	}
+	
+	if ( g2api && g2api->Shutdown ) g2api->Shutdown(qfalse);
 
 	cls.uiStarted = qfalse;
 	cls.cgameStarted = qfalse;
@@ -2265,19 +2267,19 @@ CL_ShutdownRef
 ============
 */
 static void CL_ShutdownRef( qboolean restarting ) {
-	if ( re )
-	{
-		if ( re->Shutdown )
-		{
-			re->Shutdown( qtrue, restarting );
-		}
-	}
+	if ( re && re->Shutdown ) re->Shutdown( qtrue, restarting );
+	if ( g2api && g2api->Shutdown ) g2api->Shutdown(restarting);
 
 	re = NULL;
+	g2api = NULL;
 
 	if ( rendererLib != NULL ) {
 		Sys_UnloadDll (rendererLib);
 		rendererLib = NULL;
+	}
+	if ( g2Lib != NULL ) {
+		Sys_UnloadDll (g2Lib);
+		g2Lib = NULL;
 	}
 }
 

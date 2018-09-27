@@ -1317,7 +1317,6 @@ void SP_waypoint ( gentity_t *ent )
 			if(G_CheckInSolid (ent, qtrue))
 			{
 				Com_Printf(S_COLOR_RED"ERROR: Waypoint %s at %s in solid!\n", ent->targetname, vtos(ent->r.currentOrigin));
-				assert(0 && "Waypoint in solid!");
 				G_FreeEntity(ent);
 				return;
 			}

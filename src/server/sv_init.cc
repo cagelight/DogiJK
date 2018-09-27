@@ -23,7 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 #include "server.hh"
-#include "ghoul2/G2.hh"
+#include "ghoul2/g2_public.hh"
 #include "qcommon/cm_public.hh"
 #include "qcommon/MiniHeap.hh"
 #include "qcommon/stringed_ingame.hh"
@@ -909,9 +909,30 @@ static void SV_InitRef( void ) {
 	//FIXME: Might have to do something about this...
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;
 	G2VertSpaceServer = &IHeapAllocator_singleton;
+	
+	g2api = G2_GetInterface();
+	
+	ri.G2API_GetTime = g2api->G2API_GetTime;
+	ri.G2API_FindGoreRecord = g2api->G2API_FindGoreRecord;
+	ri.G2API_DeleteGoreTextureCoords = g2api->G2API_DeleteGoreTextureCoords;
+	ri.G2API_HaveWeGhoul2Models = g2api->G2API_HaveWeGhoul2Models;
+	
+	ri.G2_FindSurface = g2api->G2_FindSurface;
+	ri.G2_FindOverrideSurface = g2api->G2_FindOverrideSurface;
+	ri.G2_SetupModelPointers = g2api->G2_SetupModelPointers;
+	ri.G2_RootMatrix = g2api->G2_RootMatrix;
+	ri.G2_Sort_Models = g2api->G2_Sort_Models;
+	ri.G2_GenerateWorldMatrix = g2api->G2_GenerateWorldMatrix;
+	ri.G2_GetBoltMatrixLow = g2api->G2_GetBoltMatrixLow;
+	ri.G2_TransformGhoulBones = g2api->G2_TransformGhoulBones;
+	ri.G2_TransformBone = g2api->G2_TransformBone;
+	ri.G2_FindGoreSet = g2api->G2_FindGoreSet;
+	ri.G2_IsValid = g2api->G2_IsValid;
+	ri.G2_Size = g2api->G2_Size;
+	ri.G2_At = g2api->G2_At;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
-	
+	G2_Init(&ri, ret);
 
 //	Com_Printf( "-------------------------------\n");
 
