@@ -20,8 +20,13 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
+#include <map>
+
+#include <qcommon/qcommon.hh>
+#include <qcommon/qfiles.hh>
 #include "qcommon/sstring.hh"	// stl string class won't compile in here (MS shite), so use Gil's.
 #include "tr_local.hh"
+#include "tr_types.hh"
 #include "tr_font.hh"
 
 #include "qcommon/stringed_ingame.hh"
@@ -1486,51 +1491,6 @@ void RE_Font_DrawString(int ox, int oy, const char *psText, const float *rgba, c
 			return;
 		}
 	}
-
-//	// test code only
-//	if (GetLanguageEnum() == eTaiwanese)
-//	{
-//		psText = "Wp:¶}·F§a ¿p·G´µ¡A§Æ±æ§A¹³¥L­Ì»¡ªº¤@¼Ë¦æ¡C";
-//	}
-//	else
-//	if (GetLanguageEnum() == eChinese)
-//	{
-//		//psText = "Ó¶±øÕ½³¡II  Ô¼º²?ÄªÁÖË¹  ÈÎÎñÊ§°Ü  ÄãÒªÌ×ÓÃ»­ÃæÉè¶¨µÄ±ä¸üÂğ£¿  Ô¤Éè,S3 Ñ¹Ëõ,DXT1 Ñ¹Ëõ,DXT5 Ñ¹Ëõ,16 Bit,32 Bit";
-//		psText = "Ó¶±øÕ½³¡II";
-//	}
-//	else
-//	if (GetLanguageEnum() == eThai)
-//	{
-//		//psText = "ÁÒµÃ°Ò¹¼ÅÔµÀÑ³±ìÍØµÊÒË¡ÃÃÁÃËÑÊÊÓËÃÑºÍÑ¡¢ÃĞä·Â·Õèãªé¡Ñº¤ÍÁ¾ÔÇàµÍÃì";
-//		psText = "ÁÒµÃ°Ò¹¼ÅÔµ";
-//		psText = "ÃËÑÊÊÓËÃÑº";
-//		psText = "ÃËÑÊÊÓËÃÑº   ÍÒ_¡Ô¹_¤ÍÃì·_1415";
-//	}
-//	else
-//	if (GetLanguageEnum() == eKorean)
-//	{
-//		psText = "Wp:¼îÅ¸ÀÓÀÌ´Ù ¸Ö¸°. ±×µéÀÌ ¸»ÇÑ´ë·Î ³×°¡ ÀßÇÒÁö ±â´ëÇÏ°Ú´Ù.";
-//	}
-//	else
-//	if (GetLanguageEnum() == eJapanese)
-//	{
-//		static char sBlah[200];
-//		sprintf(sBlah,va("%c%c%c%c%c%c%c%c",0x82,0xA9,0x82,0xC8,0x8A,0xBF,0x8E,0x9A));
-//		psText = &sBlah[0];
-//	}
-//	else
-//	if (GetLanguageEnum() == eRussian)
-//	{
-////		//psText = "Íà âåğøèíå õîëìà ñòîèò ñòàğûé äîì ñ ïğèâèäåíèÿìè è áàøíÿ ñ âîëøåáíûìè ÷àñàìè."
-//		psText = "Íà âåğøèíå õîëìà ñòîèò";
-//	}
-//	else
-//	if (GetLanguageEnum() == ePolish)
-//	{
-//		psText = "za³o¿ony w 1364 roku, jest najstarsz¹ polsk¹ uczelni¹ i nale¿y...";
-//		psText = "za³o¿ony nale¿y";
-//	}
-
 
 	CFontInfo *curfont = GetFont(iFontHandle);
 	if(!curfont || !psText)

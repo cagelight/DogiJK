@@ -7,7 +7,7 @@ top = os.getcwd()
 out = 'build'
 	
 g_comflags = ['-pthread', '-Wall', '-Wno-unused-variable', '-Werror=invalid-offsetof']
-g_cflags = ['-std=c11'] + g_comflags
+g_cflags = ['-std=c99'] + g_comflags
 g_cxxflags = ['-std=c++17'] + g_comflags
 
 def btype_cflags(ctx):
@@ -45,6 +45,7 @@ def configure(ctx):
 	if ctx.env.BUILD_CLIENT:
 		ctx.check(features='c cprogram', lib='jpeg', uselib_store='JPEG')
 		ctx.check(features='c cprogram', lib='png', uselib_store='PNG')
+		
 	ctx.check(features='c cprogram', lib='pthread', uselib_store='PTHREAD')
 	ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
@@ -123,7 +124,7 @@ def build(bld):
 
 		server = bld (
 			features = 'cxx cxxprogram',
-			target = 'parajkded',
+			target = 'dogijkded',
 			includes = ['src', '/usr/include/tirpc'],
 			source = clsv_files + server_files,
 			defines = ['_CONSOLE', 'DEDICATED'],
@@ -143,7 +144,7 @@ def build(bld):
 		
 		client = bld (
 			features = 'cxx cxxprogram',
-			target = 'parajk',
+			target = 'dogijk',
 			includes = ['src', '/usr/include/tirpc'],
 			source = clsv_files + client_files,
 			uselib = ['SDL', 'ZLIB', 'DL', 'PTHREAD'],
@@ -232,6 +233,27 @@ def build(bld):
 			target = 'rd-vanilla',
 			includes = ['src', 'src/rd-vanilla'],
 			source = rdvan_files,
+			uselib = ['JPEG', 'PNG', 'PTHREAD'],
+			install_path = os.path.join(top, 'install')
+		)
+		
+		rdvan.env.cxxshlib_PATTERN = '%s_x86_64.so'
+		
+	# RD-HOWLER
+	if build_rdvan:
+	
+		howler_files = bld.path.ant_glob('src/rd-howler/*.cc')
+		howler_files += bld.path.ant_glob('src/rd-common/*.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/q_math.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/q_string.cc')
+			
+		rdvan = bld (
+			features = 'cxx cxxshlib',
+			target = 'rd-howler',
+			includes = ['src', 'src/rd-howler'],
+			source = howler_files,
 			uselib = ['JPEG', 'PNG', 'PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)

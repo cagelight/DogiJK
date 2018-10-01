@@ -27,16 +27,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // q_shared.h -- included first by ALL program modules.
 // A user mod should never modify this file
 
-#define PRODUCT_NAME			"parajk"
+#define PRODUCT_NAME			"dogijk"
 
-#define CLIENT_WINDOW_TITLE "ParaJK (MP)"
-#define CLIENT_CONSOLE_TITLE "ParaJK Console (MP)"
-#define HOMEPATH_NAME_UNIX "parajk"
-#define HOMEPATH_NAME_WIN "ParaJK"
+#define CLIENT_WINDOW_TITLE "DogiJK (MP)"
+#define CLIENT_CONSOLE_TITLE "DogiJK Console (MP)"
+#define HOMEPATH_NAME_UNIX "dogijk"
+#define HOMEPATH_NAME_WIN "DogiJK"
 #define HOMEPATH_NAME_MACOSX HOMEPATH_NAME_WIN
 
 #define	BASEGAME "base"
-#define OPENJKGAME "ParaJK"
+#define OPENJKGAME "DogiJK"
 
 //NOTENOTE: Only change this to re-point ICARUS to a new script directory
 #define Q3_SCRIPT_DIR	"scripts"
