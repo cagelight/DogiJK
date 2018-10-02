@@ -1,6 +1,27 @@
 #include "tr_local.hh"
 
-static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name );
+static GLfloat fullscreen_quad_verts [] = {
+	-1, -1,  0,
+	-1,  1,  0,
+	 1, -1,  0,
+	 1,  1,  0,
+};
+
+static GLfloat unit_quad_verts [] = {
+	 0,  0,  0,
+	 0,  1,  0,
+	 1,  0,  0,
+	 1,  1,  0,
+};
+
+static GLfloat quad_uvs [] = {
+	 0,  0,
+	 0,  1,
+	 1,  0,
+	 1,  1,
+};
+
+static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, bool server );
 static qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name );
 
 static constexpr byte const FakeGLAFile[] = {
@@ -25,7 +46,7 @@ static constexpr byte const FakeGLAFile[] = {
 	0x00, 0x80, 0x00, 0x80, 0x00, 0x80
 };
 
-void rend::initialize_model() {
+modelbank::modelbank() {
 	models.emplace_back();
 	models[0].ptr = new model_t {};
 	strcpy(models[0].ptr->name, "BAD MODEL");
@@ -33,11 +54,12 @@ void rend::initialize_model() {
 	models[0].ptr->index = 0;
 }
 
-void rend::destruct_model() noexcept {
+
+modelbank::~modelbank() {
 	
 }
 
-qhandle_t rend::register_model(char const * name) {
+qhandle_t modelbank::register_model(char const * name, bool server) {
 	auto m = model_lookup.find(name);
 	if (m != model_lookup.end()) return m->second;
 	
@@ -97,7 +119,7 @@ qhandle_t rend::register_model(char const * name) {
 			break;
 		case MDXM_IDENT:
 			Com_Printf("Ghoul2 Model: %s\n", name);
-			R_LoadMDXM(rmod.ptr, rmod.buffer.data(), name);
+			R_LoadMDXM(rmod.ptr, rmod.buffer.data(), name, server);
 			break;
 		case MD3_IDENT:
 			Com_Printf("MD3 Model: %s\n", name);
@@ -108,13 +130,60 @@ qhandle_t rend::register_model(char const * name) {
 			break;
 	}
 	
+	if (!server) r->setup_model(handle);
 	model_lookup[name] = handle;
 	return handle;
 }
 
-model_t * rend::get_model(qhandle_t h) {
+model_t * modelbank::get_model(qhandle_t h) {
 	if (h < 0 || h >= models.size()) return nullptr;
 	return models[h].ptr;
+}
+
+void rend::initialize_model() {	
+	glCreateVertexArrays(1, &unitquad.vao);
+	glCreateBuffers(2, unitquad.vbo);
+	glNamedBufferData(unitquad.vbo[0], sizeof(unit_quad_verts), unit_quad_verts, GL_STATIC_DRAW);
+	glVertexArrayAttribBinding(unitquad.vao, 0, 0);
+	glVertexArrayVertexBuffer(unitquad.vao, 0, unitquad.vbo[0], 0, 12);
+	glEnableVertexArrayAttrib(unitquad.vao, 0);
+	glVertexArrayAttribFormat(unitquad.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+	glNamedBufferData(unitquad.vbo[1], sizeof(quad_uvs), quad_uvs, GL_STATIC_DRAW);
+	glVertexArrayAttribBinding(unitquad.vao, 1, 1);
+	glVertexArrayVertexBuffer(unitquad.vao, 1, unitquad.vbo[1], 0, 8);
+	glEnableVertexArrayAttrib(unitquad.vao, 1);
+	glVertexArrayAttribFormat(unitquad.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+	unitquad.size = 4;
+	
+	glCreateVertexArrays(1, &fullquad.vao);
+	glCreateBuffers(2, fullquad.vbo);
+	glNamedBufferData(fullquad.vbo[0], sizeof(fullscreen_quad_verts), fullscreen_quad_verts, GL_STATIC_DRAW);
+	glVertexArrayAttribBinding(fullquad.vao, 0, 0);
+	glVertexArrayVertexBuffer(fullquad.vao, 0, fullquad.vbo[0], 0, 12);
+	glEnableVertexArrayAttrib(fullquad.vao, 0);
+	glVertexArrayAttribFormat(fullquad.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+	glNamedBufferData(fullquad.vbo[1], sizeof(quad_uvs), quad_uvs, GL_STATIC_DRAW);
+	glVertexArrayAttribBinding(fullquad.vao, 1, 1);
+	glVertexArrayVertexBuffer(fullquad.vao, 1, fullquad.vbo[1], 0, 8);
+	glEnableVertexArrayAttrib(fullquad.vao, 1);
+	glVertexArrayAttribFormat(fullquad.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+	fullquad.size = 4;
+}
+
+void rend::setup_model(qhandle_t h) {
+	// TODO
+}
+
+rend::rendmodel::rendmodel(rendmodel && other) {
+	vao = other.vao;
+	other.vao = 0;
+	memcpy(vbo, other.vbo, sizeof(vbo));
+	memset(other.vbo, 0, sizeof(vbo));
+}
+
+rend::rendmodel::~rendmodel() {
+	if (vbo[0]) glDeleteBuffers(3, vbo);
+	if (vao) glDeleteVertexArrays(1, &vao);
 }
 
 static int OldToNewRemapTable[72] = {
@@ -192,7 +261,7 @@ static int OldToNewRemapTable[72] = {
 52// Bone71:   "face_always_":			Parent: "cranium"  (index 17)
 };
 
-static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
+static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, bool server ) {
 	int					i,l, j;
 	mdxmHeader_t		*pinmodel, *mdxm;
 	mdxmLOD_t			*lod;
@@ -220,7 +289,7 @@ static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 	mdxm = mod->mdxm = (mdxmHeader_t*) pinmodel;
 
 	// first up, go load in the animation file we need that has the skeletal animation info for this model
-	mdxm->animIndex = r->register_model(va ("%s.gla",mdxm->animName));
+	mdxm->animIndex = mbank->register_model(va ("%s.gla",mdxm->animName));
 
 	if (!mdxm->animIndex)
 	{
@@ -244,8 +313,9 @@ static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name ) {
 		{
 			surfInfo->name[strlen(surfInfo->name)-4]=0;	//remove "_off" from name
 		}
+		
+		if (!server && surfInfo->shader[0]) surfInfo->shaderIndex = r->register_shader(surfInfo->shader);
 
-		surfInfo->shaderIndex = 0; // FIXME -- actual shader lookup (see below commented section)
 		/*
 		shader_t	*sh;
 		// get the shader name

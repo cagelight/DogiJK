@@ -11,6 +11,7 @@ typedef b::vec2_t<float> rv2_t;
 typedef b::vec3_t<float> rv3_t;
 typedef b::vec4_t<float> rv4_t;
 typedef b::mat3_t<float> rm3_t;
+typedef b::mat4_t<float> rm4_t;
 
 extern refimport_t ri;
 
@@ -46,6 +47,49 @@ Ghoul2 Insert End
 	SF_MAX = 0xffffffff			// ensures that sizeof( surfaceType_t ) == sizeof( int )
 } surfaceType_t;
 
+struct q3model;
+struct q3shader;
+struct q3stage;
+struct q3texture;
+
+struct rcmd {
+		enum struct mode_e {
+		global_color,
+		stretch_pic
+	} mode;
+	
+	rcmd() = delete;
+	rcmd(mode_e m) : mode(m) {}
+	rcmd(rcmd const &) = default;
+	rcmd(rcmd &&) = default;
+	
+	union {
+		struct {
+			float x, y, w, h, s1, t1, s2, t2;
+			qhandle_t hShader;
+		} stretch_pic;
+		rv4_t global_color;
+	};
+};
+
+struct rframe {
+	std::vector<rcmd> d_2d;
+};
+
+struct modelbank final {
+	modelbank();
+	~modelbank();
+	modelbank(modelbank const &) = delete;
+	modelbank(modelbank &&) = delete;
+	
+	qhandle_t register_model(char const * name, bool server = false);
+	model_t * get_model(qhandle_t);
+	
+private:
+	std::unordered_map<istring, qhandle_t> model_lookup;
+	std::vector<q3model> models;
+};
+
 struct rend final {
 	rend() = default;
 	rend(rend const &) = delete;
@@ -54,16 +98,14 @@ struct rend final {
 	
 	void initialize();
 	
-	qhandle_t register_model(char const * name);
-	model_t * get_model(qhandle_t);
+	void setup_model(qhandle_t);
 	
 	qhandle_t register_shader(char const * name, bool mipmaps = true);
-	
 	GLuint register_texture(char const * name, bool mipmaps = true);
 	
-	struct q3model;
-	struct q3shader;
-	struct q3texture;
+	void draw(std::shared_ptr<rframe>);
+	
+	void swap();
 	
 private:
 	bool initialized = false;
@@ -71,13 +113,37 @@ private:
 	
 // MODEL
 	void initialize_model();
-	void destruct_model() noexcept;
-	std::unordered_map<istring, qhandle_t> model_lookup;
-	std::vector<q3model> models;
+	struct rendmodel final {
+		rendmodel() = default;
+		rendmodel(rendmodel const &) = delete;
+		rendmodel(rendmodel &&);
+		~rendmodel();
+		inline void bind() { glBindVertexArray(vao); }
+		inline void draw() { glDrawArrays(GL_TRIANGLE_STRIP, 0, size); }
+		GLuint vao = 0;
+		GLuint vbo[3] {0};
+		size_t size = 0;
+	};
+	rendmodel unitquad;
+	rendmodel fullquad;
+	std::vector<rendmodel> glmodel;
 	
 // SHADER
 	void initialize_shader();
 	void destruct_shader() noexcept;
+	void configure_stage(q3stage const &, rm4_t const & vm, rm3_t const & uvm);
+	
+	GLuint q3program = 0;
+	GLuint q3sampler = 0;
+	enum struct q3uniform : size_t {
+		vertex_matrix,
+		uv_matrix,
+		global_color,
+		max
+	};
+	GLuint q3uniforms[static_cast<size_t>(q3uniform::max)];
+	inline GLuint & q3u(q3uniform const & u) { return q3uniforms[static_cast<size_t>(u)]; }
+	
 	std::unordered_map<istring, std::string> shader_source_lookup;
 	std::unordered_map<istring, qhandle_t> shader_lookup;
 	std::vector<q3shader> shaders;
@@ -89,7 +155,7 @@ private:
 	GLuint whiteimage;
 };
 
-struct rend::q3model {
+struct q3model {
 	q3model() = default;
 	q3model(q3model const &) = delete;
 	q3model(q3model && other) noexcept {
@@ -108,10 +174,14 @@ struct rend::q3model {
 	}
 };
 
-struct rend::q3shader {
+struct q3shader {
 	bool in_use = false;
 	istring name;
-	qhandle_t index;
+	qhandle_t index;	
+	std::vector<q3stage> stages;
+};
+
+struct q3stage {
 	
 	enum struct gen_func {
 		sine,
@@ -164,47 +234,45 @@ struct rend::q3shader {
 			} rotate_data;
 		};
 	};
-	struct stage {
-		
-		enum struct gen_type {
-			none,
-			constant,
-			vertex,
-			wave,
-		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
-		
-		GLuint diffuse = 0; // GL Texture Handle
-		bool clamp = false;
-		GLenum blend_src = GL_ONE, blend_dst = GL_ZERO;
-		
-		rv4_t color {1, 1, 1, 1};
-		
-		struct {
-			struct {
-				gen_func func;
-				float base;
-				float amplitude;
-				float phase;
-				float frequency;
-			} rgb;
-			struct {
-				gen_func func;
-				float base;
-				float amplitude;
-				float phase;
-				float frequency;
-			} alpha;
-		} wave;
-		
-		std::vector<texmod> texmods;
-	};
 	
-	std::vector<stage> stages;
+	enum struct gen_type {
+		none,
+		constant,
+		vertex,
+		wave,
+	} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
+	
+	GLuint diffuse = 0; // GL Texture Handle
+	bool clamp = false;
+	GLenum blend_src = GL_ONE, blend_dst = GL_ZERO;
+	
+	rv4_t color {1, 1, 1, 1};
+	
+	struct {
+		struct {
+			gen_func func;
+			float base;
+			float amplitude;
+			float phase;
+			float frequency;
+		} rgb;
+		struct {
+			gen_func func;
+			float base;
+			float amplitude;
+			float phase;
+			float frequency;
+		} alpha;
+	} wave;
+	
+	std::vector<texmod> texmods;
 };
 
-struct rend::q3texture {
+struct q3texture {
 	bool in_use;
 	GLuint id;
 };
 
+extern std::unique_ptr<modelbank> mbank;
 extern std::unique_ptr<rend> r;
+extern std::shared_ptr<rframe> frame;

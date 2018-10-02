@@ -674,7 +674,10 @@ typedef struct qint64_s {
 
 int FloatAsInt( float f );
 
+#define	MAX_VA_STRING 65535
+#define MAX_VA_BUFFERS 6
 char	* QDECL va(const char *format, ...);
+char	* QDECL va_next();
 
 #define TRUNCATE_LENGTH	64
 void Com_TruncateLongString( char *buffer, const char *s );

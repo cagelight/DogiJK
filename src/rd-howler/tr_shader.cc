@@ -1,6 +1,81 @@
 #include "tr_local.hh"
 
+static char const * q3glsl_v = 
+R"GLSL(
+#version 450
+	
+layout(location = 0) in vec3 vert;
+layout(location = 1) in vec2 uv;
+uniform mat4 vertex_matrix;
+uniform mat3 uv_matrix;
+out vec2 f_uv;
+void main() {
+	f_uv = (uv_matrix * vec3(uv, 1)).xy;
+	gl_Position = vertex_matrix * vec4(vert, 1);
+}
+)GLSL";
+
+static char const * q3glsl_f = 
+R"GLSL(
+#version 450
+	
+in vec2 f_uv;
+out vec4 color;
+uniform vec4 global_color;
+layout(binding = 0) uniform sampler2D tex;
+void main() {
+	color = texture(tex, f_uv) * global_color;
+}
+)GLSL";
+
 void rend::initialize_shader() {
+	
+	GLint success;
+	q3program = glCreateProgram();
+	GLuint q3vertshad = glCreateShader(GL_VERTEX_SHADER), q3fragshad = glCreateShader(GL_FRAGMENT_SHADER);
+	
+	glShaderSource(q3vertshad, 1, &q3glsl_v, 0);
+	glCompileShader(q3vertshad);
+	glGetShaderiv(q3vertshad, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		char * err = va_next();
+		GLsizei max_length = MAX_VA_STRING;
+		glGetShaderInfoLog(q3vertshad, max_length, &max_length, err);
+		Com_Error(ERR_FATAL, "FATAL: vertex shader failed to compile:\n%s", err);
+	}
+	glShaderSource(q3fragshad, 1, &q3glsl_f, 0);
+	glCompileShader(q3fragshad);
+	glGetShaderiv(q3fragshad, GL_COMPILE_STATUS, &success);
+	if (!success) {
+		char * err = va_next();
+		GLsizei max_length = MAX_VA_STRING;
+		glGetShaderInfoLog(q3fragshad, max_length, &max_length, err);
+		Com_Error(ERR_FATAL, "FATAL: fragment shader failed to compile:\n%s", err);
+	}
+	
+	glAttachShader(q3program, q3vertshad);
+	glAttachShader(q3program, q3fragshad);
+	
+	glLinkProgram(q3program);
+	glGetProgramiv(q3program, GL_LINK_STATUS, &success);
+	if (!success) {
+		char * err = va_next();
+		GLsizei max_length = MAX_VA_STRING;
+		glGetProgramInfoLog(q3program, max_length, &max_length, err);
+		Com_Error(ERR_FATAL, "FATAL: shader program failed to link:\n%s", err);
+	}
+	
+	glUseProgram(q3program);
+	
+	q3u(q3uniform::vertex_matrix) = glGetUniformLocation(q3program, "vertex_matrix");
+	q3u(q3uniform::uv_matrix) = glGetUniformLocation(q3program, "uv_matrix");
+	q3u(q3uniform::global_color) = glGetUniformLocation(q3program, "global_color");
+	
+	glCreateSamplers(1, &q3sampler);
+	glBindSampler(0, q3sampler);
+	glSamplerParameteri(q3sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glSamplerParameteri(q3sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
 	auto & ds = shaders.emplace_back();
 	ds.in_use = true;
 	ds.name = "*default";
@@ -59,15 +134,14 @@ void rend::initialize_shader() {
 		ri.FS_FCloseFile(f);
 	}
 	ri.FS_FreeFileList(shfiles);
-	
-	Com_Printf("%s\n", shader_source_lookup["menu/art/saber_red"].c_str());
 }
 
 void rend::destruct_shader() noexcept {
-	
+	if (q3program) glDeleteProgram(q3program);
+	if (q3sampler) glDeleteSamplers(1, &q3sampler);
 }
 
-static bool parse_shader(rend::q3shader & shad, char const * src, bool mipmaps);
+static bool parse_shader(q3shader & shad, char const * src, bool mipmaps);
 
 qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 	
@@ -122,6 +196,13 @@ qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 	return handle;
 }
 
+void rend::configure_stage(q3stage const & stage, rm4_t const & vm, rm3_t const & uvm) {
+	glBindTextureUnit(0, stage.diffuse);
+	glBlendFunc(stage.blend_src, stage.blend_dst);
+	glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, vm);
+	glUniformMatrix3fv(q3u(q3uniform::uv_matrix), 1, GL_FALSE, uvm);
+}
+
 static std::unordered_map<std::string, GLenum> blendfunc_map = {
 	{"GL_ONE",						GL_ONE},
 	{"GL_ZERO",						GL_ZERO},
@@ -145,43 +226,43 @@ static GLenum blendfunc_str2enum(char const * str) {
 	else return i->second;
 }
 
-static std::unordered_map<std::string, rend::q3shader::gen_func> genfunc_map = {
-	{"sin",					rend::q3shader::gen_func::sine},
-	{"square",				rend::q3shader::gen_func::square},
-	{"triangle",			rend::q3shader::gen_func::triangle},
-	{"sawtooth",			rend::q3shader::gen_func::sawtooth},
-	{"inverse_sawtooth",	rend::q3shader::gen_func::inverse_sawtooth},
-	{"noise",				rend::q3shader::gen_func::noise},
-	{"random",				rend::q3shader::gen_func::random},
+static std::unordered_map<std::string, q3stage::gen_func> genfunc_map = {
+	{"sin",					q3stage::gen_func::sine},
+	{"square",				q3stage::gen_func::square},
+	{"triangle",			q3stage::gen_func::triangle},
+	{"sawtooth",			q3stage::gen_func::sawtooth},
+	{"inverse_sawtooth",	q3stage::gen_func::inverse_sawtooth},
+	{"noise",				q3stage::gen_func::noise},
+	{"random",				q3stage::gen_func::random},
 };
 
-static rend::q3shader::gen_func genfunc_str2enum(char const * str) {
-	if (!str) return rend::q3shader::gen_func::random;
+static q3stage::gen_func genfunc_str2enum(char const * str) {
+	if (!str) return q3stage::gen_func::random;
 	auto const & i = genfunc_map.find(str);
 	if (i == genfunc_map.end()) {
 		Com_Printf(S_COLOR_RED "ERROR: invalid genfunc requested: (\"%s\"), defaulting to random.\n", str);
-		return rend::q3shader::gen_func::random;
+		return q3stage::gen_func::random;
 	}
 	else return i->second;
 }
 
-static float gen_func_do(rend::q3shader::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
+static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
 	switch (func) {
 		default: 
 			break;
-		case rend::q3shader::gen_func::sine:
+		case q3stage::gen_func::sine:
 			return base + sin((in + phase) * frequency * b::pi<float> * 2) * amplitude;
 	}
 	return 0;
 }
 
-static void parse_texmod(char const * name, rend::q3shader::stage & stg, char const * p) {
+static void parse_texmod(char const * name, q3stage & stg, char const * p) {
 	
 	char const * token = COM_ParseExt( &p, qfalse );
 	
 	if (!Q_stricmp( token, "turb")) {
 		
-		stg.texmods.emplace_back(rend::q3shader::texmod::tctype::turb);
+		stg.texmods.emplace_back(q3stage::texmod::tctype::turb);
 		auto & tc = stg.texmods.back();
 		token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 			Com_Printf(S_COLOR_RED "ERROR: missing tcMod turb parm \"base\" in shader (\"%s\")\n", name);
@@ -206,7 +287,7 @@ static void parse_texmod(char const * name, rend::q3shader::stage & stg, char co
 		
 	} else if (!Q_stricmp( token, "scale")) {
 		
-		stg.texmods.emplace_back(rend::q3shader::texmod::tctype::scale);
+		stg.texmods.emplace_back(q3stage::texmod::tctype::scale);
 		auto & tc = stg.texmods.back();
 		token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 			Com_Printf(S_COLOR_RED "ERROR: missing tcMod scale parm \"x\" in shader (\"%s\")\n", name);
@@ -221,7 +302,7 @@ static void parse_texmod(char const * name, rend::q3shader::stage & stg, char co
 		
 	} else if (!Q_stricmp( token, "scroll")) {
 		
-		stg.texmods.emplace_back(rend::q3shader::texmod::tctype::scroll);
+		stg.texmods.emplace_back(q3stage::texmod::tctype::scroll);
 		auto & tc = stg.texmods.back();
 		token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 			Com_Printf(S_COLOR_RED "ERROR: missing tcMod scroll parm \"x\" in shader (\"%s\")\n", name);
@@ -236,7 +317,7 @@ static void parse_texmod(char const * name, rend::q3shader::stage & stg, char co
 		
 	} else if (!Q_stricmp( token, "stretch")) {
 		
-		stg.texmods.emplace_back(rend::q3shader::texmod::tctype::stretch);
+		stg.texmods.emplace_back(q3stage::texmod::tctype::stretch);
 		auto & tc = stg.texmods.back();
 		token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 			Com_Printf(S_COLOR_RED "ERROR: missing tcMod stretch parm \"genfunc\" in shader (\"%s\")\n", name);
@@ -266,7 +347,7 @@ static void parse_texmod(char const * name, rend::q3shader::stage & stg, char co
 		
 	} else if (!Q_stricmp( token, "transform")) {
 
-		stg.texmods.emplace_back(rend::q3shader::texmod::tctype::transform);
+		stg.texmods.emplace_back(q3stage::texmod::tctype::transform);
 		auto & tc = stg.texmods.back();
 		token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 			Com_Printf(S_COLOR_RED "ERROR: missing tcMod transform parm \"[0][0]\" in shader (\"%s\")\n", name);
@@ -301,7 +382,7 @@ static void parse_texmod(char const * name, rend::q3shader::stage & stg, char co
 		
 	} else if (!Q_stricmp( token, "rotate")) {
 
-		stg.texmods.emplace_back(rend::q3shader::texmod::tctype::rotate);
+		stg.texmods.emplace_back(q3stage::texmod::tctype::rotate);
 		auto & tc = stg.texmods.back();
 		token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 			Com_Printf(S_COLOR_RED "ERROR: missing tcMod rotate parm \"value\" in shader (\"%s\")\n", name);
@@ -344,7 +425,7 @@ static qboolean parse_vector ( const char **text, int count, float *v ) {
 	return qtrue;
 }
 
-static bool parse_stage(char const * name, rend::q3shader::stage & stg, char const * & p, bool mipmaps) {
+static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool mipmaps) {
 	
 	char const * token;
 	
@@ -390,19 +471,19 @@ static bool parse_stage(char const * name, rend::q3shader::stage & stg, char con
 			if (!Q_stricmp("const", token)) {
 				vec3_t color;
 				parse_vector(&p, 3, color);
-				stg.gen_rgb = rend::q3shader::stage::gen_type::constant;
+				stg.gen_rgb = q3stage::gen_type::constant;
 				stg.color[0] = color[0];
 				stg.color[1] = color[1];
 				stg.color[2] = color[2];
 			} else if (!Q_stricmp("identity", token)) {
-				stg.gen_rgb = rend::q3shader::stage::gen_type::constant;
+				stg.gen_rgb = q3stage::gen_type::constant;
 				stg.color[0] = 1;
 				stg.color[1] = 1;
 				stg.color[2] = 1;
 			} else if (!Q_stricmp("vertex", token)) {
-				stg.gen_rgb = rend::q3shader::stage::gen_type::vertex;
+				stg.gen_rgb = q3stage::gen_type::vertex;
 			} else if (!Q_stricmp("wave", token)) {
-				stg.gen_rgb = rend::q3shader::stage::gen_type::wave;
+				stg.gen_rgb = q3stage::gen_type::wave;
 				token = COM_ParseExt( &p, qfalse ); if (!token[0]) {
 					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"genfunc\" in shader (\"%s\")\n", name);
 					SkipRestOfLine(&p);
@@ -444,13 +525,13 @@ static bool parse_stage(char const * name, rend::q3shader::stage & stg, char con
 			token = COM_ParseExt(&p, qfalse);
 			if (!Q_stricmp("const", token)) {
 				token = COM_ParseExt(&p, qfalse);
-				stg.gen_alpha = rend::q3shader::stage::gen_type::constant;
+				stg.gen_alpha = q3stage::gen_type::constant;
 				stg.color[3] = strtof(token, nullptr);
 			} else if (!Q_stricmp("identity", token)) {
-				stg.gen_alpha = rend::q3shader::stage::gen_type::constant;
+				stg.gen_alpha = q3stage::gen_type::constant;
 				stg.color[3] = 1;
 			} else if (!Q_stricmp("vertex", token)) {
-				stg.gen_alpha = rend::q3shader::stage::gen_type::vertex;
+				stg.gen_alpha = q3stage::gen_type::vertex;
 			} else {
 				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid alphaGen (\"%s\").\n", name, token);
 				SkipRestOfLine(&p);
@@ -481,7 +562,7 @@ static bool parse_stage(char const * name, rend::q3shader::stage & stg, char con
 	return true;
 }
 
-static bool parse_shader(rend::q3shader & shad, char const * src, bool mipmaps) {
+static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 	char const * token, * p = src;
 	COM_BeginParseSession("shader");
 	
@@ -501,16 +582,16 @@ static bool parse_shader(rend::q3shader & shad, char const * src, bool mipmaps) 
 		} 
 		else if (token[0] == '}') break;
 		else if (token[0] == '{') {
-			rend::q3shader::stage stg;
+			q3stage stg;
 			if (!parse_stage(shad.name.c_str(), stg, p, mipmaps)) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") failed to parse.\n", shad.name.c_str());
 				return false;
 			}
-			if (stg.gen_alpha == rend::q3shader::stage::gen_type::none && stg.gen_rgb == rend::q3shader::stage::gen_type::vertex) {
-				stg.gen_alpha = rend::q3shader::stage::gen_type::vertex;
+			if (stg.gen_alpha == q3stage::gen_type::none && stg.gen_rgb == q3stage::gen_type::vertex) {
+				stg.gen_alpha = q3stage::gen_type::vertex;
 			}
-			else if (stg.gen_alpha == rend::q3shader::stage::gen_type::none && stg.gen_rgb == rend::q3shader::stage::gen_type::constant) {
-				stg.gen_alpha = rend::q3shader::stage::gen_type::constant;
+			else if (stg.gen_alpha == q3stage::gen_type::none && stg.gen_rgb == q3stage::gen_type::constant) {
+				stg.gen_alpha = q3stage::gen_type::constant;
 			}
 			shad.stages.push_back(stg);
 		} else if (!Q_stricmp(token, "nopicmip")) {

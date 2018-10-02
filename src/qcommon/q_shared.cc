@@ -692,21 +692,28 @@ varargs versions of all text functions.
 FIXME: make this buffer size safe someday
 ============
 */
-#define	MAX_VA_STRING	32000
-#define MAX_VA_BUFFERS 4
+
+#include <array>
+static std::array<std::array<char, MAX_VA_STRING>, MAX_VA_BUFFERS> va_string;
+static size_t va_index = 0;
 
 char * QDECL va( const char *format, ... )
 {
 	va_list		argptr;
-	static char	string[MAX_VA_BUFFERS][MAX_VA_STRING];	// in case va is called by nested functions
-	static int	index = 0;
+	
 	char		*buf;
 
 	va_start( argptr, format );
-	buf = (char *)&string[index++ & 3];
-	Q_vsnprintf( buf, sizeof(*string), format, argptr );
+	buf = va_next();
+	Q_vsnprintf( buf, MAX_VA_STRING, format, argptr );
 	va_end( argptr );
 
+	return buf;
+}
+
+char * QDECL va_next() {
+	char * buf = va_string[va_index++].data();
+	if (va_index >= MAX_VA_BUFFERS) va_index = 0;
 	return buf;
 }
 

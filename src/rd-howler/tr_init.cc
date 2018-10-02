@@ -7,10 +7,11 @@ glconfig_t glConfig;
 cvar_t * se_language;
 cvar_t * r_aspectCorrectFonts;
 
+std::unique_ptr<modelbank> mbank;
 std::unique_ptr<rend> r;
+std::shared_ptr<rframe> frame;
 
 rend::~rend() {
-	this->destruct_model();
 	this->destruct_shader();
 	this->destruct_texture();
 }
@@ -35,6 +36,13 @@ void rend::initialize() {
 	glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 	glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
 	
+	glViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	glScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
+	glEnable(GL_BLEND);
+	
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	
 	this->initialize_texture();
 	this->initialize_shader();
 	this->initialize_model();
@@ -42,11 +50,16 @@ void rend::initialize() {
 	initialized = true;
 }
 
+void rend::swap() {
+	ri.WIN_Present(&window);
+}
+
 void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
 	if ( destroyWindow ) {
 		ri.WIN_Shutdown();
 	}
 	r.reset();
+	mbank = std::make_unique<modelbank>();
 }
 
 void RE_BeginRegistration (glconfig_t *config) {
@@ -57,7 +70,11 @@ void RE_BeginRegistration (glconfig_t *config) {
 }
 
 static inline qhandle_t RE_RegisterModel (const char *name) {
-	return r->register_model(name);
+	return mbank->register_model(name, false);
+}
+
+static inline qhandle_t RE_RegisterServerModel(char const * name) {
+	return mbank->register_model(name, true);
 }
 
 qhandle_t RE_RegisterSkin (const char *name) {
@@ -125,15 +142,21 @@ void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, flo
 }
 
 void RE_RenderScene (const refdef_t *fd) {
-
+	
+	
 }
 
 void RE_SetColor (const float *rgba) {
-
+	rcmd & cmd = frame->d_2d.emplace_back(rcmd::mode_e::global_color);
+	if (rgba) cmd.global_color = {rgba[0], rgba[1], rgba[2], rgba[3]};
+	else cmd.global_color = {1, 1, 1, 1};
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
-
+	rcmd & cmd = frame->d_2d.emplace_back(rcmd::mode_e::stretch_pic);
+	cmd.stretch_pic = {
+		x, y, w, h, s1 ,t1, s2, t2, hShader
+	};
 }
 
 void RE_RotatePic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, float a1, qhandle_t hShader) {
@@ -152,11 +175,14 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 }
 
 void RE_BeginFrame (stereoFrame_t stereoFrame) {
-
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	frame = std::make_unique<rframe>();
+	RE_SetColor(nullptr);
 }
 
 void RE_EndFrame (int *frontEndMsec, int *backEndMsec) {
-
+	r->draw(frame);
+	r->swap();
 }
 
 int R_MarkFragments (int numPoints, const vec3_t *points, const vec3_t projection, int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer) {
@@ -248,7 +274,7 @@ qboolean RE_RegisterModels_LevelLoadEnd (qboolean bDeleteEverythingNotUsedThisLe
 }
 
 model_t * R_GetModelByHandle (qhandle_t index) {
-	return r->get_model(index);
+	return mbank->get_model(index);
 }
 
 skin_t * R_GetSkinByHandle (qhandle_t hSkin) {
@@ -256,7 +282,7 @@ skin_t * R_GetSkinByHandle (qhandle_t hSkin) {
 }
 
 qboolean ShaderHashTableExists (void) {
-	return qfalse;
+	return r != nullptr;
 }
 
 void RE_TakeVideoFrame (int h, int w, byte* captureBuffer, byte *encodeBuffer, qboolean motionJpeg) {
@@ -301,7 +327,7 @@ extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *r
 	re.Shutdown 							= RE_Shutdown;
 	re.BeginRegistration					= RE_BeginRegistration;
 	re.RegisterModel						= RE_RegisterModel;
-	re.RegisterServerModel					= RE_RegisterModel;
+	re.RegisterServerModel					= RE_RegisterServerModel;
 	re.RegisterSkin							= RE_RegisterSkin;
 	re.RegisterServerSkin					= RE_RegisterServerSkin;
 	re.RegisterShader						= RE_RegisterShader;
@@ -383,5 +409,7 @@ extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *r
 
 	re.ext.Font_StrLenPixels				= RE_Font_StrLenPixelsNew;
 
+	mbank = std::make_unique<modelbank>();
+	
 	return &re;
 }
