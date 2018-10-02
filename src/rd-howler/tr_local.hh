@@ -53,8 +53,8 @@ struct q3stage;
 struct q3texture;
 
 struct rcmd {
-		enum struct mode_e {
-		global_color,
+	enum struct mode_e {
+		color_2d,
 		stretch_pic
 	} mode;
 	
@@ -68,11 +68,12 @@ struct rcmd {
 			float x, y, w, h, s1, t1, s2, t2;
 			qhandle_t hShader;
 		} stretch_pic;
-		rv4_t global_color;
+		rv4_t color_2d;
 	};
 };
 
 struct rframe {
+	float shader_time = 0;
 	std::vector<rcmd> d_2d;
 };
 
@@ -102,6 +103,7 @@ struct rend final {
 	
 	qhandle_t register_shader(char const * name, bool mipmaps = true);
 	GLuint register_texture(char const * name, bool mipmaps = true);
+	inline void set_color_2d(rv4_t const & v) { color_2d = v; }
 	
 	void draw(std::shared_ptr<rframe>);
 	
@@ -131,14 +133,16 @@ private:
 // SHADER
 	void initialize_shader();
 	void destruct_shader() noexcept;
-	void configure_stage(q3stage const &, rm4_t const & vm, rm3_t const & uvm);
+	void configure_stage(q3stage const &, rm4_t const & vm, rm3_t const & uvm, float time);
+	
+	rv4_t color_2d;
 	
 	GLuint q3program = 0;
 	GLuint q3sampler = 0;
 	enum struct q3uniform : size_t {
 		vertex_matrix,
 		uv_matrix,
-		global_color,
+		q3color,
 		max
 	};
 	GLuint q3uniforms[static_cast<size_t>(q3uniform::max)];

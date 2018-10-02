@@ -12,6 +12,7 @@ std::unique_ptr<rend> r;
 std::shared_ptr<rframe> frame;
 
 rend::~rend() {
+	R_ShutdownFonts();
 	this->destruct_shader();
 	this->destruct_texture();
 }
@@ -20,32 +21,41 @@ void rend::initialize() {
 	if (initialized) return;
 	
 	windowDesc_t windowDesc = { GRAPHICS_API_OPENGL };
-	memset(&glConfig, 0, sizeof(glConfig));
 
 	window = ri.WIN_Init(&windowDesc, &glConfig);
 	gladLoadGLLoader(ri.GL_GetProcAddress);
-
-	Com_Printf( "GL_RENDERER: %s\n", (char *)glGetString (GL_RENDERER) );
 
 	// get our config strings
 	glConfig.vendor_string = (const char *)glGetString (GL_VENDOR);
 	glConfig.renderer_string = (const char *)glGetString (GL_RENDERER);
 	glConfig.version_string = (const char *)glGetString (GL_VERSION);
 	glConfig.extensions_string = (const char *)glGetString (GL_EXTENSIONS);
+	glConfig.isFullscreen = qfalse;
+	glConfig.stereoEnabled = qfalse;
 
 	glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 	glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
 	
+	if (GLAD_GL_EXT_texture_filter_anisotropic)
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.maxTextureFilterAnisotropy);
+	else glConfig.maxTextureFilterAnisotropy = 0;
+	
+	Com_Printf("Vendor: %s\nRenderer: %s\nVersion: %s\n", glConfig.vendor_string, glConfig.renderer_string, glConfig.version_string);
+	
 	glViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
 	glScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	glEnable(GL_BLEND);
 	
-	glClearColor(0, 0, 0, 0);
+	glEnable(GL_BLEND);
+	glEnable(GL_SCISSOR_TEST);
+	
+	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	
 	this->initialize_texture();
 	this->initialize_shader();
 	this->initialize_model();
+	
+	R_InitFonts();
 	
 	initialized = true;
 }
@@ -65,8 +75,10 @@ void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
 void RE_BeginRegistration (glconfig_t *config) {
 	se_language = ri.Cvar_Get("se_language", "english", CVAR_ARCHIVE | CVAR_NORESTART, "");
 	r_aspectCorrectFonts = ri.Cvar_Get("r_aspectCorrectFonts", "0", CVAR_ARCHIVE, "");
+	glConfig = *config;
 	r = std::make_unique<rend>();
 	r->initialize();
+	*config = glConfig;
 }
 
 static inline qhandle_t RE_RegisterModel (const char *name) {
@@ -114,42 +126,49 @@ void RE_EndRegistration (void) {
 // a scene is built up by calls to R_ClearScene and the various R_Add functions.
 // Nothing is drawn until R_RenderScene is called.
 void RE_ClearScene (void) {
-
+	
 }
+
 void RE_ClearDecals (void) {
 
 }
+
 void RE_AddRefEntityToScene (const refEntity_t *re) {
 
 }
+
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
 
 }
+
 void RE_AddPolyToScene (qhandle_t hShader , int numVerts, const polyVert_t *verts, int num) {
 
 }
+
 void RE_AddDecalToScene (qhandle_t shader, const vec3_t origin, const vec3_t dir, float orientation, float r, float g, float b, float a, qboolean alphaFade, float radius, qboolean temporary) {
 
 }
+
 int R_LightForPoint (vec3_t point, vec3_t ambientLight, vec3_t directedLight, vec3_t lightDir) {
 	return 0;
 }
+
 void RE_AddLightToScene (const vec3_t org, float intensity, float r, float g, float b) {
 
 }
+
 void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, float g, float b) {
 
 }
 
 void RE_RenderScene (const refdef_t *fd) {
 	
-	
 }
 
 void RE_SetColor (const float *rgba) {
-	rcmd & cmd = frame->d_2d.emplace_back(rcmd::mode_e::global_color);
-	if (rgba) cmd.global_color = {rgba[0], rgba[1], rgba[2], rgba[3]};
-	else cmd.global_color = {1, 1, 1, 1};
+	rcmd & cmd = frame->d_2d.emplace_back(rcmd::mode_e::color_2d);
+	if (rgba) cmd.color_2d = {rgba[0], rgba[1], rgba[2], rgba[3]};
+	else cmd.color_2d = {1, 1, 1, 1};
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
@@ -177,6 +196,7 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 void RE_BeginFrame (stereoFrame_t stereoFrame) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	frame = std::make_unique<rframe>();
+	frame->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
 	RE_SetColor(nullptr);
 }
 

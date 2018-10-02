@@ -5,8 +5,8 @@ static constexpr rm4_t projection_2d = rm4_t::ortho(0, 480, 0, 640, 0, 1);
 void rend::draw(std::shared_ptr<rframe> frame) {
 	for (rcmd & cmd : frame->d_2d) {
 		switch (cmd.mode) {
-			case rcmd::mode_e::global_color: {
-				glUniform4fv(q3u(q3uniform::global_color), 1, cmd.global_color);
+			case rcmd::mode_e::color_2d: {
+				r->set_color_2d(cmd.color_2d);
 			} break;
 			case rcmd::mode_e::stretch_pic: {
 				if (cmd.stretch_pic.w == 0) {
@@ -21,7 +21,7 @@ void rend::draw(std::shared_ptr<rframe> frame) {
 				
 				unitquad.bind();
 				for (q3stage const & stage : shaders[cmd.stretch_pic.hShader].stages) {
-					configure_stage(stage, m * projection_2d, uv);
+					configure_stage(stage, m * projection_2d, uv, frame->shader_time);
 					unitquad.draw();
 				}
 			} break;

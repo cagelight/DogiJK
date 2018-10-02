@@ -21,10 +21,10 @@ R"GLSL(
 	
 in vec2 f_uv;
 out vec4 color;
-uniform vec4 global_color;
+uniform vec4 q3color;
 layout(binding = 0) uniform sampler2D tex;
 void main() {
-	color = texture(tex, f_uv) * global_color;
+	color = texture(tex, f_uv) * q3color;
 }
 )GLSL";
 
@@ -69,7 +69,7 @@ void rend::initialize_shader() {
 	
 	q3u(q3uniform::vertex_matrix) = glGetUniformLocation(q3program, "vertex_matrix");
 	q3u(q3uniform::uv_matrix) = glGetUniformLocation(q3program, "uv_matrix");
-	q3u(q3uniform::global_color) = glGetUniformLocation(q3program, "global_color");
+	q3u(q3uniform::q3color) = glGetUniformLocation(q3program, "q3color");
 	
 	glCreateSamplers(1, &q3sampler);
 	glBindSampler(0, q3sampler);
@@ -196,11 +196,83 @@ qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 	return handle;
 }
 
-void rend::configure_stage(q3stage const & stage, rm4_t const & vm, rm3_t const & uvm) {
+static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
+	switch (func) {
+		default: 
+			break;
+		case q3stage::gen_func::sine:
+			return base + sin((in + phase) * frequency * b::pi<float> * 2) * amplitude;
+	}
+	return 0;
+}
+
+void rend::configure_stage(q3stage const & stage, rm4_t const & vm, rm3_t const & uvm, float time) {
 	glBindTextureUnit(0, stage.diffuse);
 	glBlendFunc(stage.blend_src, stage.blend_dst);
+	
+	rv4_t q3color {1, 1, 1, 1};
+	switch (stage.gen_rgb) {
+		case q3stage::gen_type::vertex:
+		case q3stage::gen_type::none:
+			q3color = color_2d;
+			break;
+		case q3stage::gen_type::constant:
+			q3color = stage.color;
+			break;
+		case q3stage::gen_type::wave:
+			float mult = gen_func_do(stage.wave.rgb.func, time, stage.wave.rgb.base, stage.wave.rgb.amplitude, stage.wave.rgb.phase, stage.wave.rgb.frequency);
+			q3color = stage.color * mult;
+			break;
+	}
+	
+	switch (stage.gen_alpha) {
+		case q3stage::gen_type::vertex:
+		case q3stage::gen_type::none:
+			q3color[3] = color_2d[3];
+			break;
+		case q3stage::gen_type::constant:
+			q3color[3] = stage.color[3];
+			break;
+		case q3stage::gen_type::wave:
+			float mult = gen_func_do(stage.wave.rgb.func, time, stage.wave.rgb.base, stage.wave.rgb.amplitude, stage.wave.rgb.phase, stage.wave.rgb.frequency);
+			q3color[3] = stage.color[3] * mult;
+			break;
+	}
+
+	rm3_t uvm2 = uvm;
+	for (q3stage::texmod const & t : stage.texmods) {
+		switch (t.type) {
+			case q3stage::texmod::tctype::scale:
+				uvm2 *= rm3_t::scale(t.scale_data.scale[0], t.scale_data.scale[1]);
+				break;
+			case q3stage::texmod::tctype::scroll:
+				uvm2 *= rm3_t::translate(t.scroll_data.scroll[0] * time, t.scroll_data.scroll[1] * time);
+				break;
+			case q3stage::texmod::tctype::transform:
+				uvm2 *= t.transform_data.trans;
+				break;
+			case q3stage::texmod::tctype::rotate:
+				uvm2 *= rm3_t::translate(-0.5, -0.5);
+				uvm2 *= rm3_t::rotate(t.rotate_data.rot * time);
+				uvm2 *= rm3_t::translate(0.5, 0.5);
+				break;
+			default:
+				ri.Printf(PRINT_WARNING, "WARNING: Unknown texmod type (%i) in shader stage!\n", static_cast<int>(t.type));
+				break;
+		}
+	}
+	
+	glUniform4fv(q3u(q3uniform::q3color), 1, q3color);
 	glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, vm);
-	glUniformMatrix3fv(q3u(q3uniform::uv_matrix), 1, GL_FALSE, uvm);
+	glUniformMatrix3fv(q3u(q3uniform::uv_matrix), 1, GL_FALSE, uvm2);
+	
+	if (stage.clamp) {
+		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	} else {
+		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	}
 }
 
 static std::unordered_map<std::string, GLenum> blendfunc_map = {
@@ -244,16 +316,6 @@ static q3stage::gen_func genfunc_str2enum(char const * str) {
 		return q3stage::gen_func::random;
 	}
 	else return i->second;
-}
-
-static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
-	switch (func) {
-		default: 
-			break;
-		case q3stage::gen_func::sine:
-			return base + sin((in + phase) * frequency * b::pi<float> * 2) * amplitude;
-	}
-	return 0;
 }
 
 static void parse_texmod(char const * name, q3stage & stg, char const * p) {
@@ -586,12 +648,6 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 			if (!parse_stage(shad.name.c_str(), stg, p, mipmaps)) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") failed to parse.\n", shad.name.c_str());
 				return false;
-			}
-			if (stg.gen_alpha == q3stage::gen_type::none && stg.gen_rgb == q3stage::gen_type::vertex) {
-				stg.gen_alpha = q3stage::gen_type::vertex;
-			}
-			else if (stg.gen_alpha == q3stage::gen_type::none && stg.gen_rgb == q3stage::gen_type::constant) {
-				stg.gen_alpha = q3stage::gen_type::constant;
 			}
 			shad.stages.push_back(stg);
 		} else if (!Q_stricmp(token, "nopicmip")) {
