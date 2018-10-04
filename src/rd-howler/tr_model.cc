@@ -23,6 +23,7 @@ static GLfloat quad_uvs [] = {
 
 static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, bool server );
 static qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name );
+static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name );
 
 static constexpr byte const FakeGLAFile[] = {
 	0x32, 0x4C, 0x47, 0x41, 0x06, 0x00, 0x00, 0x00, 0x2A, 0x64, 0x65, 0x66, 0x61, 0x75, 0x6C, 0x74,
@@ -123,6 +124,7 @@ qhandle_t modelbank::register_model(char const * name, bool server) {
 			break;
 		case MD3_IDENT:
 			Com_Printf("MD3 Model: %s\n", name);
+			R_LoadMD3(rmod.ptr, 0, rmod.buffer.data(), name);
 			rmod.ptr->type = MOD_MESH;
 			break;
 		default:
@@ -154,6 +156,7 @@ void rend::initialize_model() {
 	glEnableVertexArrayAttrib(unitquad.vao, 1);
 	glVertexArrayAttribFormat(unitquad.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
 	unitquad.size = 4;
+	unitquad.mode = GL_TRIANGLE_STRIP;
 	
 	glCreateVertexArrays(1, &fullquad.vao);
 	glCreateBuffers(2, fullquad.vbo);
@@ -168,20 +171,112 @@ void rend::initialize_model() {
 	glEnableVertexArrayAttrib(fullquad.vao, 1);
 	glVertexArrayAttribFormat(fullquad.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
 	fullquad.size = 4;
+	unitquad.mode = GL_TRIANGLE_STRIP;
 }
+
+struct mdxmTriangle_s a;
 
 void rend::setup_model(qhandle_t h) {
-	// TODO
+	model_t * mod = mbank->get_model(h);
+	switch (mod->type) {
+		default:
+			return;
+		case MOD_MDXM: {
+			mdxmSurfHierarchy_t * surfH = (mdxmSurfHierarchy_t *)( (byte *)mod->mdxm + mod->mdxm->ofsSurfHierarchy);
+			mdxmLOD_t * lod = (mdxmLOD_t *) ( (byte *)mod->mdxm + mod->mdxm->ofsLODs );
+			mdxmSurface_t * surf =  (mdxmSurface_t *) ( (byte *)lod + sizeof (mdxmLOD_t) + (mod->mdxm->numSurfaces * sizeof(mdxmLODSurfOffset_t)) );
+			
+			rendmodel & rmod = bankmodels[h];
+			for (int si = 0; si < mod->mdxm->numSurfaces; si++) {
+				std::vector<float> vert_data;
+				std::vector<float> uv_data;
+				mdxmVertex_t * verts = (mdxmVertex_t *) ((byte *)surf + surf->ofsVerts);
+				mdxmTriangle_t * triangles = (mdxmTriangle_t *) ((byte *)surf + surf->ofsTriangles);
+				
+				for (size_t i = 0; i < surf->numTriangles; i++) {
+					for (size_t j = 0; j < 3; j++) {
+						auto const & v = verts[triangles[i].indexes[j]];
+						vert_data.push_back(v.vertCoords[1]);
+						vert_data.push_back(-v.vertCoords[2]);
+						vert_data.push_back(v.vertCoords[0]);
+					}
+				}
+				
+				rendmesh & mesh = rmod.meshes.emplace_back();
+				mesh.size = vert_data.size() / 3;
+				mesh.shader = register_shader(surfH->shader);
+				glCreateVertexArrays(1, &mesh.vao);
+				glCreateBuffers(1, mesh.vbo);
+				glNamedBufferData(mesh.vbo[0], vert_data.size() * 4, vert_data.data(), GL_STATIC_DRAW);
+				glVertexArrayAttribBinding(mesh.vao, 0, 0);
+				glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
+				glEnableVertexArrayAttrib(mesh.vao, 0);
+				glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+				
+				surfH = (mdxmSurfHierarchy_t *)( (byte *)surfH + (size_t)( &((mdxmSurfHierarchy_t *)0)->childIndexes[ surfH->numChildren ] ));
+				surf = (mdxmSurface_t *)( (byte *)surf + surf->ofsEnd );
+			}
+		} break;
+		case MOD_MESH: {
+			rendmodel & rmod = bankmodels[h];
+			md3Header_t * header = mod->md3[0];
+			md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
+			for (int i = 0 ; i < header->numSurfaces ; i++) {
+				
+				std::vector<float> vert_data;
+				std::vector<float> uv_data;
+				rendmesh & mesh = rmod.meshes.emplace_back();
+				
+				md3XyzNormal_t * verts = (md3XyzNormal_t *) ((byte *)surf + surf->ofsXyzNormals);
+				md3St_t * uvs = (md3St_t *) ((byte *)surf + surf->ofsSt);
+				md3Triangle_t * triangles = (md3Triangle_t *) ((byte *)surf + surf->ofsTriangles);
+				
+				for (size_t i = 0; i < surf->numTriangles; i++) {
+					for (size_t j = 0; j < 3; j++) {
+						auto const & v = verts[triangles[i].indexes[j]];
+						vert_data.push_back(v.xyz[1] / 32);
+						vert_data.push_back(-v.xyz[2] / 32);
+						vert_data.push_back(v.xyz[0] / 32);
+						auto const & u = uvs[triangles[i].indexes[j]];
+						uv_data.push_back(u.st[0]);
+						uv_data.push_back(u.st[1]);
+					}
+				}
+				
+				mesh.size = vert_data.size() / 3;
+				glCreateVertexArrays(1, &mesh.vao);
+				glCreateBuffers(2, mesh.vbo);
+				glNamedBufferData(mesh.vbo[0], vert_data.size() * 4, vert_data.data(), GL_STATIC_DRAW);
+				glVertexArrayAttribBinding(mesh.vao, 0, 0);
+				glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
+				glEnableVertexArrayAttrib(mesh.vao, 0);
+				glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+				glNamedBufferData(mesh.vbo[1], uv_data.size() * 4, uv_data.data(), GL_STATIC_DRAW);
+				glVertexArrayAttribBinding(mesh.vao, 1, 1);
+				glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
+				glEnableVertexArrayAttrib(mesh.vao, 1);
+				glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+				
+				md3Shader_t * shader = (md3Shader_t *) ( (byte *)surf + surf->ofsShaders );
+				mesh.shader = register_shader(shader->name);
+				
+				surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );
+			}
+		} break;
+	}
 }
 
-rend::rendmodel::rendmodel(rendmodel && other) {
+rend::rendmesh::rendmesh(rendmesh && other) {
 	vao = other.vao;
 	other.vao = 0;
 	memcpy(vbo, other.vbo, sizeof(vbo));
 	memset(other.vbo, 0, sizeof(vbo));
+	shader = other.shader;
+	size = other.size;
+	mode = other.mode;
 }
 
-rend::rendmodel::~rendmodel() {
+rend::rendmesh::~rendmesh() {
 	if (vbo[0]) glDeleteBuffers(3, vbo);
 	if (vao) glDeleteVertexArrays(1, &vao);
 }
@@ -416,5 +511,82 @@ static qboolean R_LoadMDXA( model_t *mod, void *buffer, const char *mod_name ) {
 		return qfalse;
 	}
 	
+	return qtrue;
+}
+
+static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_name ) {
+	int					i, j;
+	md3Header_t			*pinmodel;
+	md3Surface_t		*surf;
+	int					version;
+	int					size;
+
+	pinmodel= (md3Header_t *)buffer;
+	version = pinmodel->version;
+	size	= pinmodel->ofsEnd;
+
+	if (version != MD3_VERSION) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "R_LoadMD3: %s has wrong version (%i should be %i)\n",
+				 mod_name, version, MD3_VERSION);
+		return qfalse;
+	}
+
+	mod->type      = MOD_MESH;
+	mod->dataSize += size;
+	
+	mod->md3[lod] = (md3Header_t *)pinmodel;
+
+	if ( mod->md3[lod]->numFrames < 1 ) {
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "R_LoadMD3: %s has no frames\n", mod_name );
+		return qfalse;
+	}
+
+	// swap all the surfaces
+	surf = (md3Surface_t *) ( (byte *)mod->md3[lod] + mod->md3[lod]->ofsSurfaces );
+	for ( i = 0 ; i < mod->md3[lod]->numSurfaces ; i++) {
+
+		if ( surf->numVerts >= SHADER_MAX_VERTEXES ) {
+			Com_Error (ERR_DROP, "R_LoadMD3: %s has more than %i verts on %s (%i)",
+				mod_name, SHADER_MAX_VERTEXES - 1, surf->name[0] ? surf->name : "a surface", surf->numVerts );
+		}
+		if ( surf->numTriangles*3 >= SHADER_MAX_INDEXES ) {
+			Com_Error (ERR_DROP, "R_LoadMD3: %s has more than %i triangles on %s (%i)",
+				mod_name, ( SHADER_MAX_INDEXES / 3 ) - 1, surf->name[0] ? surf->name : "a surface", surf->numTriangles );
+		}
+
+		// change to surface identifier
+		surf->ident = SF_MD3;
+
+		// lowercase the surface name so skin compares are faster
+		Q_strlwr( surf->name );
+
+		// strip off a trailing _1 or _2
+		// this is a crutch for q3data being a mess
+		j = strlen( surf->name );
+		if ( j > 2 && surf->name[j-2] == '_' ) {
+			surf->name[j-2] = 0;
+		}
+        // register the shaders
+		md3Shader_t		*shader;
+        shader = (md3Shader_t *) ( (byte *)surf + surf->ofsShaders );
+        for ( j = 0 ; j < surf->numShaders ; j++, shader++ ) {
+			shader->shaderIndex = r->register_shader(shader->name, true);
+			/*
+            shader_t	*sh;
+
+            sh = R_FindShader( shader->name, lightmapsNone, stylesDefault, qtrue );
+			if ( sh->defaultShader ) {
+				shader->shaderIndex = 0;
+			} else {
+				shader->shaderIndex = sh->index;
+			}
+			RE_RegisterModels_StoreShaderRequest(mod_name, &shader->name[0], &shader->shaderIndex);
+			*/
+        }
+
+		// find the next surface
+		surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );
+	}
+
 	return qtrue;
 }

@@ -182,6 +182,7 @@ qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 		shad.stages[0].blend_src = GL_SRC_ALPHA;
 		shad.stages[0].blend_dst = GL_ONE_MINUS_SRC_ALPHA;
 		shader_lookup[name] = handle;
+		Com_Printf("Image Shader: %s\n", name);
 		return handle;
 	}
 	
@@ -193,6 +194,7 @@ qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 	}
 	
 	shader_lookup[name] = handle;
+	Com_Printf("Q3 Shader: %s\n", name);
 	return handle;
 }
 
@@ -201,12 +203,50 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 		default: 
 			break;
 		case q3stage::gen_func::sine:
-			return base + sin((in + phase) * frequency * b::pi<float> * 2) * amplitude;
+			return base + sin((in + phase) * frequency * math::pi<float> * 2) * amplitude;
 	}
 	return 0;
 }
 
-void rend::configure_stage(q3stage const & stage, rm4_t const & vm, rm3_t const & uvm, float time) {
+void rend::shader_set_vp(rm4_t const & vp) {
+	this->vp = vp;
+}
+
+static float	s_flipMatrix[16] = {
+	// convert from our coordinate system (looking down X)
+	// to OpenGL's coordinate system (looking down -Z)
+	0, 0, -1, 0,
+	-1, 0, 0, 0,
+	0, 1, 0, 0,
+	0, 0, 0, 1
+};
+
+static void myGlMultMatrix( const float *a, const float *b, float *out ) {
+	int		i, j;
+
+	for ( i = 0 ; i < 4 ; i++ ) {
+		for ( j = 0 ; j < 4 ; j++ ) {
+			out[ i * 4 + j ] =
+				a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
+				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
+				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
+				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
+		}
+	}
+}
+
+void rend::shader_set_m(rm4_t const & m, bool flip) {
+	if (false) {
+		rm4_t mvp = m * vp;
+		rm4_t adj;
+		myGlMultMatrix(mvp, s_flipMatrix, &adj.data[0][0]);
+		glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, adj);
+	} else {
+		glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, m * vp);
+	}
+}
+
+void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float time) {
 	glBindTextureUnit(0, stage.diffuse);
 	glBlendFunc(stage.blend_src, stage.blend_dst);
 	
@@ -263,7 +303,6 @@ void rend::configure_stage(q3stage const & stage, rm4_t const & vm, rm3_t const 
 	}
 	
 	glUniform4fv(q3u(q3uniform::q3color), 1, q3color);
-	glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, vm);
 	glUniformMatrix3fv(q3u(q3uniform::uv_matrix), 1, GL_FALSE, uvm2);
 	
 	if (stage.clamp) {
@@ -451,7 +490,7 @@ static void parse_texmod(char const * name, q3stage & stg, char const * p) {
 			return;
 		}
 		tc.rotate_data.rot = strtof(token, nullptr);
-		tc.rotate_data.rot = b::deg2rad<float>(tc.rotate_data.rot);
+		tc.rotate_data.rot = math::deg2rad<float>(tc.rotate_data.rot);
 	} else {
 		Com_Printf(S_COLOR_RED "ERROR: unknown tcMod parameter \"%s\" in shader (\"%s\")\n", token, name);
 		return;

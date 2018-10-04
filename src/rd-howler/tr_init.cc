@@ -9,10 +9,13 @@ cvar_t * r_aspectCorrectFonts;
 
 std::unique_ptr<modelbank> mbank;
 std::unique_ptr<rend> r;
-std::shared_ptr<rframe> frame;
+
+std::shared_ptr<frame_t> frame2d;
+std::shared_ptr<frame_t> frame3d;
 
 rend::~rend() {
 	R_ShutdownFonts();
+	this->destruct_world();
 	this->destruct_shader();
 	this->destruct_texture();
 }
@@ -54,6 +57,7 @@ void rend::initialize() {
 	this->initialize_texture();
 	this->initialize_shader();
 	this->initialize_model();
+	this->initialize_world();
 	
 	R_InitFonts();
 	
@@ -110,7 +114,7 @@ const char * RE_ShaderNameFromIndex (int index) {
 }
 
 void RE_LoadWorldMap (const char *name) {
-
+	r->load_world(name);
 }
 
 void RE_SetWorldVisData (const byte *vis) {
@@ -126,7 +130,9 @@ void RE_EndRegistration (void) {
 // a scene is built up by calls to R_ClearScene and the various R_Add functions.
 // Nothing is drawn until R_RenderScene is called.
 void RE_ClearScene (void) {
-	
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	frame3d = std::make_shared<frame_t>();
+	RE_SetColor(nullptr);
 }
 
 void RE_ClearDecals (void) {
@@ -134,7 +140,9 @@ void RE_ClearDecals (void) {
 }
 
 void RE_AddRefEntityToScene (const refEntity_t *re) {
-
+	if (!re || re->reType == RT_ENT_CHAIN) return;
+	rcmd & cmd = frame3d->cmds.emplace_back(rcmd::mode_e::refent);
+	cmd.refent = *re;
 }
 
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
@@ -161,18 +169,71 @@ void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, flo
 
 }
 
+static float	s_flipMatrix[16] = {
+	// convert from our coordinate system (looking down X)
+	// to OpenGL's coordinate system (looking down -Z)
+	0, 0, -1, 0,
+	-1, 0, 0, 0,
+	0, 1, 0, 0,
+	0, 0, 0, 1
+};
+
+static void myGlMultMatrix( const float *a, const float *b, float *out ) {
+	int		i, j;
+
+	for ( i = 0 ; i < 4 ; i++ ) {
+		for ( j = 0 ; j < 4 ; j++ ) {
+			out[ i * 4 + j ] =
+				a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
+				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
+				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
+				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
+		}
+	}
+}
+
 void RE_RenderScene (const refdef_t *fd) {
 	
+	rm4_t p = rm4_t::perspective(math::deg2rad<float>(fd->fov_y), fd->width, fd->height, 0, 40000);
+
+	rm4_t v = rm4_t::translate(-fd->vieworg[1], fd->vieworg[2], -fd->vieworg[0]);
+	
+	rq_t roq;
+	roq *= rq_t { {1, 0, 0}, math::deg2rad<float>(fd->viewangles[PITCH]) };
+	roq *= rq_t { {0, 1, 0}, math::deg2rad<float>(-fd->viewangles[YAW]) };
+	roq *= rq_t { {0, 0, 1}, math::deg2rad<float>(fd->viewangles[ROLL]) + math::pi<float> };
+	
+	v *= rm4_t {roq};
+	
+	//v *= rm4_t::euler({math::deg2rad<float>(-fd->viewangles[YAW]), -math::deg2rad<float>(fd->viewangles[ROLL]), math::deg2rad<float>(-fd->viewangles[PITCH])});
+	
+	/*
+	rm4_t v {};
+	 v[0][0] = fd->viewaxis[0][0];
+	 v[0][1] = fd->viewaxis[0][1];
+	 v[0][2] = fd->viewaxis[0][2];
+	 v[1][0] = fd->viewaxis[1][0];
+	 v[1][1] = fd->viewaxis[1][1];
+	 v[1][2] = fd->viewaxis[1][2];
+	 v[2][0] = fd->viewaxis[2][0];
+	 v[2][1] = fd->viewaxis[2][1];
+	 v[2][2] = fd->viewaxis[2][2];
+	 v = rm4_t::translate(-fd->vieworg[0], -fd->vieworg[1], -fd->vieworg[2]) * v;
+	 */
+	
+	frame3d->vp = v * p;
+	frame3d->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
+	r->draw(frame3d, true);
 }
 
 void RE_SetColor (const float *rgba) {
-	rcmd & cmd = frame->d_2d.emplace_back(rcmd::mode_e::color_2d);
+	rcmd & cmd = frame2d->cmds.emplace_back(rcmd::mode_e::color_2d);
 	if (rgba) cmd.color_2d = {rgba[0], rgba[1], rgba[2], rgba[3]};
 	else cmd.color_2d = {1, 1, 1, 1};
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
-	rcmd & cmd = frame->d_2d.emplace_back(rcmd::mode_e::stretch_pic);
+	rcmd & cmd = frame2d->cmds.emplace_back(rcmd::mode_e::stretch_pic);
 	cmd.stretch_pic = {
 		x, y, w, h, s1 ,t1, s2, t2, hShader
 	};
@@ -193,15 +254,17 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 
 }
 
+static constexpr rm4_t projection_2d = rm4_t::ortho(0, 480, 0, 640, 0, 1);
 void RE_BeginFrame (stereoFrame_t stereoFrame) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	frame = std::make_unique<rframe>();
-	frame->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
+	frame2d = std::make_shared<frame_t>();
+	frame2d->vp = projection_2d;
 	RE_SetColor(nullptr);
 }
 
 void RE_EndFrame (int *frontEndMsec, int *backEndMsec) {
-	r->draw(frame);
+	frame2d->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
+	r->draw(frame2d, false);
 	r->swap();
 }
 
@@ -213,8 +276,33 @@ int R_LerpTag (orientation_t *tag, qhandle_t model, int startFrame, int endFrame
 	return 0;
 }
 
-void R_ModelBounds (qhandle_t model, vec3_t mins, vec3_t maxs) {
+model_t * R_GetModelByHandle (qhandle_t index);
+void R_ModelBounds (qhandle_t handle, vec3_t mins, vec3_t maxs) {
+	model_t		*model;
+	md3Header_t	*header;
+	md3Frame_t	*frame;
 
+	model = R_GetModelByHandle( handle );
+
+	if ( model->bmodel ) {
+		// TODO
+		//VectorCopy( model->bmodel->bounds[0], mins );
+		//VectorCopy( model->bmodel->bounds[1], maxs );
+		return;
+	}
+
+	if ( !model->md3[0] ) {
+		VectorClear( mins );
+		VectorClear( maxs );
+		return;
+	}
+
+	header = model->md3[0];
+
+	frame = (md3Frame_t *)( (byte *)header + header->ofsFrames );
+
+	VectorCopy( frame->bounds[0], mins );
+	VectorCopy( frame->bounds[1], maxs );
 }
 
 void R_RemapShader (const char *oldShader, const char *newShader, const char *offsetTime) {
@@ -222,7 +310,9 @@ void R_RemapShader (const char *oldShader, const char *newShader, const char *of
 }
 
 qboolean R_GetEntityToken (char *buffer, int size) {
-	return qfalse;
+	if (!r) return false;
+	Com_Printf("R_GetEntityToken: %i\n", size);
+	return r->get_entity_token(buffer, size);
 }
 
 qboolean R_inPVS (const vec3_t p1, const vec3_t p2, byte *mask) {
@@ -250,7 +340,7 @@ void SetRefractionProperties (float distortionAlpha, float distortionStretch, qb
 }
 
 float GetDistanceCull (void) {
-	return 0;
+	return 120000;
 }
 
 void GetRealRes (int *w, int *h) {

@@ -4,14 +4,14 @@
 #include "rd-common/tr_public.hh"
 #include "rd-common/tr_types.hh"
 
-#include <asterid/brassica.hh>
+#include "hmath.hh"
 
-namespace b = asterid::brassica;
-typedef b::vec2_t<float> rv2_t;
-typedef b::vec3_t<float> rv3_t;
-typedef b::vec4_t<float> rv4_t;
-typedef b::mat3_t<float> rm3_t;
-typedef b::mat4_t<float> rm4_t;
+typedef math::vec2_t<float> rv2_t;
+typedef math::vec3_t<float> rv3_t;
+typedef math::vec4_t<float> rv4_t;
+typedef math::mat3_t<float> rm3_t;
+typedef math::mat4_t<float> rm4_t;
+typedef math::quaternion_t<float> rq_t;
 
 extern refimport_t ri;
 
@@ -55,7 +55,8 @@ struct q3texture;
 struct rcmd {
 	enum struct mode_e {
 		color_2d,
-		stretch_pic
+		stretch_pic,
+		refent
 	} mode;
 	
 	rcmd() = delete;
@@ -69,12 +70,14 @@ struct rcmd {
 			qhandle_t hShader;
 		} stretch_pic;
 		rv4_t color_2d;
+		refEntity_t refent;
 	};
 };
 
-struct rframe {
+struct frame_t {
+	rm4_t vp;
 	float shader_time = 0;
-	std::vector<rcmd> d_2d;
+	std::vector<rcmd> cmds;
 };
 
 struct modelbank final {
@@ -99,13 +102,24 @@ struct rend final {
 	
 	void initialize();
 	
+	// PUBLIC MODEL
 	void setup_model(qhandle_t);
+	void setup_world_model();
 	
+	// PUBLIC SHADER
 	qhandle_t register_shader(char const * name, bool mipmaps = true);
-	GLuint register_texture(char const * name, bool mipmaps = true);
 	inline void set_color_2d(rv4_t const & v) { color_2d = v; }
+	void shader_set_vp(rm4_t const & vp); // GLSL MVP is not updated until a call to shader_set_m
+	void shader_set_m(rm4_t const & m, bool flip = false);
+	void shader_setup_stage(q3stage const &, rm3_t const & uvm, float time);
 	
-	void draw(std::shared_ptr<rframe>);
+	// PUBLIC TEXTURE
+	GLuint register_texture(char const * name, bool mipmaps = true);
+	
+	void load_world(char const * name);
+	qboolean get_entity_token(char *buffer, int size); // not entirely sure what this does
+	
+	void draw(std::shared_ptr<frame_t>, bool doing_3d);
 	
 	void swap();
 	
@@ -113,28 +127,34 @@ private:
 	bool initialized = false;
 	window_t window;
 	
-// MODEL
+	// MODEL
 	void initialize_model();
-	struct rendmodel final {
-		rendmodel() = default;
-		rendmodel(rendmodel const &) = delete;
-		rendmodel(rendmodel &&);
-		~rendmodel();
-		inline void bind() { glBindVertexArray(vao); }
-		inline void draw() { glDrawArrays(GL_TRIANGLE_STRIP, 0, size); }
+	struct rendmesh final {
+		rendmesh() = default;
+		rendmesh(rendmesh const &) = delete;
+		rendmesh(rendmesh &&);
+		~rendmesh();
+		inline void bind() const { glBindVertexArray(vao); }
+		inline void draw() const { glDrawArrays(mode, 0, size); }
 		GLuint vao = 0;
 		GLuint vbo[3] {0};
+		qhandle_t shader = 0;
 		size_t size = 0;
+		GLenum mode = GL_TRIANGLES;
 	};
-	rendmodel unitquad;
-	rendmodel fullquad;
-	std::vector<rendmodel> glmodel;
+	struct rendmodel final {
+		rendmodel() = default;
+		std::vector<rendmesh> meshes;
+	};
+	rendmesh unitquad;
+	rendmesh fullquad;
+	std::unordered_map<qhandle_t, rendmodel> bankmodels;
 	
-// SHADER
+	// SHADER
 	void initialize_shader();
 	void destruct_shader() noexcept;
-	void configure_stage(q3stage const &, rm4_t const & vm, rm3_t const & uvm, float time);
 	
+	rm4_t vp;
 	rv4_t color_2d;
 	
 	GLuint q3program = 0;
@@ -157,6 +177,11 @@ private:
 	void destruct_texture() noexcept;
 	std::unordered_map<istring, GLuint> texture_lookup;
 	GLuint whiteimage;
+	
+// WORLD
+	void initialize_world();
+	void destruct_world() noexcept;
+	void * world_data = nullptr;
 };
 
 struct q3model {
@@ -279,4 +304,6 @@ struct q3texture {
 
 extern std::unique_ptr<modelbank> mbank;
 extern std::unique_ptr<rend> r;
-extern std::shared_ptr<rframe> frame;
+
+extern std::shared_ptr<frame_t> frame2d;
+extern std::shared_ptr<frame_t> frame3d;

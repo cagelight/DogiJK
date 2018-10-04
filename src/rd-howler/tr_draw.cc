@@ -1,9 +1,8 @@
 #include "tr_local.hh"
 
-static constexpr rm4_t projection_2d = rm4_t::ortho(0, 480, 0, 640, 0, 1);
-
-void rend::draw(std::shared_ptr<rframe> frame) {
-	for (rcmd & cmd : frame->d_2d) {
+void rend::draw(std::shared_ptr<frame_t> frame, bool doing_3d) {
+	shader_set_vp(frame->vp);
+	for (rcmd & cmd : frame->cmds) {
 		switch (cmd.mode) {
 			case rcmd::mode_e::color_2d: {
 				r->set_color_2d(cmd.color_2d);
@@ -19,12 +18,29 @@ void rend::draw(std::shared_ptr<rframe> frame) {
 				rm3_t uv = rm3_t::scale(cmd.stretch_pic.s2 - cmd.stretch_pic.s1, cmd.stretch_pic.t2 - cmd.stretch_pic.t1);
 				uv *= rm3_t::translate(cmd.stretch_pic.s1, cmd.stretch_pic.t1);
 				
+				//glDisable(GL_DEPTH_TEST);
 				unitquad.bind();
 				for (q3stage const & stage : shaders[cmd.stretch_pic.hShader].stages) {
-					configure_stage(stage, m * projection_2d, uv, frame->shader_time);
+					shader_set_m(m, doing_3d);
+					shader_setup_stage(stage, uv, frame->shader_time);
 					unitquad.draw();
 				}
 			} break;
+			case rcmd::mode_e::refent: {
+				//glEnable(GL_DEPTH_TEST);
+				auto mod = bankmodels.find(cmd.refent.hModel);
+				if (mod == bankmodels.end()) continue;
+				for (rendmesh const & mesh : mod->second.meshes) {
+					mesh.bind();
+					for (q3stage const & stage : shaders[mesh.shader].stages) {
+						shader_set_m(rm4_t::translate({cmd.refent.origin[1], -cmd.refent.origin[2], cmd.refent.origin[0]}), doing_3d);
+						shader_setup_stage(stage, {}, frame->shader_time);
+					}
+					mesh.draw();
+				}
+			} break;
+			default:
+				break;
 		}
 	}
 }
