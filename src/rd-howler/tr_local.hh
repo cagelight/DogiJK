@@ -50,7 +50,18 @@ Ghoul2 Insert End
 struct q3model;
 struct q3shader;
 struct q3stage;
-struct q3texture;
+
+struct q3texture {
+	q3texture() = default;
+	q3texture(q3texture const &) = delete;
+	inline q3texture(q3texture && other) = delete;
+	inline ~q3texture() {
+		if (id) glDeleteTextures(1, &id);
+	}
+	
+	GLuint id = 0;
+	bool has_transparency = false;
+};
 
 struct rcmd {
 	enum struct mode_e {
@@ -94,6 +105,20 @@ private:
 	std::vector<q3model> models;
 };
 
+struct skinbank final {
+	skinbank() = default;
+	~skinbank() = default;
+	skinbank(skinbank const &) = delete;
+	skinbank(skinbank &&) = delete;
+	
+	qhandle_t register_skin(char const * name, bool server = false);
+	skin_t * get_skin(qhandle_t);
+private:
+	qhandle_t hcounter = 0;
+	std::unordered_map<istring, std::shared_ptr<skin_t>> skin_lookup;
+	std::unordered_map<qhandle_t, std::shared_ptr<skin_t>> skin_map;
+};
+
 struct rend final {
 	rend() = default;
 	rend(rend const &) = delete;
@@ -110,16 +135,16 @@ struct rend final {
 	qhandle_t register_shader(char const * name, bool mipmaps = true);
 	inline void set_color_2d(rv4_t const & v) { color_2d = v; }
 	void shader_set_vp(rm4_t const & vp); // GLSL MVP is not updated until a call to shader_set_m
-	void shader_set_m(rm4_t const & m, bool flip = false);
+	void shader_set_m(rm4_t const & m);
 	void shader_setup_stage(q3stage const &, rm3_t const & uvm, float time);
 	
 	// PUBLIC TEXTURE
-	GLuint register_texture(char const * name, bool mipmaps = true);
+	std::shared_ptr<q3texture const> register_texture(char const * name, bool mipmaps = true);
 	
 	void load_world(char const * name);
 	qboolean get_entity_token(char *buffer, int size); // not entirely sure what this does
 	
-	void draw(std::shared_ptr<frame_t>, bool doing_3d);
+	void draw(std::shared_ptr<frame_t>);
 	
 	void swap();
 	
@@ -145,6 +170,7 @@ private:
 	struct rendmodel final {
 		rendmodel() = default;
 		std::vector<rendmesh> meshes;
+		istring name;
 	};
 	rendmesh unitquad;
 	rendmesh fullquad;
@@ -175,8 +201,7 @@ private:
 // TEXTURE
 	void initialize_texture();
 	void destruct_texture() noexcept;
-	std::unordered_map<istring, GLuint> texture_lookup;
-	GLuint whiteimage;
+	std::unordered_map<istring, std::shared_ptr<q3texture>> texture_lookup;
 	
 // WORLD
 	void initialize_world();
@@ -206,11 +231,17 @@ struct q3model {
 struct q3shader {
 	bool in_use = false;
 	istring name;
-	qhandle_t index;	
+	qhandle_t index = 0;	
 	std::vector<q3stage> stages;
+	bool opaque = true;
 };
 
 struct q3stage {
+	
+	q3stage() = default;
+	~q3stage() = default;
+	q3stage(q3stage const &) = delete;
+	q3stage(q3stage &&) = default;
 	
 	enum struct gen_func {
 		sine,
@@ -262,6 +293,7 @@ struct q3stage {
 				float rot;
 			} rotate_data;
 		};
+		
 	};
 	
 	enum struct gen_type {
@@ -271,9 +303,12 @@ struct q3stage {
 		wave,
 	} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
 	
-	GLuint diffuse = 0; // GL Texture Handle
+	std::shared_ptr<q3texture const> diffuse;
 	bool clamp = false;
 	GLenum blend_src = GL_ONE, blend_dst = GL_ZERO;
+	
+	bool opaque = true;
+	bool blend = false;
 	
 	rv4_t color {1, 1, 1, 1};
 	
@@ -297,12 +332,8 @@ struct q3stage {
 	std::vector<texmod> texmods;
 };
 
-struct q3texture {
-	bool in_use;
-	GLuint id;
-};
-
 extern std::unique_ptr<modelbank> mbank;
+extern std::unique_ptr<skinbank> sbank;
 extern std::unique_ptr<rend> r;
 
 extern std::shared_ptr<frame_t> frame2d;

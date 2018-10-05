@@ -8,6 +8,7 @@ cvar_t * se_language;
 cvar_t * r_aspectCorrectFonts;
 
 std::unique_ptr<modelbank> mbank;
+std::unique_ptr<skinbank> sbank;
 std::unique_ptr<rend> r;
 
 std::shared_ptr<frame_t> frame2d;
@@ -50,6 +51,7 @@ void rend::initialize() {
 	
 	glEnable(GL_BLEND);
 	glEnable(GL_SCISSOR_TEST);
+	glEnable(GL_DEPTH_TEST);
 	
 	glClearColor(0, 0, 0, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -74,6 +76,7 @@ void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
 	}
 	r.reset();
 	mbank = std::make_unique<modelbank>();
+	sbank = std::make_unique<skinbank>();
 }
 
 void RE_BeginRegistration (glconfig_t *config) {
@@ -93,12 +96,13 @@ static inline qhandle_t RE_RegisterServerModel(char const * name) {
 	return mbank->register_model(name, true);
 }
 
+static qhandle_t scam = 0;
 qhandle_t RE_RegisterSkin (const char *name) {
-	return 0;
+	return sbank->register_skin(name, false);
 }
 
 qhandle_t RE_RegisterServerSkin (const char *name) {
-	return 0;
+	return sbank->register_skin(name, true);
 }
 
 qhandle_t RE_RegisterShader (const char *name) {
@@ -130,7 +134,6 @@ void RE_EndRegistration (void) {
 // a scene is built up by calls to R_ClearScene and the various R_Add functions.
 // Nothing is drawn until R_RenderScene is called.
 void RE_ClearScene (void) {
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	frame3d = std::make_shared<frame_t>();
 	RE_SetColor(nullptr);
 }
@@ -169,32 +172,8 @@ void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, flo
 
 }
 
-static float	s_flipMatrix[16] = {
-	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
-	0, 0, -1, 0,
-	-1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 0, 1
-};
-
-static void myGlMultMatrix( const float *a, const float *b, float *out ) {
-	int		i, j;
-
-	for ( i = 0 ; i < 4 ; i++ ) {
-		for ( j = 0 ; j < 4 ; j++ ) {
-			out[ i * 4 + j ] =
-				a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
-				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
-				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
-				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
-		}
-	}
-}
-
 void RE_RenderScene (const refdef_t *fd) {
-	
-	rm4_t p = rm4_t::perspective(math::deg2rad<float>(fd->fov_y), fd->width, fd->height, 0, 40000);
+	rm4_t p = rm4_t::perspective(math::deg2rad<float>(fd->fov_y), fd->width, fd->height, 1, 16384);
 
 	rm4_t v = rm4_t::translate(-fd->vieworg[1], fd->vieworg[2], -fd->vieworg[0]);
 	
@@ -204,6 +183,15 @@ void RE_RenderScene (const refdef_t *fd) {
 	roq *= rq_t { {0, 0, 1}, math::deg2rad<float>(fd->viewangles[ROLL]) + math::pi<float> };
 	
 	v *= rm4_t {roq};
+	
+	/*
+	rm4_t a = {
+		fd->viewaxis[1][1], fd->viewaxis[1][2], fd->viewaxis[1][0], 0,
+		fd->viewaxis[2][1], fd->viewaxis[2][2], fd->viewaxis[2][0], 0,
+		fd->viewaxis[0][1], fd->viewaxis[0][2], fd->viewaxis[0][0], 0,
+		0, 0, 0, 1
+	};
+	*/
 	
 	//v *= rm4_t::euler({math::deg2rad<float>(-fd->viewangles[YAW]), -math::deg2rad<float>(fd->viewangles[ROLL]), math::deg2rad<float>(-fd->viewangles[PITCH])});
 	
@@ -223,7 +211,7 @@ void RE_RenderScene (const refdef_t *fd) {
 	
 	frame3d->vp = v * p;
 	frame3d->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
-	r->draw(frame3d, true);
+	r->draw(frame3d);
 }
 
 void RE_SetColor (const float *rgba) {
@@ -256,6 +244,7 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 
 static constexpr rm4_t projection_2d = rm4_t::ortho(0, 480, 0, 640, 0, 1);
 void RE_BeginFrame (stereoFrame_t stereoFrame) {
+	glDepthMask(GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	frame2d = std::make_shared<frame_t>();
 	frame2d->vp = projection_2d;
@@ -263,8 +252,12 @@ void RE_BeginFrame (stereoFrame_t stereoFrame) {
 }
 
 void RE_EndFrame (int *frontEndMsec, int *backEndMsec) {
+	glDepthMask(GL_TRUE);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	frame2d->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
-	r->draw(frame2d, false);
+	glDisable(GL_DEPTH_TEST);
+	r->draw(frame2d);
+	glEnable(GL_DEPTH_TEST);
 	r->swap();
 }
 
@@ -310,8 +303,6 @@ void R_RemapShader (const char *oldShader, const char *newShader, const char *of
 }
 
 qboolean R_GetEntityToken (char *buffer, int size) {
-	if (!r) return false;
-	Com_Printf("R_GetEntityToken: %i\n", size);
 	return r->get_entity_token(buffer, size);
 }
 
@@ -388,7 +379,7 @@ model_t * R_GetModelByHandle (qhandle_t index) {
 }
 
 skin_t * R_GetSkinByHandle (qhandle_t hSkin) {
-	return nullptr;
+	return sbank->get_skin(hSkin);
 }
 
 qboolean ShaderHashTableExists (void) {
@@ -520,6 +511,7 @@ extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *r
 	re.ext.Font_StrLenPixels				= RE_Font_StrLenPixelsNew;
 
 	mbank = std::make_unique<modelbank>();
+	sbank = std::make_unique<skinbank>();
 	
 	return &re;
 }

@@ -169,8 +169,8 @@ qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 	auto src = shader_source_lookup.find(name);
 	if (src == shader_source_lookup.end()) {
 		
-		GLuint tex = r->register_texture(name);
-		if (!tex) {
+		std::shared_ptr<q3texture const> tex = r->register_texture(name);
+		if (!tex->id) {
 			Com_Printf(S_COLOR_RED "ERROR: Could not find image for shader '%s'!\n", name);
 			shad = {};
 			shader_lookup[name] = 0;
@@ -179,8 +179,16 @@ qhandle_t rend::register_shader(char const * name, bool mipmaps) {
 		
 		shad.stages.emplace_back();
 		shad.stages[0].diffuse = tex;
-		shad.stages[0].blend_src = GL_SRC_ALPHA;
-		shad.stages[0].blend_dst = GL_ONE_MINUS_SRC_ALPHA;
+		if (tex->has_transparency) {
+			shad.stages[0].blend_src = GL_SRC_ALPHA;
+			shad.stages[0].blend_dst = GL_ONE_MINUS_SRC_ALPHA;
+			shad.stages[0].blend = true;
+			shad.stages[0].opaque = false;
+		} else {
+			shad.stages[0].blend = false;
+			shad.stages[0].opaque = true;
+		}
+		shad.opaque = shad.stages[0].opaque;
 		shader_lookup[name] = handle;
 		Com_Printf("Image Shader: %s\n", name);
 		return handle;
@@ -212,42 +220,13 @@ void rend::shader_set_vp(rm4_t const & vp) {
 	this->vp = vp;
 }
 
-static float	s_flipMatrix[16] = {
-	// convert from our coordinate system (looking down X)
-	// to OpenGL's coordinate system (looking down -Z)
-	0, 0, -1, 0,
-	-1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 0, 1
-};
-
-static void myGlMultMatrix( const float *a, const float *b, float *out ) {
-	int		i, j;
-
-	for ( i = 0 ; i < 4 ; i++ ) {
-		for ( j = 0 ; j < 4 ; j++ ) {
-			out[ i * 4 + j ] =
-				a [ i * 4 + 0 ] * b [ 0 * 4 + j ]
-				+ a [ i * 4 + 1 ] * b [ 1 * 4 + j ]
-				+ a [ i * 4 + 2 ] * b [ 2 * 4 + j ]
-				+ a [ i * 4 + 3 ] * b [ 3 * 4 + j ];
-		}
-	}
-}
-
-void rend::shader_set_m(rm4_t const & m, bool flip) {
-	if (false) {
-		rm4_t mvp = m * vp;
-		rm4_t adj;
-		myGlMultMatrix(mvp, s_flipMatrix, &adj.data[0][0]);
-		glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, adj);
-	} else {
-		glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, m * vp);
-	}
+void rend::shader_set_m(rm4_t const & m) {
+	glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, m * vp);
 }
 
 void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float time) {
-	glBindTextureUnit(0, stage.diffuse);
+	if (stage.diffuse) glBindTextureUnit(0, stage.diffuse->id);
+	
 	glBlendFunc(stage.blend_src, stage.blend_dst);
 	
 	rv4_t q3color {1, 1, 1, 1};
@@ -529,6 +508,7 @@ static qboolean parse_vector ( const char **text, int count, float *v ) {
 static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool mipmaps) {
 	
 	char const * token;
+	std::shared_ptr<q3texture const> map;
 	
 	while(true) {
 		
@@ -543,7 +523,8 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 		
 		else if (!Q_stricmp("map", token)) {
 			token = COM_ParseExt(&p, qfalse);
-			stg.diffuse = r->register_texture(token, mipmaps);
+			map = r->register_texture(token, mipmaps);
+			stg.diffuse = map;
 			if (!stg.diffuse) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid map (\"%s\"), could not find this image.\n", name, token);
 				return false;
@@ -552,7 +533,8 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 		
 		else if (!Q_stricmp("clampmap", token)) {
 			token = COM_ParseExt(&p, qfalse);
-			stg.diffuse = r->register_texture(token, mipmaps);
+			map = r->register_texture(token, mipmaps);
+			stg.diffuse = map;
 			if (!stg.diffuse) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid clampmap (\"%s\"), could not find this image.\n", name, token);
 				return false;
@@ -565,6 +547,7 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 			stg.blend_src = blendfunc_str2enum(token);
 			token = COM_ParseExt(&p, qfalse);
 			stg.blend_dst = blendfunc_str2enum(token);
+			stg.blend = true;
 		}
 		
 		else if (!Q_stricmp("rgbGen", token)) {
@@ -660,6 +643,12 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 		}
 	}
 	
+	if (stg.blend) {
+		if (stg.blend_dst != GL_ZERO) stg.opaque = false;
+	} else {
+		stg.opaque = true;
+	}
+	
 	return true;
 }
 
@@ -673,6 +662,8 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 		return false;
 	}
 	
+	shad.opaque = false;
+	
 	while (true) {
 		
 		token = COM_ParseExt(&p, qtrue);
@@ -683,12 +674,12 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 		} 
 		else if (token[0] == '}') break;
 		else if (token[0] == '{') {
-			q3stage stg;
+			q3stage & stg = shad.stages.emplace_back();
 			if (!parse_stage(shad.name.c_str(), stg, p, mipmaps)) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") failed to parse.\n", shad.name.c_str());
 				return false;
 			}
-			shad.stages.push_back(stg);
+			if (stg.opaque) shad.opaque = true;
 		} else if (!Q_stricmp(token, "nopicmip")) {
 			SkipRestOfLine(&p);
 			// TODO
@@ -703,6 +694,8 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 		}
 		
 	}
+	
+	
 	
 	return true;
 }

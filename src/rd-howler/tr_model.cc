@@ -182,12 +182,13 @@ void rend::setup_model(qhandle_t h) {
 		default:
 			return;
 		case MOD_MDXM: {
-			mdxmSurfHierarchy_t * surfH = (mdxmSurfHierarchy_t *)( (byte *)mod->mdxm + mod->mdxm->ofsSurfHierarchy);
-			mdxmLOD_t * lod = (mdxmLOD_t *) ( (byte *)mod->mdxm + mod->mdxm->ofsLODs );
-			mdxmSurface_t * surf =  (mdxmSurface_t *) ( (byte *)lod + sizeof (mdxmLOD_t) + (mod->mdxm->numSurfaces * sizeof(mdxmLODSurfOffset_t)) );
-			
 			rendmodel & rmod = bankmodels[h];
+			rmod.name = mod->name;
 			for (int si = 0; si < mod->mdxm->numSurfaces; si++) {
+				mdxmSurface_t * surf = (mdxmSurface_t *)ri.G2_FindSurface(mod, si, 0);
+				mdxmHierarchyOffsets_t * surfI = (mdxmHierarchyOffsets_t *)((byte *)mod->mdxm + sizeof(mdxmHeader_t));
+				mdxmSurfHierarchy_t * surfH = (mdxmSurfHierarchy_t *)((byte *)surfI + surfI->offsets[surf->thisSurfaceIndex]);
+				
 				std::vector<float> vert_data;
 				std::vector<float> uv_data;
 				mdxmVertex_t * verts = (mdxmVertex_t *) ((byte *)surf + surf->ofsVerts);
@@ -197,7 +198,7 @@ void rend::setup_model(qhandle_t h) {
 					for (size_t j = 0; j < 3; j++) {
 						auto const & v = verts[triangles[i].indexes[j]];
 						vert_data.push_back(v.vertCoords[1]);
-						vert_data.push_back(-v.vertCoords[2]);
+						vert_data.push_back(v.vertCoords[2]);
 						vert_data.push_back(v.vertCoords[0]);
 					}
 				}
@@ -212,13 +213,11 @@ void rend::setup_model(qhandle_t h) {
 				glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
 				glEnableVertexArrayAttrib(mesh.vao, 0);
 				glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-				
-				surfH = (mdxmSurfHierarchy_t *)( (byte *)surfH + (size_t)( &((mdxmSurfHierarchy_t *)0)->childIndexes[ surfH->numChildren ] ));
-				surf = (mdxmSurface_t *)( (byte *)surf + surf->ofsEnd );
 			}
 		} break;
 		case MOD_MESH: {
 			rendmodel & rmod = bankmodels[h];
+			rmod.name = mod->name;
 			md3Header_t * header = mod->md3[0];
 			md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
 			for (int i = 0 ; i < header->numSurfaces ; i++) {
@@ -235,7 +234,7 @@ void rend::setup_model(qhandle_t h) {
 					for (size_t j = 0; j < 3; j++) {
 						auto const & v = verts[triangles[i].indexes[j]];
 						vert_data.push_back(v.xyz[1] / 32);
-						vert_data.push_back(-v.xyz[2] / 32);
+						vert_data.push_back(v.xyz[2] / 32);
 						vert_data.push_back(v.xyz[0] / 32);
 						auto const & u = uvs[triangles[i].indexes[j]];
 						uv_data.push_back(u.st[0]);
