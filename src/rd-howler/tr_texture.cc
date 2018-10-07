@@ -20,18 +20,18 @@ void rend::destruct_texture() noexcept {
 
 std::shared_ptr<q3texture const> rend::register_texture(char const * name, bool mipmaps) {
 	char sname [MAX_QPATH];
-	COM_StripExtension(name, sname, MAX_QPATH);
+	//COM_StripExtension(name, sname, MAX_QPATH);
 	
-	auto find = texture_lookup.find(sname);
+	auto find = texture_lookup.find(name);
 	if (find != texture_lookup.end()) return find->second;
 	
 	byte * idat;
 	int width, height;
 	
-	R_LoadImage( sname, &idat, &width, &height );
+	R_LoadImage( name, &idat, &width, &height );
 	if (!idat) {
 		Com_Printf(S_COLOR_RED "ERROR: Failed to load texture '%s'!\n", name);
-		texture_lookup[sname] = 0;
+		texture_lookup[name] = 0;
 		return texture_lookup["*invalid"];
 	}
 	
@@ -47,6 +47,7 @@ std::shared_ptr<q3texture const> rend::register_texture(char const * name, bool 
 	glTextureSubImage2D(tex->id, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, idat);
 	if (mipmaps) glGenerateTextureMipmap(tex->id);
 	
-	texture_lookup[sname] = tex;
+	Z_Free(idat);
+	texture_lookup[name] = tex;
 	return tex;
 };

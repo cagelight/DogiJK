@@ -171,10 +171,8 @@ void rend::initialize_model() {
 	glEnableVertexArrayAttrib(fullquad.vao, 1);
 	glVertexArrayAttribFormat(fullquad.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
 	fullquad.size = 4;
-	unitquad.mode = GL_TRIANGLE_STRIP;
+	fullquad.mode = GL_TRIANGLE_STRIP;
 }
-
-struct mdxmTriangle_s a;
 
 void rend::setup_model(qhandle_t h) {
 	model_t * mod = mbank->get_model(h);
@@ -189,17 +187,23 @@ void rend::setup_model(qhandle_t h) {
 				mdxmHierarchyOffsets_t * surfI = (mdxmHierarchyOffsets_t *)((byte *)mod->mdxm + sizeof(mdxmHeader_t));
 				mdxmSurfHierarchy_t * surfH = (mdxmSurfHierarchy_t *)((byte *)surfI + surfI->offsets[surf->thisSurfaceIndex]);
 				
+				if (surfH->name[0] == '*') continue;
+				
 				std::vector<float> vert_data;
 				std::vector<float> uv_data;
 				mdxmVertex_t * verts = (mdxmVertex_t *) ((byte *)surf + surf->ofsVerts);
+				mdxmVertexTexCoord_t * uvs = (mdxmVertexTexCoord_t *) &verts[surf->numVerts];
 				mdxmTriangle_t * triangles = (mdxmTriangle_t *) ((byte *)surf + surf->ofsTriangles);
 				
 				for (size_t i = 0; i < surf->numTriangles; i++) {
 					for (size_t j = 0; j < 3; j++) {
 						auto const & v = verts[triangles[i].indexes[j]];
-						vert_data.push_back(v.vertCoords[1]);
-						vert_data.push_back(v.vertCoords[2]);
 						vert_data.push_back(v.vertCoords[0]);
+						vert_data.push_back(v.vertCoords[2]);
+						vert_data.push_back(-v.vertCoords[1]);
+						auto const & u = uvs[triangles[i].indexes[j]];
+						uv_data.push_back(u.texCoords[0]);
+						uv_data.push_back(u.texCoords[1]);
 					}
 				}
 				
@@ -207,12 +211,17 @@ void rend::setup_model(qhandle_t h) {
 				mesh.size = vert_data.size() / 3;
 				mesh.shader = register_shader(surfH->shader);
 				glCreateVertexArrays(1, &mesh.vao);
-				glCreateBuffers(1, mesh.vbo);
+				glCreateBuffers(2, mesh.vbo);
 				glNamedBufferData(mesh.vbo[0], vert_data.size() * 4, vert_data.data(), GL_STATIC_DRAW);
 				glVertexArrayAttribBinding(mesh.vao, 0, 0);
 				glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
 				glEnableVertexArrayAttrib(mesh.vao, 0);
 				glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+				glNamedBufferData(mesh.vbo[1], uv_data.size() * 4, uv_data.data(), GL_STATIC_DRAW);
+				glVertexArrayAttribBinding(mesh.vao, 1, 1);
+				glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
+				glEnableVertexArrayAttrib(mesh.vao, 1);
+				glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
 			}
 		} break;
 		case MOD_MESH: {
@@ -220,7 +229,7 @@ void rend::setup_model(qhandle_t h) {
 			rmod.name = mod->name;
 			md3Header_t * header = mod->md3[0];
 			md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
-			for (int i = 0 ; i < header->numSurfaces ; i++) {
+			for (int s = 0 ; s < header->numSurfaces ; s++) {
 				
 				std::vector<float> vert_data;
 				std::vector<float> uv_data;
@@ -233,9 +242,9 @@ void rend::setup_model(qhandle_t h) {
 				for (size_t i = 0; i < surf->numTriangles; i++) {
 					for (size_t j = 0; j < 3; j++) {
 						auto const & v = verts[triangles[i].indexes[j]];
-						vert_data.push_back(v.xyz[1] / 32);
-						vert_data.push_back(v.xyz[2] / 32);
-						vert_data.push_back(v.xyz[0] / 32);
+						vert_data.push_back(v.xyz[1] / 64.0);
+						vert_data.push_back(v.xyz[2] / 64.0);
+						vert_data.push_back(v.xyz[0] / 64.0);
 						auto const & u = uvs[triangles[i].indexes[j]];
 						uv_data.push_back(u.st[0]);
 						uv_data.push_back(u.st[1]);

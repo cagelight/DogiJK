@@ -1,13 +1,16 @@
 #include "tr_local.hh"
 
+#define SS(v) _SS(v)
+#define _SS(v) #v
+
 static char const * q3glsl_v = 
 R"GLSL(
 #version 450
 	
-layout(location = 0) in vec3 vert;
-layout(location = 1) in vec2 uv;
-uniform mat4 vertex_matrix;
-uniform mat3 uv_matrix;
+layout(location = )GLSL" SS(LAYOUT_VERTCOORD) R"GLSL() in vec3 vert;
+layout(location = )GLSL" SS(LAYOUT_TEXCOORD) R"GLSL() in vec2 uv;
+layout(location = )GLSL" SS(UNIFORM_VERTEX_MATRIX) R"GLSL() uniform mat4 vertex_matrix;
+layout(location = )GLSL" SS(UNIFORM_TEXCOORD_MATRIX) R"GLSL() uniform mat3 uv_matrix;
 out vec2 f_uv;
 void main() {
 	f_uv = (uv_matrix * vec3(uv, 1)).xy;
@@ -21,55 +24,114 @@ R"GLSL(
 	
 in vec2 f_uv;
 out vec4 color;
-uniform vec4 q3color;
+layout(location = )GLSL" SS(UNIFORM_COLOR) R"GLSL() uniform vec4 q3color;
 layout(binding = 0) uniform sampler2D tex;
 void main() {
 	color = texture(tex, f_uv) * q3color;
 }
 )GLSL";
 
+static char const * basic_color_vsrc = 
+R"GLSL(
+#version 450
+	
+layout(location = )GLSL" SS(LAYOUT_VERTCOORD) R"GLSL() in vec3 vert;
+layout(location = )GLSL" SS(UNIFORM_VERTEX_MATRIX) R"GLSL() uniform mat4 vertex_matrix;
+void main() {
+	gl_Position = vertex_matrix * vec4(vert, 1);
+}
+)GLSL";
+
+static char const * basic_color_fsrc = 
+R"GLSL(
+#version 450
+	
+out vec4 color;
+layout(location = )GLSL" SS(UNIFORM_COLOR) R"GLSL() uniform vec4 q3color;
+void main() {
+	color = q3color;
+}
+)GLSL";
+
+static char const * missingnoise_vsrc = 
+R"GLSL(
+#version 450
+	
+layout(location = )GLSL" SS(LAYOUT_VERTCOORD) R"GLSL() in vec3 vert;
+layout(location = )GLSL" SS(UNIFORM_VERTEX_MATRIX) R"GLSL() uniform mat4 vertex_matrix;
+void main() {
+	gl_Position = vertex_matrix * vec4(vert, 1);
+}
+)GLSL";
+
+static char const * missingnoise_fsrc = 
+R"GLSL(
+#version 450
+	
+out vec4 color;
+layout(location = )GLSL" SS(UNIFORM_TIME) R"GLSL() uniform float time;
+
+float rand(vec2 co){
+    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+void main() {
+	float freq = sin(pow(mod(time, 10.0)+10.0, 1.9));
+	float v = rand(vec2(gl_FragCoord.x, gl_FragCoord.y) + mod(time, freq));
+	color = vec4(v, v, v, 1);
+}
+)GLSL";
+
 void rend::initialize_shader() {
 	
-	GLint success;
-	q3program = glCreateProgram();
-	GLuint q3vertshad = glCreateShader(GL_VERTEX_SHADER), q3fragshad = glCreateShader(GL_FRAGMENT_SHADER);
+	std::string error;
 	
-	glShaderSource(q3vertshad, 1, &q3glsl_v, 0);
-	glCompileShader(q3vertshad);
-	glGetShaderiv(q3vertshad, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		char * err = va_next();
-		GLsizei max_length = MAX_VA_STRING;
-		glGetShaderInfoLog(q3vertshad, max_length, &max_length, err);
-		Com_Error(ERR_FATAL, "FATAL: vertex shader failed to compile:\n%s", err);
-	}
-	glShaderSource(q3fragshad, 1, &q3glsl_f, 0);
-	glCompileShader(q3fragshad);
-	glGetShaderiv(q3fragshad, GL_COMPILE_STATUS, &success);
-	if (!success) {
-		char * err = va_next();
-		GLsizei max_length = MAX_VA_STRING;
-		glGetShaderInfoLog(q3fragshad, max_length, &max_length, err);
-		Com_Error(ERR_FATAL, "FATAL: fragment shader failed to compile:\n%s", err);
+	{
+		gl_shader q3vertshad {GL_VERTEX_SHADER};
+		q3vertshad.source(q3glsl_v);
+		if (!q3vertshad.compile(error)) Com_Error(ERR_FATAL, "FATAL: vertex shader failed to compile:\n%s", error.c_str());
+		
+		gl_shader q3fragshad {GL_FRAGMENT_SHADER};
+		q3fragshad.source(q3glsl_f);
+		if (!q3fragshad.compile(error)) Com_Error(ERR_FATAL, "FATAL: fragment shader failed to compile:\n%s", error.c_str());
+		
+		q3program = std::make_unique<gl_program>();
+		q3program->attach(q3vertshad);
+		q3program->attach(q3fragshad);
+		if (!q3program->link(error)) Com_Error(ERR_FATAL, "FATAL: q3 shader program failed to link:\n%s", error.c_str());
 	}
 	
-	glAttachShader(q3program, q3vertshad);
-	glAttachShader(q3program, q3fragshad);
-	
-	glLinkProgram(q3program);
-	glGetProgramiv(q3program, GL_LINK_STATUS, &success);
-	if (!success) {
-		char * err = va_next();
-		GLsizei max_length = MAX_VA_STRING;
-		glGetProgramInfoLog(q3program, max_length, &max_length, err);
-		Com_Error(ERR_FATAL, "FATAL: shader program failed to link:\n%s", err);
+	{
+		gl_shader basicolorvert {GL_VERTEX_SHADER};
+		basicolorvert.source(basic_color_vsrc);
+		if (!basicolorvert.compile(error)) Com_Error(ERR_FATAL, "FATAL: vertex shader failed to compile:\n%s", error.c_str());
+		
+		gl_shader basicolorfrag {GL_FRAGMENT_SHADER};
+		basicolorfrag.source(basic_color_fsrc);
+		if (!basicolorfrag.compile(error)) Com_Error(ERR_FATAL, "FATAL: fragment shader failed to compile:\n%s", error.c_str());
+		
+		basic_color_program = std::make_unique<gl_program>();
+		basic_color_program->attach(basicolorvert);
+		basic_color_program->attach(basicolorfrag);
+		if (!basic_color_program->link(error)) Com_Error(ERR_FATAL, "FATAL: q3 shader program failed to link:\n%s", error.c_str());
 	}
 	
-	glUseProgram(q3program);
+	{
+		gl_shader missingnoisevert {GL_VERTEX_SHADER};
+		missingnoisevert.source(missingnoise_vsrc);
+		if (!missingnoisevert.compile(error)) Com_Error(ERR_FATAL, "FATAL: vertex shader failed to compile:\n%s", error.c_str());
+		
+		gl_shader missingnoisefrag {GL_FRAGMENT_SHADER};
+		missingnoisefrag.source(missingnoise_fsrc);
+		if (!missingnoisefrag.compile(error)) Com_Error(ERR_FATAL, "FATAL: fragment shader failed to compile:\n%s", error.c_str());
+		
+		missingnoise_program = std::make_unique<gl_program>();
+		missingnoise_program->attach(missingnoisevert);
+		missingnoise_program->attach(missingnoisefrag);
+		if (!missingnoise_program->link(error)) Com_Error(ERR_FATAL, "FATAL: q3 shader program failed to link:\n%s", error.c_str());
+	}
 	
-	q3u(q3uniform::vertex_matrix) = glGetUniformLocation(q3program, "vertex_matrix");
-	q3u(q3uniform::uv_matrix) = glGetUniformLocation(q3program, "uv_matrix");
-	q3u(q3uniform::q3color) = glGetUniformLocation(q3program, "q3color");
+	q3program->use();
 	
 	glCreateSamplers(1, &q3sampler);
 	glBindSampler(0, q3sampler);
@@ -134,11 +196,6 @@ void rend::initialize_shader() {
 		ri.FS_FCloseFile(f);
 	}
 	ri.FS_FreeFileList(shfiles);
-}
-
-void rend::destruct_shader() noexcept {
-	if (q3program) glDeleteProgram(q3program);
-	if (q3sampler) glDeleteSamplers(1, &q3sampler);
 }
 
 static bool parse_shader(q3shader & shad, char const * src, bool mipmaps);
@@ -221,7 +278,7 @@ void rend::shader_set_vp(rm4_t const & vp) {
 }
 
 void rend::shader_set_m(rm4_t const & m) {
-	glUniformMatrix4fv(q3u(q3uniform::vertex_matrix), 1, GL_FALSE, m * vp);
+	glUniformMatrix4fv(UNIFORM_VERTEX_MATRIX, 1, GL_FALSE, m * vp);
 }
 
 void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float time) {
@@ -281,8 +338,8 @@ void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float ti
 		}
 	}
 	
-	glUniform4fv(q3u(q3uniform::q3color), 1, q3color);
-	glUniformMatrix3fv(q3u(q3uniform::uv_matrix), 1, GL_FALSE, uvm2);
+	glUniform4fv(UNIFORM_COLOR, 1, q3color);
+	glUniformMatrix3fv(UNIFORM_TEXCOORD_MATRIX, 1, GL_FALSE, uvm2);
 	
 	if (stage.clamp) {
 		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
@@ -684,9 +741,9 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 			SkipRestOfLine(&p);
 			// TODO
 		} else if (!Q_stricmp(token, "nomipmaps")) {
+			mipmaps = false;
 			SkipRestOfLine(&p);
-			// TODO
-		} else if (!Q_stricmp(token, "qer_editorimage")) {
+		} else if (!Q_stricmpn(token, "qer_", 4) || !Q_stricmpn(token, "q3map_", 6)) {
 			SkipRestOfLine(&p);
 		} else {
 			Com_Printf(S_COLOR_YELLOW "WARNING: shader (\"%s\") has unknown/invalid key (\"%s\").\n", shad.name.c_str(), token);
@@ -695,7 +752,7 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 		
 	}
 	
-	
+	shad.mipmaps = mipmaps;
 	
 	return true;
 }

@@ -120,8 +120,8 @@ typedef enum {
 	RT_MAX_REF_ENTITY_TYPE
 } refEntityType_t;
 
-typedef struct miniRefEntity_s
-{
+struct miniRefEntity_t {
+	
 	refEntityType_t		reType;
 	int					renderfx;
 
@@ -150,48 +150,9 @@ typedef struct miniRefEntity_s
 	float		shaderTime;			// subtracted from refdef time to control effect start times
 	int			frame;				// also used as MODEL_BEAM's diameter
 
-} miniRefEntity_t;
+};
 
-typedef struct refEntity_s {
-	// this stucture must remain identical as the miniRefEntity_t
-	//
-	//
-	refEntityType_t		reType;
-	int					renderfx;
-
-	qhandle_t			hModel;				// opaque type outside refresh
-
-	// most recent data
-	matrix3_t			axis;			// rotation vectors
-	qboolean			nonNormalizedAxes;	// axis are not normalized, i.e. they have scale
-	vec3_t				origin;				// also used as MODEL_BEAM's "from"
-
-	// previous data for frame interpolation
-	vec3_t				oldorigin;			// also used as MODEL_BEAM's "to"
-
-	// texturing
-	qhandle_t			customShader;		// use one image for the entire thing
-
-	// misc
-	byte				shaderRGBA[4];		// colors used by rgbgen entity shaders
-	vec2_t				shaderTexCoord;		// texture coordinates used by tcMod entity modifiers
-
-	// extra sprite information
-	float				radius;
-	float				rotation;
-
-	// misc
-	float		shaderTime;			// subtracted from refdef time to control effect start times
-	int			frame;				// also used as MODEL_BEAM's diameter
-	//
-	//
-	// end miniRefEntity_t
-
-	//
-	//
-	// specific full refEntity_t data
-	//
-	//
+struct refEntity_t : public miniRefEntity_t {
 
 	// most recent data
 	vec3_t		lightingOrigin;		// so multi-part models can be lit identically (RF_LIGHTING_ORIGIN)
@@ -270,7 +231,7 @@ Ghoul2 Insert Start
 /*
 Ghoul2 Insert End
 */
-} refEntity_t;
+};
 
 /*
 Ghoul2 Insert Start

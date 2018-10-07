@@ -6,6 +6,7 @@ glconfig_t glConfig;
 
 cvar_t * se_language;
 cvar_t * r_aspectCorrectFonts;
+cvar_t * r_showtris;
 
 std::unique_ptr<modelbank> mbank;
 std::unique_ptr<skinbank> sbank;
@@ -17,7 +18,6 @@ std::shared_ptr<frame_t> frame3d;
 rend::~rend() {
 	R_ShutdownFonts();
 	this->destruct_world();
-	this->destruct_shader();
 	this->destruct_texture();
 }
 
@@ -36,6 +36,8 @@ void rend::initialize() {
 	glConfig.extensions_string = (const char *)glGetString (GL_EXTENSIONS);
 	glConfig.isFullscreen = qfalse;
 	glConfig.stereoEnabled = qfalse;
+	glConfig.clampToEdgeAvailable = qtrue;
+	glConfig.maxActiveTextures = 4096;
 
 	glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
 	glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
@@ -80,8 +82,11 @@ void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
 }
 
 void RE_BeginRegistration (glconfig_t *config) {
+	
 	se_language = ri.Cvar_Get("se_language", "english", CVAR_ARCHIVE | CVAR_NORESTART, "");
 	r_aspectCorrectFonts = ri.Cvar_Get("r_aspectCorrectFonts", "0", CVAR_ARCHIVE, "");
+	r_showtris = ri.Cvar_Get("r_showtris", "0", CVAR_ARCHIVE, "");
+	
 	glConfig = *config;
 	r = std::make_unique<rend>();
 	r->initialize();
@@ -114,7 +119,7 @@ qhandle_t RE_RegisterShaderNoMip (const char *name) {
 }
 
 const char * RE_ShaderNameFromIndex (int index) {
-	return "";
+	return r->shader_name(index).c_str();
 }
 
 void RE_LoadWorldMap (const char *name) {
@@ -128,7 +133,7 @@ void RE_SetWorldVisData (const byte *vis) {
 // EndRegistration will draw a tiny polygon with each texture, forcing
 // them to be loaded into card memory
 void RE_EndRegistration (void) {
-
+	
 }
 
 // a scene is built up by calls to R_ClearScene and the various R_Add functions.
@@ -221,6 +226,8 @@ void RE_SetColor (const float *rgba) {
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
+	if (!hShader) return;
+	
 	rcmd & cmd = frame2d->cmds.emplace_back(rcmd::mode_e::stretch_pic);
 	cmd.stretch_pic = {
 		x, y, w, h, s1 ,t1, s2, t2, hShader
@@ -238,6 +245,7 @@ void RE_RotatePic2 (float x, float y, float w, float h, float s1, float t1, floa
 void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty) {
 
 }
+
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
 
 }
@@ -265,8 +273,59 @@ int R_MarkFragments (int numPoints, const vec3_t *points, const vec3_t projectio
 	return 0;
 }
 
-int R_LerpTag (orientation_t *tag, qhandle_t model, int startFrame, int endFrame, float frac, const char *tagName) {
-	return 0;
+static md3Tag_t *R_GetTag( md3Header_t *mod, int frame, const char *tagName ) {
+	md3Tag_t		*tag;
+	int				i;
+
+	if ( frame >= mod->numFrames ) {
+		// it is possible to have a bad frame while changing models, so don't error
+		frame = mod->numFrames - 1;
+	}
+
+	tag = (md3Tag_t *)((byte *)mod + mod->ofsTags) + frame * mod->numTags;
+	for ( i = 0 ; i < mod->numTags ; i++, tag++ ) {
+		if ( !strcmp( tag->name, tagName ) ) {
+			return tag;	// found it
+		}
+	}
+
+	return NULL;
+}
+
+int R_LerpTag (orientation_t *tag, qhandle_t handle, int startFrame, int endFrame, float frac, const char *tagName) {
+	md3Tag_t	*start, *end;
+	int		i;
+	float		frontLerp, backLerp;
+	model_t		*model;
+
+	model = mbank->get_model( handle );
+	if ( !model->md3[0] ) {
+		AxisClear( tag->axis );
+		VectorClear( tag->origin );
+		return qfalse;
+	}
+
+	start = R_GetTag( model->md3[0], startFrame, tagName );
+	end = R_GetTag( model->md3[0], endFrame, tagName );
+	if ( !start || !end ) {
+		AxisClear( tag->axis );
+		VectorClear( tag->origin );
+		return qfalse;
+	}
+
+	frontLerp = frac;
+	backLerp = 1.0f - frac;
+
+	for ( i = 0 ; i < 3 ; i++ ) {
+		tag->origin[i] = start->origin[i] * backLerp +  end->origin[i] * frontLerp;
+		tag->axis[0][i] = start->axis[0][i] * backLerp +  end->axis[0][i] * frontLerp;
+		tag->axis[1][i] = start->axis[1][i] * backLerp +  end->axis[1][i] * frontLerp;
+		tag->axis[2][i] = start->axis[2][i] * backLerp +  end->axis[2][i] * frontLerp;
+	}
+	VectorNormalize( tag->axis[0] );
+	VectorNormalize( tag->axis[1] );
+	VectorNormalize( tag->axis[2] );
+	return qtrue;
 }
 
 model_t * R_GetModelByHandle (qhandle_t index);
@@ -307,7 +366,7 @@ qboolean R_GetEntityToken (char *buffer, int size) {
 }
 
 qboolean R_inPVS (const vec3_t p1, const vec3_t p2, byte *mask) {
-	return qfalse;
+	return qtrue;
 }
 
 void RE_GetLightStyle (int style, color4ub_t color) {
@@ -335,7 +394,8 @@ float GetDistanceCull (void) {
 }
 
 void GetRealRes (int *w, int *h) {
-
+	*w = glConfig.vidWidth;
+	*h = glConfig.vidHeight;
 }
 
 void R_AutomapElevationAdjustment (float newHeight) {
@@ -343,7 +403,7 @@ void R_AutomapElevationAdjustment (float newHeight) {
 }
 
 qboolean R_InitializeWireframeAutomap (void) {
-	return qfalse;
+	return qtrue;
 }
 
 void RE_AddWeatherZone (vec3_t mins, vec3_t maxs) {
@@ -354,8 +414,9 @@ void RE_WorldEffectCommand (const char *command) {
 
 }
 
+static int levelNum = 0;
 void RE_RegisterMedia_LevelLoadBegin (const char *psMapName, ForceReload_e eForceReload) {
-
+	levelNum++;
 }
 
 void RE_RegisterMedia_LevelLoadEnd (void) {
@@ -363,15 +424,15 @@ void RE_RegisterMedia_LevelLoadEnd (void) {
 }
 
 int RE_RegisterMedia_GetLevel (void) {
-	return 0;
+	return levelNum;
 }
 
 qboolean RE_RegisterImages_LevelLoadEnd (void) {
-	return qfalse;
+	return qtrue;
 }
 
 qboolean RE_RegisterModels_LevelLoadEnd (qboolean bDeleteEverythingNotUsedThisLevel) {
-	return qfalse;
+	return qtrue;
 }
 
 model_t * R_GetModelByHandle (qhandle_t index) {
@@ -407,7 +468,7 @@ void RE_HunkClearCrap (void) {
 }
 
 qboolean G2_HackadelicOnClient (void) {
-	return qfalse;
+	return r != nullptr;
 }
 
 extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {

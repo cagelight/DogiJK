@@ -4380,33 +4380,6 @@ static void CG_G2PlayerAngles( centity_t *cent, matrix3_t legs, vec3_t legsAngle
 
 /*
 ===============
-CG_TrailItem
-===============
-*/
-#if 0
-static void CG_TrailItem( centity_t *cent, qhandle_t hModel ) {
-	refEntity_t		ent;
-	vec3_t			angles;
-	matrix3_t		axis;
-
-	VectorCopy( cent->lerpAngles, angles );
-	angles[PITCH] = 0;
-	angles[ROLL] = 0;
-	AnglesToAxis( angles, axis );
-
-	memset( &ent, 0, sizeof( ent ) );
-	VectorMA( cent->lerpOrigin, -16, axis[0], ent.origin );
-	ent.origin[2] += 16;
-	angles[YAW] += 90;
-	AnglesToAxis( angles, ent.axis );
-
-	ent.hModel = hModel;
-	trap->R_AddRefEntityToScene( &ent );
-}
-#endif
-
-/*
-===============
 CG_PlayerFlag
 ===============
 */
@@ -4565,42 +4538,6 @@ static void CG_PlayerFloatSprite( centity_t *cent, qhandle_t shader ) {
 	ent.shaderRGBA[3] = 255;
 	trap->R_AddRefEntityToScene( &ent );
 }
-
-
-
-/*
-===============
-CG_PlayerFloatSprite
-
-Same as above but allows custom RGBA values
-===============
-*/
-#if 0
-static void CG_PlayerFloatSpriteRGBA( centity_t *cent, qhandle_t shader, vec4_t rgba ) {
-	int				rf;
-	refEntity_t		ent;
-
-	if ( cent->currentState.number == cg.snap->ps.clientNum && !cg.renderingThirdPerson ) {
-		rf = RF_THIRD_PERSON;		// only show in mirrors
-	} else {
-		rf = 0;
-	}
-
-	memset( &ent, 0, sizeof( ent ) );
-	VectorCopy( cent->lerpOrigin, ent.origin );
-	ent.origin[2] += 48;
-	ent.reType = RT_SPRITE;
-	ent.customShader = shader;
-	ent.radius = 10;
-	ent.renderfx = rf;
-	ent.shaderRGBA[0] = rgba[0];
-	ent.shaderRGBA[1] = rgba[1];
-	ent.shaderRGBA[2] = rgba[2];
-	ent.shaderRGBA[3] = rgba[3];
-	trap->R_AddRefEntityToScene( &ent );
-}
-#endif
-
 
 /*
 ===============
