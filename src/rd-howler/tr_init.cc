@@ -18,7 +18,6 @@ std::shared_ptr<frame_t> frame3d;
 rend::~rend() {
 	R_ShutdownFonts();
 	this->destruct_world();
-	this->destruct_texture();
 }
 
 void rend::initialize() {
@@ -111,15 +110,15 @@ qhandle_t RE_RegisterServerSkin (const char *name) {
 }
 
 qhandle_t RE_RegisterShader (const char *name) {
-	return r->register_shader(name);
+	return r->shader_register(name);
 }
 
 qhandle_t RE_RegisterShaderNoMip (const char *name) {
-	return r->register_shader(name, false);
+	return r->shader_register(name, false);
 }
 
 const char * RE_ShaderNameFromIndex (int index) {
-	return r->shader_name(index).c_str();
+	return r->shader_get(index)->name.c_str();
 }
 
 void RE_LoadWorldMap (const char *name) {
@@ -130,14 +129,10 @@ void RE_SetWorldVisData (const byte *vis) {
 
 }
 
-// EndRegistration will draw a tiny polygon with each texture, forcing
-// them to be loaded into card memory
 void RE_EndRegistration (void) {
 	
 }
 
-// a scene is built up by calls to R_ClearScene and the various R_Add functions.
-// Nothing is drawn until R_RenderScene is called.
 void RE_ClearScene (void) {
 	frame3d = std::make_shared<frame_t>();
 	RE_SetColor(nullptr);
@@ -149,16 +144,15 @@ void RE_ClearDecals (void) {
 
 void RE_AddRefEntityToScene (const refEntity_t *re) {
 	if (!re || re->reType == RT_ENT_CHAIN) return;
-	rcmd & cmd = frame3d->cmds.emplace_back(rcmd::mode_e::refent);
-	cmd.refent = *re;
+	frame3d->cmds.emplace_back(*re);
 }
 
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
-
+	// TODO -- USED BY FX SYSTEM
 }
 
 void RE_AddPolyToScene (qhandle_t hShader , int numVerts, const polyVert_t *verts, int num) {
-
+	// NOT IMPLEMENTED -- NOTHING USES THIS
 }
 
 void RE_AddDecalToScene (qhandle_t shader, const vec3_t origin, const vec3_t dir, float orientation, float r, float g, float b, float a, qboolean alphaFade, float radius, qboolean temporary) {
@@ -220,18 +214,13 @@ void RE_RenderScene (const refdef_t *fd) {
 }
 
 void RE_SetColor (const float *rgba) {
-	rcmd & cmd = frame2d->cmds.emplace_back(rcmd::mode_e::color_2d);
-	if (rgba) cmd.color_2d = {rgba[0], rgba[1], rgba[2], rgba[3]};
-	else cmd.color_2d = {1, 1, 1, 1};
+	if (rgba) frame2d->cmds.emplace_back(rv4_t {rgba[0], rgba[1], rgba[2], rgba[3]});
+	else frame2d->cmds.emplace_back(rv4_t {1, 1, 1, 1});
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
 	if (!hShader) return;
-	
-	rcmd & cmd = frame2d->cmds.emplace_back(rcmd::mode_e::stretch_pic);
-	cmd.stretch_pic = {
-		x, y, w, h, s1 ,t1, s2, t2, hShader
-	};
+	frame2d->cmds.emplace_back( stretch_pic { x, y, w, h, s1 ,t1, s2, t2, r->shader_get(hShader) });
 }
 
 void RE_RotatePic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, float a1, qhandle_t hShader) {
@@ -440,7 +429,7 @@ model_t * R_GetModelByHandle (qhandle_t index) {
 }
 
 skin_t * R_GetSkinByHandle (qhandle_t hSkin) {
-	return sbank->get_skin(hSkin);
+	return &sbank->get_skin(hSkin)->skin;
 }
 
 qboolean ShaderHashTableExists (void) {

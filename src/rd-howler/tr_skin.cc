@@ -148,7 +148,7 @@ static bool setup_skin( q3skin & q3s, char const * path, bool server )
 
 		Q_strncpyz( surf.name, surfName, sizeof( surf.name ) );
 
-		if (!server) surf.shader = r->register_shader(token, true);
+		if (!server) surf.shader = r->shader_register(token, true);
 		else surf.shader = 0;
 		
 		q3s.skin.numSurfaces++;
@@ -220,11 +220,22 @@ qhandle_t skinbank::register_skin(char const * name, bool server) {
 	auto const & find = skin_lookup.find(name);
 	if (find != skin_lookup.end()) return find->second;
 	
-	std::shared_ptr<q3skin> q3s = std::make_shared<q3skin>();
+	qhandle_t handle = -1;
+	
+	for (size_t i = 0; i < skins.size(); i++) {
+		if (!skins[i]) {
+			handle = i;
+		}
+	}
+	
+	if (handle == -1) {
+		handle = skins.size();
+		skins.emplace_back( skins.emplace_back( std::make_shared<q3skin>() ));
+	}
+	
+	q3skin_ptr & q3s = skins[handle];
 	Q_strncpyz( q3s->skin.name, name, sizeof( q3s->skin.name ) );
 	q3s->surfs.reserve(128);
-	
-	qhandle_t handle = 0;
 	
 	char skinhead[MAX_QPATH]={0};
 	char skintorso[MAX_QPATH]={0};
@@ -240,12 +251,10 @@ qhandle_t skinbank::register_skin(char const * name, bool server) {
 	}
 	
 	skin_lookup[name] = handle;
-	if (handle) skin_map[handle] = std::move(q3s);
 	return handle;
 }
 
-skin_t * skinbank::get_skin(qhandle_t h) {
-	auto const & skin = skin_map.find(h);
-	if (skin == skin_map.end()) return nullptr;
-	return &skin->second.get()->skin;
+q3skin_ptr skinbank::get_skin(qhandle_t h) {
+	if (h < 0 || h >= skins.size()) return nullptr;
+	return skins[h];
 }

@@ -14,11 +14,7 @@ void rend::initialize_texture() {
 	texture_lookup["*invalid"] = std::make_shared<q3texture>();
 }
 
-void rend::destruct_texture() noexcept {
-	texture_lookup.clear();
-}
-
-std::shared_ptr<q3texture const> rend::register_texture(char const * name, bool mipmaps) {
+std::shared_ptr<q3texture const> rend::texture_register(char const * name, bool mipmaps) {
 	char sname [MAX_QPATH];
 	//COM_StripExtension(name, sname, MAX_QPATH);
 	
