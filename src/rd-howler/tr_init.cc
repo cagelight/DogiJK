@@ -12,8 +12,7 @@ std::unique_ptr<modelbank> mbank;
 std::unique_ptr<skinbank> sbank;
 std::unique_ptr<rend> r;
 
-std::shared_ptr<frame_t> frame2d;
-std::shared_ptr<frame_t> frame3d;
+std::shared_ptr<frame_t> r_frame;
 
 rend::~rend() {
 	R_ShutdownFonts();
@@ -110,19 +109,24 @@ qhandle_t RE_RegisterServerSkin (const char *name) {
 }
 
 qhandle_t RE_RegisterShader (const char *name) {
-	return r->shader_register(name);
+	q3shader_ptr & shad = r->shader_register(name, true);
+	if (!shad) return 0;
+	return shad->index;
 }
 
 qhandle_t RE_RegisterShaderNoMip (const char *name) {
-	return r->shader_register(name, false);
+	q3shader_ptr & shad = r->shader_register(name, false);
+	if (!shad) return 0;
+	return shad->index;
 }
 
 const char * RE_ShaderNameFromIndex (int index) {
-	return r->shader_get(index)->name.c_str();
+	if (!r->shaders[index]) return "";
+	return r->shaders[index]->name.c_str();
 }
 
 void RE_LoadWorldMap (const char *name) {
-	r->load_world(name);
+	r->world_load(name);
 }
 
 void RE_SetWorldVisData (const byte *vis) {
@@ -134,8 +138,8 @@ void RE_EndRegistration (void) {
 }
 
 void RE_ClearScene (void) {
-	frame3d = std::make_shared<frame_t>();
-	RE_SetColor(nullptr);
+	// TODO
+	//RE_SetColor(nullptr);
 }
 
 void RE_ClearDecals (void) {
@@ -144,7 +148,7 @@ void RE_ClearDecals (void) {
 
 void RE_AddRefEntityToScene (const refEntity_t *re) {
 	if (!re || re->reType == RT_ENT_CHAIN) return;
-	frame3d->cmds.emplace_back(*re);
+	//HACK frame3d->cmds.emplace_back(*re);
 }
 
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
@@ -183,44 +187,18 @@ void RE_RenderScene (const refdef_t *fd) {
 	
 	v *= rm4_t {roq};
 	
-	/*
-	rm4_t a = {
-		fd->viewaxis[1][1], fd->viewaxis[1][2], fd->viewaxis[1][0], 0,
-		fd->viewaxis[2][1], fd->viewaxis[2][2], fd->viewaxis[2][0], 0,
-		fd->viewaxis[0][1], fd->viewaxis[0][2], fd->viewaxis[0][0], 0,
-		0, 0, 0, 1
-	};
-	*/
-	
-	//v *= rm4_t::euler({math::deg2rad<float>(-fd->viewangles[YAW]), -math::deg2rad<float>(fd->viewangles[ROLL]), math::deg2rad<float>(-fd->viewangles[PITCH])});
-	
-	/*
-	rm4_t v {};
-	 v[0][0] = fd->viewaxis[0][0];
-	 v[0][1] = fd->viewaxis[0][1];
-	 v[0][2] = fd->viewaxis[0][2];
-	 v[1][0] = fd->viewaxis[1][0];
-	 v[1][1] = fd->viewaxis[1][1];
-	 v[1][2] = fd->viewaxis[1][2];
-	 v[2][0] = fd->viewaxis[2][0];
-	 v[2][1] = fd->viewaxis[2][1];
-	 v[2][2] = fd->viewaxis[2][2];
-	 v = rm4_t::translate(-fd->vieworg[0], -fd->vieworg[1], -fd->vieworg[2]) * v;
-	 */
-	
-	frame3d->vp = v * p;
-	frame3d->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
-	r->draw(frame3d);
+	r_frame->vp = v * p;
+	// HACK r->draw(r_frame);
 }
 
 void RE_SetColor (const float *rgba) {
-	if (rgba) frame2d->cmds.emplace_back(rv4_t {rgba[0], rgba[1], rgba[2], rgba[3]});
-	else frame2d->cmds.emplace_back(rv4_t {1, 1, 1, 1});
+	if (rgba) r_frame->cmds2d.emplace_back(rv4_t {rgba[0], rgba[1], rgba[2], rgba[3]});
+	else r_frame->cmds2d.emplace_back(rv4_t {1, 1, 1, 1});
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
 	if (!hShader) return;
-	frame2d->cmds.emplace_back( stretch_pic { x, y, w, h, s1 ,t1, s2, t2, r->shader_get(hShader) });
+	r_frame->cmds2d.emplace_back( stretch_pic { x, y, w, h, s1 ,t1, s2, t2, r->shader_get(hShader) });
 }
 
 void RE_RotatePic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, float a1, qhandle_t hShader) {
@@ -239,22 +217,17 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 
 }
 
-static constexpr rm4_t projection_2d = rm4_t::ortho(0, 480, 0, 640, 0, 1);
 void RE_BeginFrame (stereoFrame_t stereoFrame) {
 	glDepthMask(GL_TRUE);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	frame2d = std::make_shared<frame_t>();
-	frame2d->vp = projection_2d;
+	r_frame = std::make_shared<frame_t>();
 	RE_SetColor(nullptr);
 }
 
 void RE_EndFrame (int *frontEndMsec, int *backEndMsec) {
-	glDepthMask(GL_TRUE);
-	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	frame2d->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
-	glDisable(GL_DEPTH_TEST);
-	r->draw(frame2d);
-	glEnable(GL_DEPTH_TEST);
+	r_frame->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
+	r->draw(r_frame);
+	
 	r->swap();
 }
 
@@ -287,7 +260,9 @@ int R_LerpTag (orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	float		frontLerp, backLerp;
 	model_t		*model;
 
-	model = mbank->get_model( handle );
+	basemodel_ptr bmod = mbank->get_model( handle );
+	if (!bmod) return 0;
+	model = &bmod->mod;
 	if ( !model->md3[0] ) {
 		AxisClear( tag->axis );
 		VectorClear( tag->origin );
@@ -425,7 +400,9 @@ qboolean RE_RegisterModels_LevelLoadEnd (qboolean bDeleteEverythingNotUsedThisLe
 }
 
 model_t * R_GetModelByHandle (qhandle_t index) {
-	return mbank->get_model(index);
+	basemodel_ptr bmod = mbank->get_model( index );
+	if (!bmod) return nullptr;
+	return &bmod->mod;
 }
 
 skin_t * R_GetSkinByHandle (qhandle_t hSkin) {

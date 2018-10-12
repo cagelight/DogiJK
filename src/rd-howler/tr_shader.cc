@@ -138,10 +138,10 @@ void rend::initialize_shader() {
 	glSamplerParameteri(q3sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glSamplerParameteri(q3sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	
-	q3shader & ds = *shaders.emplace_back( std::make_shared<q3shader>() );
-	ds.name = "*default";
-	ds.index = 0;
-	shader_lookup[ds.name] = ds.index;
+	q3shader_ptr & ds = shaders.emplace_back( std::make_shared<q3shader>() );
+	ds->name = "*default";
+	ds->index = 0;
+	shader_lookup[ds->name] = ds;
 	
 	int num_shader_files;
 	char * * shfiles = ri.FS_ListFiles("shaders", ".shader", &num_shader_files);
@@ -190,7 +190,10 @@ void rend::initialize_shader() {
 				}
 				break;
 			}
-			shader_source_lookup[name] = {pOld, p};
+			
+			char sname [MAX_QPATH];
+			COM_StripExtension(name.c_str(), sname, MAX_QPATH);
+			shader_source_lookup[sname] = {pOld, p};
 		}
 		ri.FS_FCloseFile(f);
 	}
@@ -199,7 +202,10 @@ void rend::initialize_shader() {
 
 static bool parse_shader(q3shader & shad, char const * src, bool mipmaps);
 
-qhandle_t rend::shader_register(char const * name, bool mipmaps) {
+q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps) {
+	
+	char name [MAX_QPATH];
+	COM_StripExtension(pname, name, MAX_QPATH);
 	
 	auto m = shader_lookup.find(name);
 	if (m != shader_lookup.end()) return m->second;
@@ -228,8 +234,8 @@ qhandle_t rend::shader_register(char const * name, bool mipmaps) {
 		if (!tex->id) {
 			Com_Printf(S_COLOR_RED "ERROR: Could not find image for shader '%s'!\n", name);
 			shad.reset();
-			shader_lookup[name] = 0;
-			return 0;
+			shader_lookup[name] = shaders[0];
+			return shaders[0];
 		}
 		
 		shad->stages.emplace_back();
@@ -244,27 +250,19 @@ qhandle_t rend::shader_register(char const * name, bool mipmaps) {
 			shad->stages[0].opaque = true;
 		}
 		shad->opaque = shad->stages[0].opaque;
-		shader_lookup[name] = handle;
-		Com_Printf("Image Shader: %s\n", name);
-		return handle;
+		shader_lookup[name] = shad;
+		return shaders[handle];
 	}
 	
 	if (!parse_shader(*shad, src->second.c_str(), mipmaps)) {
 		Com_Printf(S_COLOR_RED "ERROR: Could not parse shader '%s'!\n", name);
 		shad = {};
-		shader_lookup[name] = 0;
-		return 0;
+		shader_lookup[name] = shaders[0];
+		return shaders[0];
 	}
 	
-	shader_lookup[name] = handle;
-	Com_Printf("Q3 Shader: %s\n", name);
-	return handle;
-}
-
-q3shader_ptr rend::shader_get(qhandle_t h) {		
-	if (h < 0 || h >= shaders.size()) return shaders[0];
-	if (!shaders[h]) return shaders[0];
-	return shaders[h];
+	shader_lookup[name] = shad;
+	return shaders[handle];
 }
 
 static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
@@ -279,6 +277,22 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 
 void rend::shader_set_mvp(rm4_t const & mvp) {
 	glUniformMatrix4fv(UNIFORM_VERTEX_MATRIX, 1, GL_FALSE, mvp);
+}
+
+void rend::shader_presetup(q3shader const & shad) {
+	switch (shad.cull) {
+		case q3shader::cull_type::front:
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_FRONT);
+			break;
+		case q3shader::cull_type::back:
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+			break;
+		case q3shader::cull_type::both:
+			glDisable(GL_CULL_FACE);
+			break;
+	}
 }
 
 void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float time) {
@@ -318,11 +332,17 @@ void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float ti
 	rm3_t uvm2 = uvm;
 	for (q3stage::texmod const & t : stage.texmods) {
 		switch (t.type) {
+			case q3stage::texmod::tctype::turb:
+				// TODO
+				break;
 			case q3stage::texmod::tctype::scale:
 				uvm2 *= rm3_t::scale(t.scale_data.scale[0], t.scale_data.scale[1]);
 				break;
 			case q3stage::texmod::tctype::scroll:
 				uvm2 *= rm3_t::translate(t.scroll_data.scroll[0] * time, t.scroll_data.scroll[1] * time);
+				break;
+			case q3stage::texmod::tctype::stretch:
+				// TODO
 				break;
 			case q3stage::texmod::tctype::transform:
 				uvm2 *= t.transform_data.trans;
@@ -701,12 +721,44 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 	}
 	
 	if (stg.blend) {
-		if (stg.blend_dst != GL_ZERO) stg.opaque = false;
+		if (stg.blend_dst == GL_ONE_MINUS_SRC_ALPHA && map && map->has_transparency) stg.opaque = false;
+		else if (stg.blend_dst != GL_ZERO) stg.opaque = false;
+		else stg.opaque = true;
 	} else {
 		stg.opaque = true;
 	}
 	
 	return true;
+}
+
+static std::unordered_map<istring, q3shader::cull_type> const cull_type_lookup {
+	{"front",		q3shader::cull_type::front},
+	{"frontside",	q3shader::cull_type::front},
+	{"frontsided",	q3shader::cull_type::front},
+	{"back",		q3shader::cull_type::back},
+	{"backside",	q3shader::cull_type::back},
+	{"backsided",	q3shader::cull_type::back},
+	{"none",		q3shader::cull_type::both},
+	{"twosided",	q3shader::cull_type::both},
+	{"disable",		q3shader::cull_type::both},
+};
+
+static inline q3shader::cull_type parse_cull(char const * name, char const * token) {
+	auto f = cull_type_lookup.find(token);
+	if (f != cull_type_lookup.end()) return f->second;
+	Com_Printf(S_COLOR_YELLOW "WARNING: shader (\"%s\") has unknown/invalid cull type (\"%s\").\n", name, token);
+	return q3shader::cull_type::front;
+}
+
+static std::unordered_map<istring, float> const named_sorts {
+	{"opaque", q3sort_opaque},
+	{"additive", q3sort_basetrans + 1}
+};
+
+static inline float parse_sort(char const * token) {
+	auto s = named_sorts.find(token);
+	if (s != named_sorts.end()) return s->second;
+	return std::strtof(token, nullptr);
 }
 
 static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
@@ -720,6 +772,7 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 	}
 	
 	shad.opaque = false;
+	bool manual_sort = false;
 	
 	while (true) {
 		
@@ -743,6 +796,15 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 		} else if (!Q_stricmp(token, "nomipmaps")) {
 			mipmaps = false;
 			SkipRestOfLine(&p);
+		} else if (!Q_stricmp(token, "cull")) {
+			token = COM_ParseExt(&p, qtrue);
+			shad.cull = parse_cull(shad.name.c_str(), token);
+			SkipRestOfLine(&p);
+		} else if (!Q_stricmp(token, "sort")) {
+			token = COM_ParseExt(&p, qtrue);
+			shad.sort = parse_sort(token);
+			manual_sort = true;
+			SkipRestOfLine(&p);
 		} else if (!Q_stricmpn(token, "qer_", 4) || !Q_stricmpn(token, "q3map_", 6)) {
 			SkipRestOfLine(&p);
 		} else {
@@ -753,6 +815,10 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 	}
 	
 	shad.mipmaps = mipmaps;
+	
+	if (!manual_sort) {
+		shad.sort = shad.opaque ? q3sort_opaque : q3sort_basetrans;
+	}
 	
 	return true;
 }

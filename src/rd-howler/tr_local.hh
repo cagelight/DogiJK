@@ -66,6 +66,18 @@ using q3texture_ptr = std::shared_ptr<q3texture>;
 // MODEL
 // ================================================================
 
+struct basemodel {
+	inline basemodel() { memset(&mod, 0, sizeof(mod)); }
+	basemodel(basemodel const &) = delete;
+	basemodel(basemodel && other) = delete;
+	~basemodel() = default;
+	
+	std::vector<char> buffer;
+	model_t mod;
+};
+
+using basemodel_ptr = std::shared_ptr<basemodel>;
+
 struct modelbank final {
 	modelbank();
 	~modelbank();
@@ -73,21 +85,32 @@ struct modelbank final {
 	modelbank(modelbank &&) = delete;
 	
 	qhandle_t register_model(char const * name, bool server = false);
-	model_t * get_model(qhandle_t);
+	basemodel_ptr get_model(qhandle_t);
 	
 private:
 	std::unordered_map<istring, qhandle_t> model_lookup;
-	std::vector<q3model_ptr> models;
+	std::vector<basemodel_ptr> models;
 };
 
-struct q3model {
-	inline q3model() { memset(&mod, 0, sizeof(mod)); }
-	q3model(q3model const &) = delete;
-	q3model(q3model && other) = delete;
-	~q3model() = default;
-	
-	std::vector<char> buffer;
-	model_t mod;
+struct q3mesh final {
+	q3mesh() = default;
+	q3mesh(q3mesh const &) = delete;
+	q3mesh(q3mesh &&);
+	~q3mesh();
+	inline void bind() const { glBindVertexArray(vao); }
+	inline void draw() const { glDrawArrays(mode, 0, size); }
+	GLuint vao = 0;
+	GLuint vbo[3] {0};
+	q3shader_ptr shader;
+	size_t size = 0;
+	GLenum mode = GL_TRIANGLES;
+};
+
+struct q3model final {
+	q3model() = default;
+	istring name;
+	basemodel_ptr base;
+	std::vector<q3mesh> meshes;
 };
 
 extern std::unique_ptr<modelbank> mbank;
@@ -201,17 +224,29 @@ struct q3stage {
 	std::vector<texmod> texmods;
 };
 
+static constexpr float q3sort_opaque = 3.0f;
+static constexpr float q3sort_basetrans = 14.0f;
+
 struct q3shader {
 	q3shader() = default;
 	q3shader(q3shader const &) = delete;
 	q3shader(q3shader &&) = delete;
 	~q3shader() = default;
 	
+	enum struct cull_type {
+		front,
+		back,
+		both
+	} cull = cull_type::front;
+	
 	istring name;
-	qhandle_t index = 0;	
-	std::vector<q3stage> stages;
-	bool opaque = true;
+	qhandle_t index = 0;
 	bool mipmaps = false;
+	
+	bool opaque = true;
+	float sort = q3sort_opaque;
+	
+	std::vector<q3stage> stages;
 };
 
 // ================================================================
@@ -276,21 +311,23 @@ struct stretch_pic {
 	q3shader_ptr shader;
 };
 
-using rcmd =
+struct basic_mesh {
+	
+};
+
+using cmd2d =
 std::variant<
 	rv4_t,
-	stretch_pic,
-	refEntity_t
+	stretch_pic
 >;
 
 struct frame_t {
 	rm4_t vp;
 	float shader_time = 0;
-	std::vector<rcmd> cmds;
+	std::vector<cmd2d> cmds2d;
 };
 
-extern std::shared_ptr<frame_t> frame2d;
-extern std::shared_ptr<frame_t> frame3d;
+extern std::shared_ptr<frame_t> r_frame;
 
 // ================================================================
 // REND
@@ -311,32 +348,13 @@ struct rend final {
 // ================================
 // MODEL
 // ================================
-	
-	struct rendmesh final {
-		rendmesh() = default;
-		rendmesh(rendmesh const &) = delete;
-		rendmesh(rendmesh &&);
-		~rendmesh();
-		inline void bind() const { glBindVertexArray(vao); }
-		inline void draw() const { glDrawArrays(mode, 0, size); }
-		GLuint vao = 0;
-		GLuint vbo[3] {0};
-		qhandle_t shader = 0;
-		size_t size = 0;
-		GLenum mode = GL_TRIANGLES;
-	};
-	
-	struct rendmodel final {
-		rendmodel() = default;
-		std::vector<rendmesh> meshes;
-		istring name;
-	};
-	
-	rendmesh unitquad;
-	rendmesh fullquad;
-	std::unordered_map<qhandle_t, rendmodel> models;
+		
+	q3mesh unitquad;
+	q3mesh fullquad;
+	std::vector<q3model_ptr> models;
 	
 	void model_load(qhandle_t);
+	q3model_ptr model_get(qhandle_t);
 	
 // ================================
 // SHADER
@@ -396,12 +414,13 @@ struct rend final {
 	rv4_t color_2d;
 	
 	std::unordered_map<istring, std::string> shader_source_lookup;
-	std::unordered_map<istring, qhandle_t> shader_lookup;
+	std::unordered_map<istring, q3shader_ptr> shader_lookup;
 	std::vector<q3shader_ptr> shaders;
 	
-	qhandle_t shader_register(char const * name, bool mipmaps = true);
-	q3shader_ptr shader_get(qhandle_t h);
+	q3shader_ptr & shader_register(char const * name, bool mipmaps = true);
+	inline q3shader_ptr & shader_get(qhandle_t h) { return (h < 0 || h >= shaders.size()) ? shaders[0] : shaders[h]; }
 	void shader_set_mvp(rm4_t const & m);
+	void shader_presetup(q3shader const &);
 	void shader_setup_stage(q3stage const &, rm3_t const & uvm, float time);
 	
 // ================================
@@ -418,8 +437,11 @@ struct rend final {
 // WORLD
 // ================================
 	
-	void load_world(char const * name);
+	void world_load(char const * name);
 	qboolean get_entity_token(char *buffer, int size); // not entirely sure what this does
+	
+	q3model opaque_world;
+	q3model trans_world;
 	
 private:
 		

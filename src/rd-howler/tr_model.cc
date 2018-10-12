@@ -48,7 +48,7 @@ static constexpr byte const FakeGLAFile[] = {
 };
 
 modelbank::modelbank() {
-	model_t & mod =  models.emplace_back( std::make_shared<q3model>() )->mod;
+	model_t & mod =  models.emplace_back( std::make_shared<basemodel>() )->mod;
 	strcpy(mod.name, "BAD MODEL");
 	mod.type = MOD_BAD;
 	mod.index = 0;
@@ -73,16 +73,16 @@ qhandle_t modelbank::register_model(char const * name, bool server) {
 	
 	if (handle == -1) {
 		handle = models.size();
-		models.emplace_back( models.emplace_back( std::make_shared<q3model>() ));
+		models.emplace_back(std::make_shared<basemodel>());
 	}
 	
-	q3model & rmod = *models[handle];
+	basemodel_ptr rmod = models[handle];
 	
 	if (!Q_stricmp(name, "*default.gla")) {
-		strcpy(rmod.mod.name, name);
-		rmod.mod.index = handle;
-		rmod.mod.dataSize = sizeof(FakeGLAFile);
-		R_LoadMDXA(&rmod.mod, (void *)FakeGLAFile, name);
+		strcpy(rmod->mod.name, name);
+		rmod->mod.index = handle;
+		rmod->mod.dataSize = sizeof(FakeGLAFile);
+		R_LoadMDXA(&rmod->mod, (void *)FakeGLAFile, name);
 		model_lookup[name] = handle;
 		return handle;
 	}
@@ -91,51 +91,48 @@ qhandle_t modelbank::register_model(char const * name, bool server) {
 	long len = ri.FS_FOpenFileRead(name, &f, qfalse);
 	if (len <= 0) {
 		Com_Printf(S_COLOR_RED "ERROR: Failed to open model '%s' for reading!\n", name);
-		strcpy(rmod.mod.name, name);
-		rmod.mod.index = handle;
-		rmod.mod.type = MOD_BAD;
+		strcpy(rmod->mod.name, name);
+		rmod->mod.index = handle;
+		rmod->mod.type = MOD_BAD;
 		model_lookup[name] = handle;
 		return handle;
 	}
 	
-	rmod.buffer.resize(len);
+	rmod->buffer.resize(len);
 	
-	ri.FS_Read(rmod.buffer.data(), len, f);
+	ri.FS_Read(rmod->buffer.data(), len, f);
 	ri.FS_FCloseFile(f);
 	
-	int ident = *reinterpret_cast<int *>(rmod.buffer.data());
+	int ident = *reinterpret_cast<int *>(rmod->buffer.data());
 	
-	strcpy(rmod.mod.name, name);
-	rmod.mod.index = handle;
-	rmod.mod.dataSize = len;
+	strcpy(rmod->mod.name, name);
+	rmod->mod.index = handle;
+	rmod->mod.dataSize = len;
 	
 	switch (ident) {
 		case MDXA_IDENT:
-			Com_Printf("Ghoul2 Animation: %s\n", name);
-			R_LoadMDXA(&rmod.mod, rmod.buffer.data(), name);
+			R_LoadMDXA(&rmod->mod, rmod->buffer.data(), name);
 			break;
 		case MDXM_IDENT:
-			Com_Printf("Ghoul2 Model: %s\n", name);
-			R_LoadMDXM(&rmod.mod, rmod.buffer.data(), name, server);
+			R_LoadMDXM(&rmod->mod, rmod->buffer.data(), name, server);
 			break;
 		case MD3_IDENT:
-			Com_Printf("MD3 Model: %s\n", name);
-			R_LoadMD3(&rmod.mod, 0, rmod.buffer.data(), name);
-			rmod.mod.type = MOD_MESH;
+			R_LoadMD3(&rmod->mod, 0, rmod->buffer.data(), name);
+			rmod->mod.type = MOD_MESH;
 			break;
 		default:
-			rmod.mod.type = MOD_BAD;
+			rmod->mod.type = MOD_BAD;
 			break;
 	}
 	
-	if (!server) r->model_load(handle);
+	if (r && !server) r->model_load(handle);
 	model_lookup[name] = handle;
 	return handle;
 }
 
-model_t * modelbank::get_model(qhandle_t h) {
+basemodel_ptr modelbank::get_model(qhandle_t h) {
 	if (h < 0 || h >= models.size()) return nullptr;
-	return &models[h]->mod;
+	return models[h];
 }
 
 void rend::initialize_model() {	
@@ -171,16 +168,25 @@ void rend::initialize_model() {
 }
 
 void rend::model_load(qhandle_t h) {
-	model_t * mod = mbank->get_model(h);
-	switch (mod->type) {
+	
+	basemodel_ptr mod = mbank->get_model(h);
+	if (!mod) return;
+	
+	if (h >= models.size()) {
+		models.resize(h+1);
+	}
+	if (!models[h]) models[h] = std::make_shared<q3model>();
+	q3model & rmod = *models[h];
+	rmod.name = mod->mod.name;
+	rmod.base = mod;
+	
+	switch (mod->mod.type) {
 		default:
 			return;
 		case MOD_MDXM: {
-			rendmodel & rmod = models[h];
-			rmod.name = mod->name;
-			for (int si = 0; si < mod->mdxm->numSurfaces; si++) {
-				mdxmSurface_t * surf = (mdxmSurface_t *)ri.G2_FindSurface(mod, si, 0);
-				mdxmHierarchyOffsets_t * surfI = (mdxmHierarchyOffsets_t *)((byte *)mod->mdxm + sizeof(mdxmHeader_t));
+			for (int si = 0; si < mod->mod.mdxm->numSurfaces; si++) {
+				mdxmSurface_t * surf = (mdxmSurface_t *)ri.G2_FindSurface(&mod->mod, si, 0);
+				mdxmHierarchyOffsets_t * surfI = (mdxmHierarchyOffsets_t *)((byte *)mod->mod.mdxm + sizeof(mdxmHeader_t));
 				mdxmSurfHierarchy_t * surfH = (mdxmSurfHierarchy_t *)((byte *)surfI + surfI->offsets[surf->thisSurfaceIndex]);
 				
 				if (surfH->name[0] == '*') continue;
@@ -203,7 +209,7 @@ void rend::model_load(qhandle_t h) {
 					}
 				}
 				
-				rendmesh & mesh = rmod.meshes.emplace_back();
+				q3mesh & mesh = rmod.meshes.emplace_back();
 				mesh.size = vert_data.size() / 3;
 				mesh.shader = shader_register(surfH->shader);
 				glCreateVertexArrays(1, &mesh.vao);
@@ -221,15 +227,13 @@ void rend::model_load(qhandle_t h) {
 			}
 		} break;
 		case MOD_MESH: {
-			rendmodel & rmod = models[h];
-			rmod.name = mod->name;
-			md3Header_t * header = mod->md3[0];
+			md3Header_t * header = mod->mod.md3[0];
 			md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
 			for (int s = 0 ; s < header->numSurfaces ; s++) {
 				
 				std::vector<float> vert_data;
 				std::vector<float> uv_data;
-				rendmesh & mesh = rmod.meshes.emplace_back();
+				q3mesh & mesh = rmod.meshes.emplace_back();
 				
 				md3XyzNormal_t * verts = (md3XyzNormal_t *) ((byte *)surf + surf->ofsXyzNormals);
 				md3St_t * uvs = (md3St_t *) ((byte *)surf + surf->ofsSt);
@@ -270,7 +274,7 @@ void rend::model_load(qhandle_t h) {
 	}
 }
 
-rend::rendmesh::rendmesh(rendmesh && other) {
+q3mesh::q3mesh(q3mesh && other) {
 	vao = other.vao;
 	other.vao = 0;
 	memcpy(vbo, other.vbo, sizeof(vbo));
@@ -280,7 +284,7 @@ rend::rendmesh::rendmesh(rendmesh && other) {
 	mode = other.mode;
 }
 
-rend::rendmesh::~rendmesh() {
+q3mesh::~q3mesh() {
 	if (vbo[0]) glDeleteBuffers(3, vbo);
 	if (vao) glDeleteVertexArrays(1, &vao);
 }
@@ -413,7 +417,7 @@ static qboolean R_LoadMDXM( model_t *mod, void *buffer, const char *mod_name, bo
 			surfInfo->name[strlen(surfInfo->name)-4]=0;	//remove "_off" from name
 		}
 		
-		if (!server && surfInfo->shader[0]) surfInfo->shaderIndex = r->shader_register(surfInfo->shader);
+		if (!server && surfInfo->shader[0]) surfInfo->shaderIndex = r->shader_register(surfInfo->shader)->index;
 
 		/*
 		shader_t	*sh;
@@ -574,7 +578,7 @@ static qboolean R_LoadMD3 (model_t *mod, int lod, void *buffer, const char *mod_
 		md3Shader_t		*shader;
         shader = (md3Shader_t *) ( (byte *)surf + surf->ofsShaders );
         for ( j = 0 ; j < surf->numShaders ; j++, shader++ ) {
-			shader->shaderIndex = r->shader_register(shader->name, true);
+			shader->shaderIndex = r->shader_register(shader->name, true)->index;
 			/*
             shader_t	*sh;
 

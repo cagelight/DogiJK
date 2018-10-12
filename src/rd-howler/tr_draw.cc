@@ -1,5 +1,8 @@
 #include "tr_local.hh"
 
+#include "ghoul2/g2_public.hh"
+
+/*
 struct draw_visitor {
 	
 	rm4_t vp;
@@ -17,6 +20,7 @@ struct draw_visitor {
 		uv *= rm3_t::translate(pic.s1, pic.t1);
 		
 		glDepthMask(GL_FALSE);
+		glDisable(GL_CULL_FACE);
 		
 		r->unitquad.bind();
 		if (!pic.shader->index) {
@@ -41,6 +45,7 @@ struct draw_visitor {
 		
 		if (ent.hModel) model = ent.hModel;
 		else if (ent.ghoul2) {
+			return;
 			model = ri.G2_At(*(CGhoul2Info_v *)ent.ghoul2, 0).mModel;
 		}
 		
@@ -58,24 +63,24 @@ struct draw_visitor {
 		};
 		auto m = a * v;
 		r->shader_set_mvp(m * vp);
-		glDepthMask(GL_FALSE);
 		
 		for (rend::rendmesh const & mesh : mod->second.meshes) {
 			mesh.bind();
 			q3shader_ptr shad = r->shader_get(mesh.shader);
 			if (!shad || !shad->index) {
+				glDepthMask(GL_TRUE);
 				r->missingnoise_program->use();
 				r->shader_set_mvp(m * vp);
-				glDepthMask(GL_TRUE);
 				glUniform1f(UNIFORM_TIME, shader_time);
 				mesh.draw();
 				r->q3program->use();
 				continue;
 			}
 			
+			glDepthMask( shad->opaque ? GL_TRUE : GL_FALSE );
+			r->shader_presetup(*shad);
 			glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, shad->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 			for (size_t i = 0; i < shad->stages.size(); i++) {
-				if (i == shad->stages.size() - 1 && shad->opaque) glDepthMask(GL_TRUE);
 				r->shader_setup_stage(shad->stages[i], {}, shader_time);
 				mesh.draw();
 			}
@@ -84,7 +89,9 @@ struct draw_visitor {
 };
 
 struct line_visitor {
+	
 	rm4_t vp;
+	float shader_time = 0;
 	
 	void operator () (rv4_t const & color_2d) {
 		
@@ -103,10 +110,12 @@ struct line_visitor {
 	void operator () (refEntity_t const & ent) {
 		
 		qhandle_t model = 0;
+		bool ghoul2 = false;
 		
 		if (ent.hModel) model = ent.hModel;
 		else if (ent.ghoul2) {
 			model = ri.G2_At(*(CGhoul2Info_v *)ent.ghoul2, 0).mModel;
+			ghoul2 = true;
 		}
 		
 		if (!model) return;
@@ -132,12 +141,74 @@ struct line_visitor {
 	}
 };
 
+*/
+
+static constexpr rm4_t projection_2d = rm4_t::ortho(0, 480, 0, 640, 0, 1);
+
+struct visitor_2d {
+	
+	float shader_time = 0;
+	
+	void operator () (rv4_t const & color_2d) {
+		r->color_2d = color_2d;
+	}
+	
+	void operator () (stretch_pic const & pic) {
+		rm4_t m = rm4_t::scale(pic.w ? pic.w : pic.h * (640.0f / 480.0f), pic.h, 1);
+		m *= rm4_t::translate(pic.x, pic.y, 0);
+		
+		rm3_t uv = rm3_t::scale(pic.s2 - pic.s1, pic.t2 - pic.t1);
+		uv *= rm3_t::translate(pic.s1, pic.t1);
+		
+		if (!pic.shader) {
+			return;
+		}
+		
+		r->shader_set_mvp(m * projection_2d);
+		r->unitquad.bind();
+		for (size_t i = 0; i < pic.shader->stages.size(); i++) {
+			r->shader_setup_stage(pic.shader->stages[i], uv, shader_time);
+			r->unitquad.draw();
+		}
+	}
+};
+
 void rend::draw(std::shared_ptr<frame_t> frame) {
 	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
 	q3program->use();
+	
+	visitor_2d v2d {
+		.shader_time = frame->shader_time
+	};
+	
+	for (cmd2d const & cmd : frame->cmds2d) {
+		std::visit(v2d, cmd);
+	}
+	
+	/*
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glDepthFunc(GL_LEQUAL);
+	glDepthMask(GL_TRUE);
+	
+	q3program->use();
+	shader_set_mvp(frame->vp);
+	
+	for (rendmesh const & worldmesh : opaque_world.meshes) {
+		worldmesh.bind();
+		q3shader_ptr shad = r->shader_get(worldmesh.shader);
+		r->shader_presetup(*shad);
+		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, shad->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+		for (size_t i = 0; i < shad->stages.size(); i++) {
+			r->shader_setup_stage(shad->stages[i], {}, frame->shader_time);
+			worldmesh.draw();
+		}
+		worldmesh.draw();
+	}
 	
 	draw_visitor dv {
 		.vp = frame->vp,
@@ -147,14 +218,46 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 		std::visit(dv, cmd);
 	}
 	
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glDepthFunc(GL_LEQUAL);
+	glDepthMask(GL_FALSE);
+	
+	q3program->use();
+	shader_set_mvp(frame->vp);
+	
+	for (rendmesh const & worldmesh : trans_world.meshes) {
+		worldmesh.bind();
+		q3shader_ptr shad = r->shader_get(worldmesh.shader);
+		r->shader_presetup(*shad);
+		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, shad->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+		for (size_t i = 0; i < shad->stages.size(); i++) {
+			r->shader_setup_stage(shad->stages[i], {}, frame->shader_time);
+			worldmesh.draw();
+		}
+		worldmesh.draw();
+	}
+	
 	if (r_showtris->integer) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_BLEND);
+		glDisable(GL_CULL_FACE);
 		glDepthMask(GL_FALSE);
 		basic_color_program->use();
 		static float line_color[4] = {1, 1, 1, 1};
 		glUniform4fv(UNIFORM_COLOR, 1, line_color);
+		
+		shader_set_mvp(frame->vp);
+		for (rendmesh const & worldmesh : opaque_world.meshes) {
+			worldmesh.bind();
+			worldmesh.draw();
+		}
+		for (rendmesh const & worldmesh : trans_world.meshes) {
+			worldmesh.bind();
+			worldmesh.draw();
+		}
 		
 		line_visitor lv {
 			.vp = frame->vp
@@ -163,4 +266,5 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 			std::visit(lv, cmd);
 		}
 	}
+	*/
 }

@@ -10,6 +10,7 @@ void rend::initialize_texture() {
 	glTextureSubImage2D(whiteimage->id, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, "\xFF\xFF\xFF\xFF");
 	texture_lookup["*white"] = whiteimage;
 	texture_lookup["$whiteimage"] = whiteimage;
+	texture_lookup["$lightmap"] = whiteimage;
 	
 	texture_lookup["*invalid"] = std::make_shared<q3texture>();
 }
