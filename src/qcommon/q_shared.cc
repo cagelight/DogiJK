@@ -465,7 +465,7 @@ qboolean COM_ParseInt( const char **data, int *i )
 		return qtrue;
 	}
 
-	*i = atoi( token );
+	*i = strtol( token, nullptr, 10 );
 	return qfalse;
 }
 
@@ -485,7 +485,7 @@ qboolean COM_ParseFloat( const char **data, float *f )
 		return qtrue;
 	}
 
-	*f = atof( token );
+	*f = strtof( token, nullptr );
 	return qfalse;
 }
 

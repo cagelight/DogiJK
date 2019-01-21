@@ -192,7 +192,7 @@ qboolean Jedi_CultistDestroyer( gentity_t *self )
 	}
 	if( self->client->NPC_class == CLASS_REBORN &&
 		self->s.weapon == WP_MELEE &&
-		!Q_stricmp( "cultist_destroyer", self->NPC_type ) )
+		"cultist_destroyer" == self->NPC_type )
 	{
 		return qtrue;
 	}
@@ -229,7 +229,7 @@ void WP_ResistForcePush( gentity_t *self, gentity_t *pusher, qboolean noPenalty 
 	{
 		return;
 	}
-	if ( ((self->s.number >= 0 && self->s.number < MAX_CLIENTS) || self->client->NPC_class == CLASS_DESANN || !Q_stricmp("Yoda",self->NPC_type) || self->client->NPC_class == CLASS_LUKE)
+	if ( ((self->s.number >= 0 && self->s.number < MAX_CLIENTS) || self->client->NPC_class == CLASS_DESANN || "Yoda" == self->NPC_type || self->client->NPC_class == CLASS_LUKE)
 		&& (VectorLengthSquared( self->client->ps.velocity ) > 10000 || self->client->ps.fd.forcePowerLevel[FP_PUSH] >= FORCE_LEVEL_3 || self->client->ps.fd.forcePowerLevel[FP_PULL] >= FORCE_LEVEL_3 ) )
 	{
 		runningResist = qtrue;
@@ -1385,13 +1385,13 @@ static void Jedi_AdjustSaberAnimLevel( gentity_t *self, int newLevel )
 		switch ( self->client->ps.fd.saberAnimLevel )
 		{
 		case FORCE_LEVEL_1:
-			Com_Printf( S_COLOR_GREEN"%s Saber Attack Set: fast\n", self->NPC_type );
+			Com_Printf( S_COLOR_GREEN"%s Saber Attack Set: fast\n", self->NPC_type.c_str() );
 			break;
 		case FORCE_LEVEL_2:
-			Com_Printf( S_COLOR_YELLOW"%s Saber Attack Set: medium\n", self->NPC_type );
+			Com_Printf( S_COLOR_YELLOW"%s Saber Attack Set: medium\n", self->NPC_type.c_str() );
 			break;
 		case FORCE_LEVEL_3:
-			Com_Printf( S_COLOR_RED"%s Saber Attack Set: strong\n", self->NPC_type );
+			Com_Printf( S_COLOR_RED"%s Saber Attack Set: strong\n", self->NPC_type.c_str() );
 			break;
 		}
 	}
@@ -1541,7 +1541,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 	}
 	//rwwFIXMEFIXME: Give them the ability to do this again (turret needs to be fixed up to allow it)
 	else if ( enemy_dist <= 64
-		&& ((NPCS.NPCInfo->scriptFlags&SCF_DONT_FIRE)||(!Q_stricmp("Yoda",NPCS.NPC->NPC_type)&&!Q_irand(0,10))) )
+		&& ((NPCS.NPCInfo->scriptFlags&SCF_DONT_FIRE)||("Yoda"==NPCS.NPC->NPC_type&&!Q_irand(0,10))) )
 	{//can't use saber and they're in striking range
 		if ( !Q_irand( 0, 5 ) && InFront( NPCS.NPC->enemy->r.currentOrigin, NPCS.NPC->r.currentOrigin, NPCS.NPC->client->ps.viewangles, 0.2f ) )
 		{
@@ -1706,7 +1706,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 				}
 			}
 			chanceScale = 0;
-			if ( NPCS.NPC->client->NPC_class == CLASS_DESANN || !Q_stricmp("Yoda",NPCS.NPC->NPC_type) )
+			if ( NPCS.NPC->client->NPC_class == CLASS_DESANN || "Yoda" == NPCS.NPC->NPC_type)
 			{
 				chanceScale = 1;
 			}
@@ -1719,7 +1719,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 				chanceScale = 5;
 			}
 			if ( chanceScale
-				&& (enemy_dist > Q_irand( 100, 200 ) || (NPCS.NPCInfo->scriptFlags&SCF_DONT_FIRE) || (!Q_stricmp("Yoda",NPCS.NPC->NPC_type)&&!Q_irand(0,3)) )
+				&& (enemy_dist > Q_irand( 100, 200 ) || (NPCS.NPCInfo->scriptFlags&SCF_DONT_FIRE) || ("Yoda"==NPCS.NPC->NPC_type&&!Q_irand(0,3)) )
 				&& enemy_dist < 500
 				&& (Q_irand( 0, chanceScale*10 )<5 || (NPCS.NPC->enemy->client && NPCS.NPC->enemy->client->ps.weapon != WP_SABER && !Q_irand( 0, chanceScale ) ) ) )
 			{//else, randomly try some kind of attack every now and then
@@ -1738,7 +1738,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 						}
 					}
 					else if ( (WP_ForcePowerUsable( NPCS.NPC, FP_LIGHTNING )
-						&& ((NPCS.NPCInfo->scriptFlags & SCF_DONT_FIRE) && Q_stricmp("cultist_lightning",NPCS.NPC->NPC_type))) || Q_irand( 0, 1 ))
+						&& ((NPCS.NPCInfo->scriptFlags & SCF_DONT_FIRE) && "cultist_lightning" != NPCS.NPC->NPC_type)) || Q_irand( 0, 1 ))
 					{
 						ForceLightning( NPCS.NPC );
 						if ( NPCS.NPC->client->ps.fd.forcePowerLevel[FP_LIGHTNING] > FORCE_LEVEL_1 )
@@ -1752,7 +1752,7 @@ static void Jedi_CombatDistance( int enemy_dist )
 					else if ( (NPCS.NPC->health < NPCS.NPC->client->ps.stats[STAT_MAX_HEALTH] * 0.75f
 							&& Q_irand( FORCE_LEVEL_0, NPCS.NPC->client->ps.fd.forcePowerLevel[FP_DRAIN] ) > FORCE_LEVEL_1
 							&& WP_ForcePowerUsable( NPCS.NPC, FP_DRAIN )
-							&& ((NPCS.NPCInfo->scriptFlags&SCF_DONT_FIRE)&&Q_stricmp("cultist_drain",NPCS.NPC->NPC_type))) || Q_irand( 0, 1 ) )
+							&& ((NPCS.NPCInfo->scriptFlags&SCF_DONT_FIRE)&&"cultist_drain" != NPCS.NPC->NPC_type)) || Q_irand( 0, 1 ) )
 						{
 							ForceDrain( NPCS.NPC );
 							NPCS.NPC->client->ps.weaponTime = Q_irand( 1000, 3000+(g_npcspskill.integer*500) );
@@ -4321,7 +4321,7 @@ static qboolean Jedi_AttackDecide( int enemy_dist )
 	if ( NPCS.NPC->client->ps.saberEventFlags&SEF_LOCK_WON )
 	{//we won a saber lock, press the advantage with an attack!
 		int	chance = 0;
-		if ( NPCS.NPC->client->NPC_class == CLASS_DESANN || NPCS.NPC->client->NPC_class == CLASS_LUKE || !Q_stricmp("Yoda",NPCS.NPC->NPC_type) )
+		if ( NPCS.NPC->client->NPC_class == CLASS_DESANN || NPCS.NPC->client->NPC_class == CLASS_LUKE || "Yoda"==NPCS.NPC->NPC_type)
 		{//desann and luke
 			chance = 20;
 		}
@@ -4896,7 +4896,7 @@ static void Jedi_CheckEnemyMovement( float enemy_dist )
 	if ( NPCS.NPC->client->NPC_class != CLASS_TAVION
 		&& NPCS.NPC->client->NPC_class != CLASS_DESANN
 		&& NPCS.NPC->client->NPC_class != CLASS_LUKE
-		&& Q_stricmp("Yoda",NPCS.NPC->NPC_type) )
+		&& "Yoda" != NPCS.NPC->NPC_type)
 	{
 		if ( NPCS.NPC->enemy->enemy && NPCS.NPC->enemy->enemy == NPCS.NPC )
 		{//enemy is mad at *me*
@@ -5336,7 +5336,7 @@ void NPC_Jedi_Pain(gentity_t *self, gentity_t *attacker, int damage)
 	if ( other->s.weapon == WP_SABER )
 	{//back off
 		TIMER_Set( self, "parryTime", -1 );
-		if ( self->client->NPC_class == CLASS_DESANN || !Q_stricmp("Yoda",self->NPC_type) )
+		if ( self->client->NPC_class == CLASS_DESANN || "Yoda" == self->NPC_type)
 		{//less for Desann
 			self->client->ps.fd.forcePowerDebounce[FP_SABER_DEFENSE] = level.time + (3-g_npcspskill.integer)*50;
 		}
@@ -5707,7 +5707,7 @@ qboolean Jedi_CanPullBackSaber( gentity_t *self )
 		|| self->client->NPC_class == CLASS_TAVION
 		|| self->client->NPC_class == CLASS_LUKE
 		|| self->client->NPC_class == CLASS_DESANN
-		|| !Q_stricmp( "Yoda", self->NPC_type ) )
+		|| "Yoda" == self->NPC_type )
 	{
 		return qtrue;
 	}
@@ -5838,7 +5838,7 @@ static void Jedi_Attack( void )
 		{
 			float chance;
 
-			if ( NPCS.NPC->client->NPC_class == CLASS_DESANN || !Q_stricmp("Yoda",NPCS.NPC->NPC_type) )
+			if ( NPCS.NPC->client->NPC_class == CLASS_DESANN || "Yoda" == NPCS.NPC->NPC_type)
 			{
 				if ( g_npcspskill.integer )
 				{

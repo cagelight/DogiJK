@@ -312,7 +312,10 @@ struct stretch_pic {
 };
 
 struct basic_mesh {
+	q3model_ptr model;
 	
+	rv3_t origin;
+	matrix3_t pre;
 };
 
 using cmd2d =
@@ -321,10 +324,29 @@ std::variant<
 	stretch_pic
 >;
 
-struct frame_t {
+using cmd3d =
+std::variant<
+	basic_mesh
+>;
+
+struct rseq {
+	inline rseq() {
+		cmds3d.reserve(8192);
+	}
+	
 	rm4_t vp;
+	std::vector<cmd3d> cmds3d;
+};
+
+struct frame_t {
+	inline frame_t() {
+		cmds2d.reserve(8192);
+		cmds3d.emplace_back();
+	}
+	
 	float shader_time = 0;
 	std::vector<cmd2d> cmds2d;
+	std::vector<rseq> cmds3d;
 };
 
 extern std::shared_ptr<frame_t> r_frame;
@@ -348,7 +370,7 @@ struct rend final {
 // ================================
 // MODEL
 // ================================
-		
+	
 	q3mesh unitquad;
 	q3mesh fullquad;
 	std::vector<q3model_ptr> models;

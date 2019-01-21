@@ -81,3 +81,29 @@ void Svcmd_GameMem_f( void ) {
 	f *= 100;
 	trap->Print("Game Memory Pool is %.1f%% full, %i bytes out of %i used.\n", f, allocPoint, POOLSIZE);
 }
+
+template <typename T> struct weirdstruct {
+	T value;
+	
+	void add(T const & v) {
+		value += v;
+	}
+	
+	T const & get() const {
+		return value;
+	}
+};
+
+void test() {
+	weirdstruct<int> wi {
+		.value = 3
+	};
+	wi.add(5);
+	// wi.get() returns 8
+	
+	weirdstruct<std::string> ws {
+		.value = "test"
+	};
+	ws.add("lawl");
+	// ws.get() returns "testlawl"
+}

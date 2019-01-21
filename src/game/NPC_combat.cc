@@ -499,7 +499,7 @@ void G_SetEnemy( gentity_t *self, gentity_t *enemy )
 		}
 
 		//Alert anyone else in the area
-		if ( Q_stricmp( "desperado", self->NPC_type ) != 0 && Q_stricmp( "paladin", self->NPC_type ) != 0 )
+		if ( "desperado" != self->NPC_type && "paladin" != self->NPC_type )
 		{//special holodeck enemies exception
 			if ( self->client->ps.fd.forceGripBeingGripped < level.time )
 			{//gripped people can't call for help

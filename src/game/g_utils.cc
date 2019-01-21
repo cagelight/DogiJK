@@ -1037,12 +1037,6 @@ void G_FreeEntity( gentity_t * ent ) {
 	}
 
 	*ent = {};
-	/*
-	memset (ent, 0, sizeof(*ent));
-	ent->classname = "freent";
-	ent->freetime = level.time;
-	ent->inuse = qfalse;
-	*/
 }
 
 /*

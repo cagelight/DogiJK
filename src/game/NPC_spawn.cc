@@ -254,7 +254,7 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 		//turn the damn hatch cover on and LEAVE it on
 		trap->G2API_SetSurfaceOnOff( ent->ghoul2, "head_hatchcover", 0/*TURN_ON*/ );
 	}
-	if ( !Q_stricmp( "wampa", ent->NPC_type ) )
+	if ( "wampa" == ent->NPC_type )
 	{//FIXME: extern this into NPC.cfg?
 		Wampa_SetBolts( ent );
 		ent->s.g2radius = 80;//???
@@ -275,14 +275,14 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 	{
 		Howler_SetBolts( ent );
 	}
-	if ( !Q_stricmp( "Yoda", ent->NPC_type ) )
+	if ( "Yoda" == ent->NPC_type )
 	{//FIXME: extern this into NPC.cfg?
 		ent->NPC->scriptFlags |= SCF_NO_FORCE;//force powers don't work on him
 	}
-	if ( !Q_stricmp( "emperor", ent->NPC_type )
-		|| !Q_stricmp( "cultist_grip", ent->NPC_type )
-		|| !Q_stricmp( "cultist_drain", ent->NPC_type )
-		|| !Q_stricmp( "cultist_lightning", ent->NPC_type ))
+	if ("emperor" == ent->NPC_type
+		|| "cultist_grip" == ent->NPC_type
+		|| "cultist_drain" == ent->NPC_type
+		|| "cultist_lightning" == ent->NPC_type )
 	{//FIXME: extern this into NPC.cfg?
 		ent->NPC->scriptFlags |= SCF_DONT_FIRE;//so he uses only force powers
 	}
@@ -377,7 +377,7 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 
 	case NPCTEAM_NEUTRAL:
 
-		if ( Q_stricmp( ent->NPC_type, "gonk" ) == 0 )
+		if ( ent->NPC_type == "gonk" )
 		{
 			// I guess we generically make them player usable
 			ent->r.svFlags |= SVF_PLAYER_USABLE;
@@ -450,7 +450,7 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 					break;
 				case WP_FLECHETTE:
 					//shotgunner
-					if ( !Q_stricmp( "stofficeralt", ent->NPC_type ) )
+					if ("stofficeralt" == ent->NPC_type )
 					{
 						//ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 					}
@@ -472,13 +472,13 @@ void NPC_SetMiscDefaultData( gentity_t *ent )
 					{//commanders use alt-fire
 						//ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 					}
-					if ( !Q_stricmp( "rodian2", ent->NPC_type ) )
+					if ("rodian2" == ent->NPC_type )
 					{
 						//ent->NPC->scriptFlags |= SCF_ALT_FIRE;
 					}
 					break;
 				}
-				if ( !Q_stricmp( "galak_mech", ent->NPC_type ) )
+				if ( "galak_mech" == ent->NPC_type )
 				{//starts with armor
 					NPC_GalakMech_Init( ent );
 				}
@@ -527,8 +527,9 @@ NPC_WeaponsForTeam
 -------------------------
 */
 
-int NPC_WeaponsForTeam( team_t team, int spawnflags, const char *NPC_type )
+int NPC_WeaponsForTeam( team_t team, int spawnflags, istring const & NPC_type_in )
 {
+	char const * NPC_type = NPC_type_in.c_str();
 	//*** not sure how to handle this, should I pass in class instead of team and go from there? - dmv
 	switch(team)
 	{
@@ -936,7 +937,7 @@ void NPC_Begin (gentity_t *ent)
 		client->pers.maxHealth = client->ps.stats[STAT_MAX_HEALTH] = 100;
 	}
 
-	if ( !Q_stricmp( "rodian", ent->NPC_type ) )
+	if ("rodian" == ent->NPC_type )
 	{//sniper
 		//NOTE: this will get overridden by any aim settings in their spawnscripts
 		switch ( g_npcspskill.integer )
@@ -955,7 +956,7 @@ void NPC_Begin (gentity_t *ent)
 	else if ( ent->client->NPC_class == CLASS_STORMTROOPER
 		|| ent->client->NPC_class == CLASS_SWAMPTROOPER
 		|| ent->client->NPC_class == CLASS_IMPWORKER
-		|| !Q_stricmp( "rodian2", ent->NPC_type ) )
+		|| "rodian2" == ent->NPC_type )
 	{//tweak yawspeed for these NPCs based on difficulty
 		switch ( g_npcspskill.integer )
 		{
@@ -1452,13 +1453,9 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 
 //==NPC_Connect( newent, net_name );===================================
 
-	if ( ent->NPC_type == NULL )
+	if ( !ent->NPC_type.size() )
 	{
 		ent->NPC_type = "random";
-	}
-	else
-	{
-		ent->NPC_type = Q_strlwr( G_NewString( ent->NPC_type ) );
 	}
 
 	if ( ent->r.svFlags & SVF_NO_BASIC_SOUNDS )
@@ -1484,7 +1481,7 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 	if ( ent->classname == "NPC_Vehicle" )
 	{
 		// Get the vehicle entry index.
-		int iVehIndex = BG_VehicleGetIndex( ent->NPC_type );
+		int iVehIndex = BG_VehicleGetIndex( ent->NPC_type.c_str() );
 
  		if ( iVehIndex == VEHICLE_NONE )
 		{
@@ -1501,23 +1498,23 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 		{
 			case VH_ANIMAL:
 				// Create the animal (making sure all it's data is initialized).
-				G_CreateAnimalNPC( &newent->m_pVehicle, ent->NPC_type );
+				G_CreateAnimalNPC( &newent->m_pVehicle, ent->NPC_type.c_str() );
 				break;
 			case VH_SPEEDER:
 				// Create the speeder (making sure all it's data is initialized).
-				G_CreateSpeederNPC( &newent->m_pVehicle, ent->NPC_type );
+				G_CreateSpeederNPC( &newent->m_pVehicle, ent->NPC_type.c_str() );
 				break;
 			case VH_FIGHTER:
 				// Create the fighter (making sure all it's data is initialized).
-				G_CreateFighterNPC( &newent->m_pVehicle, ent->NPC_type );
+				G_CreateFighterNPC( &newent->m_pVehicle, ent->NPC_type.c_str() );
 				break;
 			case VH_WALKER:
 				// Create the walker (making sure all it's data is initialized).
-				G_CreateWalkerNPC( &newent->m_pVehicle, ent->NPC_type );
+				G_CreateWalkerNPC( &newent->m_pVehicle, ent->NPC_type.c_str() );
 				break;
 
 			default:
-				Com_Printf ( S_COLOR_RED "ERROR: Couldn't spawn vehicle NPC %s\n", ent->NPC_type );
+				Com_Printf ( S_COLOR_RED "ERROR: Couldn't spawn vehicle NPC %s\n", ent->NPC_type.c_str() );
 				G_FreeEntity( newent );
 				//get rid of the spawner, too, I guess
 				G_FreeEntity( ent );
@@ -1579,22 +1576,22 @@ gentity_t *NPC_Spawn_Do( gentity_t *ent )
 	VectorCopy(ent->s.origin, newent->r.currentOrigin);
 	G_SetOrigin(newent, ent->s.origin);//just to be sure!
 	//NOTE: on vehicles, anything in the .npc file will STOMP data on the NPC that's set by the vehicle
-	if ( !NPC_ParseParms( ent->NPC_type, newent ) )
+	if ( !NPC_ParseParms( ent->NPC_type.c_str(), newent ) )
 	{
-		Com_Printf ( S_COLOR_RED "ERROR: Couldn't spawn NPC %s\n", ent->NPC_type );
+		Com_Printf ( S_COLOR_RED "ERROR: Couldn't spawn NPC %s\n", ent->NPC_type.c_str() );
 		G_FreeEntity( newent );
 		//get rid of the spawner, too, I guess
 		G_FreeEntity( ent );
 		return NULL;
 	}
 
-	if ( ent->NPC_type )
+	if ( ent->NPC_type.size() )
 	{
-		if ( !Q_stricmp( ent->NPC_type, "kyle" ) )
+		if ( !Q_stricmp( ent->NPC_type.c_str(), "kyle" ) )
 		{//FIXME: "player", not Kyle?  Or check NPC_type against player's NPC_type?
 			newent->NPC->aiFlags |= NPCAI_MATCHPLAYERWEAPON;
 		}
-		else if ( !Q_stricmp( ent->NPC_type, "test" ) )
+		else if ( !Q_stricmp( ent->NPC_type.c_str(), "test" ) )
 		{
 			int	n;
 			for ( n = 0; n < 1 ; n++)
@@ -2023,7 +2020,7 @@ void SP_NPC_spawner( gentity_t *self)
 	//rwwFIXMEFIXME: support for this flag?
 
 	//We have to load the animation.cfg now because spawnscripts are going to want to set anims and we need to know their length and if they're valid
-	NPC_PrecacheAnimationCFG( self->NPC_type );
+	NPC_PrecacheAnimationCFG( self->NPC_type.c_str() );
 
 	//rww - can't cheat and do this on the client like in SP, so I'm doing this.
 	NPC_Precache(self);
@@ -2092,13 +2089,13 @@ qboolean NPC_VehiclePrecache( gentity_t *spawner )
 	char *droidNPCType = NULL;
 	//This will precache the vehicle
 	vehicleInfo_t *pVehInfo;
-	int iVehIndex = BG_VehicleGetIndex( spawner->NPC_type );
+	int iVehIndex = BG_VehicleGetIndex( spawner->NPC_type.c_str() );
  	if ( iVehIndex == VEHICLE_NONE )
 	{//fixme: error msg?
 		return qfalse;
 	}
 
-	G_ModelIndex(va("$%s", spawner->NPC_type)); //make sure the thing is frickin precached
+	G_ModelIndex(va("$%s", spawner->NPC_type.c_str())); //make sure the thing is frickin precached
 	//now cache his model/skin/anim config
 	pVehInfo = &g_vehicleInfo[iVehIndex];
 	if (pVehInfo->model && pVehInfo->model[0])
@@ -2176,7 +2173,7 @@ void SP_NPC_Vehicle( gentity_t *self)
 {
 	float dropTime;
 	int		t;
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		self->NPC_type = "swoop";
 	}
@@ -2473,7 +2470,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Reborn_New( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( (self->spawnflags&4) )
 		{//weaker guys
@@ -2528,7 +2525,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Cultist_Saber( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( (self->spawnflags&1) )
 		{
@@ -2597,7 +2594,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Cultist_Saber_Powers( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( (self->spawnflags&1) )
 		{
@@ -2665,11 +2662,11 @@ SHY - Spawner is shy
 */
 void SP_NPC_Cultist( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( (self->spawnflags&1) )
 		{
-			self->NPC_type = NULL;
+			self->NPC_type.clear();
 			self->spawnflags = 0;//fast, no throw
 			switch ( Q_irand( 0, 2 ) )
 			{
@@ -2723,7 +2720,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Cultist_Commando( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		self->NPC_type = "cultistcommando";
 	}
@@ -2845,7 +2842,7 @@ Ally Jedi NPC Buddy - tags along with player
 */
 void SP_NPC_Jedi( gentity_t *self)
 {
-	if(!self->NPC_type)
+	if(!self->NPC_type.size())
 	{
 		if ( self->spawnflags & 4 )
 		{//random!
@@ -2931,7 +2928,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Prisoner( gentity_t *self)
 {
-	if(!self->NPC_type)
+	if(!self->NPC_type.size())
 	{
 		if ( Q_irand( 0, 1 ) )
 		{
@@ -2955,7 +2952,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Rebel( gentity_t *self)
 {
-	if(!self->NPC_type)
+	if(!self->NPC_type.size())
 	{
 		if ( Q_irand( 0, 1 ) )
 		{
@@ -2994,7 +2991,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Human_Merc( gentity_t *self )
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		/*if ( self->message )
 		{
@@ -3115,7 +3112,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Ugnaught( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( Q_irand( 0, 1 ) )
 		{
@@ -3141,7 +3138,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Jawa( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( (self->spawnflags&1) )
 		{
@@ -3169,7 +3166,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Gran( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( self->spawnflags & 1 )
 		{
@@ -3206,7 +3203,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Rodian( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( self->spawnflags&1 )
 		{
@@ -3230,7 +3227,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Weequay( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		switch ( Q_irand( 0, 3 ) )
 		{
@@ -3261,7 +3258,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Trandoshan( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		self->NPC_type = "Trandoshan";
 	}
@@ -3278,7 +3275,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Tusken( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( (self->spawnflags&1) )
 		{
@@ -3302,7 +3299,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Noghri( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		self->NPC_type = "noghri";
 	}
@@ -3320,7 +3317,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_SwampTrooper( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( self->spawnflags & 1 )
 		{
@@ -3352,7 +3349,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Imperial( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( self->spawnflags & 1 )
 		{
@@ -3395,7 +3392,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_ImpWorker( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( !Q_irand( 0, 2 ) )
 		{
@@ -3423,7 +3420,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_BespinCop( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( !Q_irand( 0, 1 ) )
 		{
@@ -3457,7 +3454,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_Reborn( gentity_t *self)
 {
-	if ( !self->NPC_type )
+	if ( !self->NPC_type.size() )
 	{
 		if ( self->spawnflags & 1 )
 		{
@@ -3494,7 +3491,7 @@ SHY - Spawner is shy
 */
 void SP_NPC_ShadowTrooper( gentity_t *self)
 {
-	if(!self->NPC_type)
+	if(!self->NPC_type.size())
 	{
 		if ( !Q_irand( 0, 1 ) )
 		{
@@ -4027,75 +4024,75 @@ gentity_t *NPC_SpawnType( gentity_t *ent, char *npc_type, char *targetname, qboo
 	}
 
 	//call precache funcs for James' builds
-	if ( !Q_stricmp( "gonk", NPCspawner->NPC_type))
+	if ( !Q_stricmp( "gonk", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Gonk_Precache();
 	}
-	else if ( !Q_stricmp( "mouse", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "mouse", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Mouse_Precache();
 	}
-	else if ( !Q_strncmp( "r2d2", NPCspawner->NPC_type, 4))
+	else if ( !Q_strncmp( "r2d2", NPCspawner->NPC_type.c_str(), 4))
 	{
 		NPC_R2D2_Precache();
 	}
-	else if ( !Q_stricmp( "atst", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "atst", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_ATST_Precache();
 	}
-	else if ( !Q_strncmp( "r5d2", NPCspawner->NPC_type, 4))
+	else if ( !Q_strncmp( "r5d2", NPCspawner->NPC_type.c_str(), 4))
 	{
 		NPC_R5D2_Precache();
 	}
-	else if ( !Q_stricmp( "mark1", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "mark1", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Mark1_Precache();
 	}
-	else if ( !Q_stricmp( "mark2", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "mark2", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Mark2_Precache();
 	}
-	else if ( !Q_stricmp( "interrogator", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "interrogator", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Interrogator_Precache(NULL);
 	}
-	else if ( !Q_stricmp( "probe", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "probe", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Probe_Precache();
 	}
-	else if ( !Q_stricmp( "seeker", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "seeker", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Seeker_Precache();
 	}
-	else if ( !Q_stricmp( "remote", NPCspawner->NPC_type))
+	else if ( !Q_stricmp( "remote", NPCspawner->NPC_type.c_str()))
 	{
 		NPC_Remote_Precache();
 	}
-	else if ( !Q_strncmp( "shadowtrooper", NPCspawner->NPC_type, 13 ) )
+	else if ( !Q_strncmp( "shadowtrooper", NPCspawner->NPC_type.c_str(), 13 ) )
 	{
 		NPC_ShadowTrooper_Precache();
 	}
-	else if ( !Q_stricmp( "minemonster", NPCspawner->NPC_type ))
+	else if ( !Q_stricmp( "minemonster", NPCspawner->NPC_type.c_str() ))
 	{
 		NPC_MineMonster_Precache();
 	}
-	else if ( !Q_stricmp( "howler", NPCspawner->NPC_type ))
+	else if ( !Q_stricmp( "howler", NPCspawner->NPC_type.c_str() ))
 	{
 		NPC_Howler_Precache();
 	}
-	else if ( !Q_stricmp( "sentry", NPCspawner->NPC_type ))
+	else if ( !Q_stricmp( "sentry", NPCspawner->NPC_type.c_str() ))
 	{
 		NPC_Sentry_Precache();
 	}
-	else if ( !Q_stricmp( "protocol", NPCspawner->NPC_type ))
+	else if ( !Q_stricmp( "protocol", NPCspawner->NPC_type.c_str() ))
 	{
 		NPC_Protocol_Precache();
 	}
-	else if ( !Q_stricmp( "galak_mech", NPCspawner->NPC_type ))
+	else if ( !Q_stricmp( "galak_mech", NPCspawner->NPC_type.c_str() ))
 	{
 		NPC_GalakMech_Precache();
 	}
-	else if ( !Q_stricmp( "wampa", NPCspawner->NPC_type ))
+	else if ( !Q_stricmp( "wampa", NPCspawner->NPC_type.c_str() ))
 	{
 		NPC_Wampa_Precache();
 	}
@@ -4201,7 +4198,7 @@ void NPC_Kill_f( void )
 				{
 					if ( player->client->playerTeam != NPCTEAM_PLAYER )
 					{
-						Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type, player->targetname );
+						Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type.c_str(), player->targetname );
 						player->health = 0;
 
 						if (player->die && player->client)
@@ -4210,9 +4207,9 @@ void NPC_Kill_f( void )
 						}
 					}
 				}
-				else if ( player->NPC_type && player->classname.size() && "NPC_starfleet" != player->classname  )
+				else if ( player->NPC_type.size() && player->classname.size() && "NPC_starfleet" != player->classname  )
 				{//A spawner, remove it
-					Com_Printf( S_COLOR_GREEN"Removing NPC spawner %s with NPC named %s\n", player->NPC_type, player->NPC_targetname );
+					Com_Printf( S_COLOR_GREEN"Removing NPC spawner %s with NPC named %s\n", player->NPC_type.c_str(), player->NPC_targetname );
 					G_FreeEntity( player );
 					//FIXME: G_UseTargets2(player, player, player->NPC_target & player->target);?
 				}
@@ -4224,7 +4221,7 @@ void NPC_Kill_f( void )
 			{
 				if ( player->client->playerTeam == killTeam )
 				{
-					Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type, player->targetname );
+					Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type.c_str(), player->targetname );
 					player->health = 0;
 					if (player->die)
 					{
@@ -4235,7 +4232,7 @@ void NPC_Kill_f( void )
 			else if( (player->targetname && Q_stricmp( name, player->targetname ) == 0)
 				|| Q_stricmp( name, "all" ) == 0 )
 			{
-				Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type, player->targetname );
+				Com_Printf( S_COLOR_GREEN"Killing NPC %s named %s\n", player->NPC_type.c_str(), player->targetname );
 				player->health = 0;
 				player->client->ps.stats[STAT_HEALTH] = 0;
 				if (player->die)

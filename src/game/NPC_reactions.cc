@@ -851,7 +851,7 @@ void NPC_Respond( gentity_t *self, int userNum )
 		}
 		break;
 	case CLASS_BESPIN_COP:
-		if ( !Q_stricmp( "bespincop", self->NPC_type ) )
+		if ( "bespincop" == self->NPC_type )
 		{//variant 1
 			if ( self->enemy )
 			{

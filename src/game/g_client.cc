@@ -1559,7 +1559,7 @@ qboolean BG_IsValidCharacterModel(const char *modelName, const char *skinName);
 qboolean BG_ValidateSkinForTeam( const char *modelName, char *skinName, int team, float *colors );
 void BG_GetVehicleModelName(char *modelName, const char *vehicleName, size_t len);
 
-void SetupGameGhoul2Model(gentity_t *ent, char *modelname, char *skinName)
+void SetupGameGhoul2Model(gentity_t *ent, char const *modelname, char const *skinName)
 {
 	int handle;
 	char		afilename[MAX_QPATH];

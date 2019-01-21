@@ -237,7 +237,7 @@ struct gentity_t : public sharedEntity_t {
 									// players, for instance
 
 //Only used by NPC_spawners
-	char		*NPC_type = nullptr;
+	istring		NPC_type;
 	char		*NPC_targetname = nullptr;
 	char		*NPC_target = nullptr;
 

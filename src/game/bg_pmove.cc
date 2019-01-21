@@ -2411,7 +2411,7 @@ static qboolean PM_CheckJump( void )
 					if ( trace.fraction < 1.0f )
 					{//flip off wall
 						int parts = SETANIM_LEGS;
-
+						
 						pm->ps->velocity[0] *= 0.5f;
 						pm->ps->velocity[1] *= 0.5f;
 						VectorMA( pm->ps->velocity, -300, fwd, pm->ps->velocity );

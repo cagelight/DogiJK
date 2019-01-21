@@ -173,6 +173,13 @@ struct visitor_2d {
 	}
 };
 
+struct visitor_3d {
+	
+	float shader_time = 0.4f;
+	
+	
+};
+
 void rend::draw(std::shared_ptr<frame_t> frame) {
 	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

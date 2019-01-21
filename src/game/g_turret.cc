@@ -497,7 +497,7 @@ static qboolean turret_find_enemies( gentity_t *self )
 			enemyDist = VectorLengthSquared( enemyDir );
 
 			if ( enemyDist < bestDist // all things equal, keep current
-				|| (!Q_stricmp( "atst_vehicle", target->NPC_type ) && bestTarget && Q_stricmp( "atst_vehicle", bestTarget->NPC_type ) ) )//target AT-STs over non-AT-STs... FIXME: must be a better, easier way to tell this, no?
+				|| (!Q_stricmp( "atst_vehicle", target->NPC_type.c_str() ) && bestTarget && Q_stricmp( "atst_vehicle", bestTarget->NPC_type.c_str() ) ) )//target AT-STs over non-AT-STs... FIXME: must be a better, easier way to tell this, no?
 			{
 				if ( self->attackDebounceTime < level.time )
 				{

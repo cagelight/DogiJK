@@ -807,6 +807,15 @@ void AS_ParseSets( void )
 	{
 		Com_Error ( ERR_FATAL, S_COLOR_RED"ERROR: Couldn't load ambient sound sets from %s", AMBIENT_SET_FILENAME );
 	}
+	
+	int num_set_files;
+	char * * soundset_list = FS_ListFiles("sound", ".sset", &num_set_files);
+	for (int i = 0; i < num_set_files; i++) {
+		if (AS_ParseFile( va("sound/%s", soundset_list[i]), aSets ) == qfalse) {
+			Com_Printf("^3WARNING: Sound Set (\"%s\") failed to parse!\n", soundset_list[i]);
+		}
+	}
+	FS_FreeFileList(soundset_list);
 
 //	Com_Printf( "AS_ParseFile: Loaded %d of %d ambient set(s)\n", pMap.size(), numSets );
 

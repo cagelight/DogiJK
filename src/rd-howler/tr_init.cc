@@ -143,12 +143,16 @@ void RE_ClearScene (void) {
 }
 
 void RE_ClearDecals (void) {
-
+	
 }
 
 void RE_AddRefEntityToScene (const refEntity_t *re) {
 	if (!re || re->reType == RT_ENT_CHAIN) return;
-	//HACK frame3d->cmds.emplace_back(*re);
+	basic_mesh m;
+	m.model = r->model_get(re->hModel);
+	m.origin = {re->origin[0], re->origin[1], re->origin[2]};
+	memcpy(m.pre, re->axis, sizeof(matrix3_t));
+	r_frame->cmds3d.back().cmds3d.emplace_back(std::move(m));
 }
 
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
@@ -187,8 +191,10 @@ void RE_RenderScene (const refdef_t *fd) {
 	
 	v *= rm4_t {roq};
 	
-	r_frame->vp = v * p;
-	// HACK r->draw(r_frame);
+	r_frame->cmds3d.back().vp = v * p;
+	r_frame->cmds3d.emplace_back();
+	// HACK ???
+	// nothing is actually drawn until EndFrame
 }
 
 void RE_SetColor (const float *rgba) {
