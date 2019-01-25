@@ -4326,7 +4326,7 @@ void Cmd_NPC_f( gentity_t *ent )
 	else if ( ! Q_stricmp( cmd, "listveh" ) ) {
 		Com_Printf("\nVehicles:\n");
 		BG_ListVehicles();
-	} else if ( ! Q_stricmp( cmd, "listnpc" ) ) {
+	} else if ( ! Q_stricmp( cmd, "list" ) ) {
 		Com_Printf("\nNPCs:\n");
 		BG_ListNPCs();
 	}
