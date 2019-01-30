@@ -910,7 +910,7 @@ int PM_SaberLockWinAnim( qboolean victory, qboolean superBreak )
 #ifdef _GAME //including game headers on cgame is FORBIDDEN ^_^
 	#include "g_local.hh"
 	extern void NPC_SetAnim(gentity_t *ent, int setAnimParts, int anim, int setAnimFlags);
-	extern gentity_t g_entities[];
+	extern gentity_t * g_entities;
 #elif defined(_CGAME)
 	#include "cgame/cg_local.hh" //ahahahahhahahaha@$!$!
 #endif

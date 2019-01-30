@@ -37,7 +37,8 @@ extern int fatalErrors;
 
 int killPlayerTimer = 0;
 
-gentity_t		g_entities[MAX_GENTITIES];
+std::vector<gentity_t> g_entities_actual;
+gentity_t * 	g_entities = nullptr;
 gclient_t		g_clients[MAX_CLIENTS];
 
 qboolean gDuelExit = qfalse;
@@ -174,6 +175,10 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	vmCvar_t	mapname;
 	vmCvar_t	ckSum;
 	char serverinfo[MAX_INFO_STRING] = {0};
+	
+	g_entities_actual.clear();
+	g_entities_actual.resize(MAX_GENTITIES);
+	g_entities = g_entities_actual.data();
 
 	//Init RMG to 0, it will be autoset to 1 if there is terrain on the level.
 	trap->Cvar_Set("RMG", "0");
@@ -506,6 +511,8 @@ void G_ShutdownGame( int restart ) {
 	if ( trap->Cvar_VariableIntegerValue( "bot_enable" ) ) {
 		BotAIShutdown( restart );
 	}
+	
+	g_entities_actual.clear();
 
 	B_CleanupAlloc(); //clean up all allocations made with B_Alloc
 }

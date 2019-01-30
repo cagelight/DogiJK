@@ -40,9 +40,8 @@ given client
 static void SV_SendConfigstring(client_t *client, int index)
 {
 	int maxChunkSize = MAX_STRING_CHARS - 24;
-	int len;
 
-	len = strlen(sv.configstrings[index]);
+	int len = sv.configstrings[index].size();
 
 	if( len >= maxChunkSize ) {
 		int		sent = 0;
@@ -72,7 +71,7 @@ static void SV_SendConfigstring(client_t *client, int index)
 	} else {
 		// standard cs, just send it
 		SV_SendServerCommand( client, "cs %i \"%s\"\n", index,
-			sv.configstrings[index] );
+			sv.configstrings[index].c_str() );
 	}
 }
 
@@ -122,13 +121,12 @@ void SV_SetConfigstring (int index, const char *val) {
 	}
 
 	// don't bother broadcasting an update if no change
-	if ( !strcmp( val, sv.configstrings[ index ] ) ) {
+	if (sv.configstrings[ index ] == val) {
 		return;
 	}
 
 	// change the string in sv
-	Z_Free( sv.configstrings[index] );
-	sv.configstrings[index] = CopyString( val );
+	sv.configstrings[index] = val;
 
 	// send it to all the clients if we aren't
 	// spawning a new server
@@ -164,12 +162,12 @@ void SV_GetConfigstring( int index, char *buffer, int bufferSize ) {
 	if ( index < 0 || index >= MAX_CONFIGSTRINGS ) {
 		Com_Error (ERR_DROP, "SV_GetConfigstring: bad index %i\n", index);
 	}
-	if ( !sv.configstrings[index] ) {
+	if (!sv.configstrings[index].size()) {
 		buffer[0] = 0;
 		return;
 	}
 
-	Q_strncpyz( buffer, sv.configstrings[index], bufferSize );
+	Q_strncpyz( buffer, sv.configstrings[index].c_str(), bufferSize );
 }
 
 /*
@@ -297,8 +295,7 @@ Ghoul2 Insert Start
  void SV_InitSV(void)
 {
 	// clear out most of the sv struct
-	memset(&sv, 0, (sizeof(sv)));
-	sv.mLocalSubBSPIndex = -1;
+	sv.clear();
 }
 /*
 Ghoul2 Insert End
@@ -379,9 +376,7 @@ void SV_ClearServer(void) {
 	int i;
 
 	for ( i = 0 ; i < MAX_CONFIGSTRINGS ; i++ ) {
-		if ( sv.configstrings[i] ) {
-			Z_Free( sv.configstrings[i] );
-		}
+		sv.configstrings[i].clear();
 	}
 
 //	CM_ClearMap();
@@ -574,9 +569,6 @@ Ghoul2 Insert End
 
 	// wipe the entire per-level structure
 	SV_ClearServer();
-	for ( i = 0 ; i < MAX_CONFIGSTRINGS ; i++ ) {
-		sv.configstrings[i] = CopyString("");
-	}
 
 	//rww - RAGDOLL_BEGIN
 	g2api->G2API_SetTime(sv.time,0);

@@ -430,7 +430,6 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 }
 
 void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
-	int			start;
 	entityState_t	*base, nullstate;
 
 	// NOTE, MRE: all server->client messages now acknowledge
@@ -448,17 +447,17 @@ void SV_CreateClientGameStateMessage( client_t *client, msg_t *msg ) {
 	MSG_WriteLong( msg, client->reliableSequence );
 
 	// write the configstrings
-	for ( start = 0 ; start < MAX_CONFIGSTRINGS ; start++ ) {
+	for ( int start = 0 ; start < MAX_CONFIGSTRINGS ; start++ ) {
 		if (sv.configstrings[start][0]) {
 			MSG_WriteByte( msg, svc_configstring );
 			MSG_WriteShort( msg, start );
-			MSG_WriteBigString( msg, sv.configstrings[start] );
+			MSG_WriteBigString( msg, sv.configstrings[start].c_str() );
 		}
 	}
 
 	// write the baselines
 	Com_Memset( &nullstate, 0, sizeof( nullstate ) );
-	for ( start = 0 ; start < MAX_GENTITIES; start++ ) {
+	for ( int start = 0 ; start < MAX_GENTITIES; start++ ) {
 		base = &sv.svEntities[start].baseline;
 		if ( !base->number ) {
 			continue;

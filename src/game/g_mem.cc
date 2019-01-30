@@ -42,7 +42,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
   http://www.altdevblogaday.com/2011/02/12/alternatives-to-malloc-and-new/
 */
 
-#define POOLSIZE	(4 * 1024 * 1024) // (256*1024)
+#define POOLSIZE	(8 * 1024 * 1024) // (256*1024)
 
 static char		memoryPool[POOLSIZE];
 static int		allocPoint;

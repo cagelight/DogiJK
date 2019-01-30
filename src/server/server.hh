@@ -56,39 +56,53 @@ typedef enum {
 } serverState_t;
 
 typedef struct server_s {
-	serverState_t	state;
-	qboolean		restarting;			// if true, send configstring changes during SS_LOADING
-	int				serverId;			// changes each server start
-	int				restartedServerId;	// serverId before a map_restart
-	int				checksumFeed;		//
-	int				snapshotCounter;	// incremented for each snapshot built
-	int				timeResidual;		// <= 1000 / sv_frame->value
-	int				nextFrameTime;		// when time > nextFrameTime, process world
-	char			*configstrings[MAX_CONFIGSTRINGS];
-	svEntity_t		svEntities[MAX_GENTITIES];
+	
+	server_s() {
+		memset(&state, 0, sizeof(state));
+		memset(&svEntities, 0, sizeof(svEntities));
+		configstrings.resize(MAX_CONFIGSTRINGS);
+	}
+	
+	server_s(server_s const &) = delete;
+	
+	void clear() {
+		this->~server_s();
+		new (this) (server_s);
+	}
+	
+	serverState_t	state {};
+	qboolean		restarting = 0;			// if true, send configstring changes during SS_LOADING
+	int				serverId = 0;			// changes each server start
+	int				restartedServerId = 0;	// serverId before a map_restart
+	int				checksumFeed = 0;		//
+	int				snapshotCounter = 0;	// incremented for each snapshot built
+	int				timeResidual = 0;		// <= 1000 / sv_frame->value
+	int				nextFrameTime = 0;		// when time > nextFrameTime, process world
+	std::vector<std::string> configstrings {};
+	svEntity_t		svEntities[MAX_GENTITIES] {};
 
-	char			*entityParsePoint;	// used during game VM init
+	char			*entityParsePoint = nullptr;	// used during game VM init
 
 	// the game virtual machine will update these on init and changes
-	sharedEntity_t	*gentities;
-	int				gentitySize;
-	int				num_entities;		// current number, <= MAX_GENTITIES
+	sharedEntity_t	*gentities = nullptr;
+	int				gentitySize = 0;
+	int				num_entities = 0;		// current number, <= MAX_GENTITIES
 
-	playerState_t	*gameClients;
-	int				gameClientSize;		// will be > sizeof(playerState_t) due to game private data
+	playerState_t	*gameClients = nullptr;
+	int				gameClientSize = 0;		// will be > sizeof(playerState_t) due to game private data
 
-	int				restartTime;
-	int				time;
+	int				restartTime = 0;
+	int				time = 0;
 
 	//rwwRMG - added:
-	int				mLocalSubBSPIndex;
-	int				mLocalSubBSPModelOffset;
-	char			*mLocalSubBSPEntityParsePoint;
+	int				mLocalSubBSPIndex = -1;
+	int				mLocalSubBSPModelOffset = 0;
+	char			*mLocalSubBSPEntityParsePoint = 0;
 
-	char			*mSharedMemory;
+	char			*mSharedMemory = nullptr;
 
-	time_t			realMapTimeStarted;	// time the current map was started
-	qboolean		demosPruned; // whether or not existing demos were cleaned up already
+	time_t			realMapTimeStarted = 0;	// time the current map was started
+	qboolean		demosPruned = qfalse; // whether or not existing demos were cleaned up already
 } server_t;
 
 typedef struct clientSnapshot_s {

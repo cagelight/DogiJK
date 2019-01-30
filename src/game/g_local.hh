@@ -1471,7 +1471,8 @@ int BotAIStartFrame( int time );
 
 
 extern	level_locals_t	level;
-extern	gentity_t		g_entities[MAX_GENTITIES];
+extern	gentity_t * g_entities; // always maps to g_entities_actual.data(), here for compatibility reasons (laziness)
+extern	std::vector<gentity_t> g_entities_actual; // g_entities is now a vector so constructors and destructors are called appropriately vs a C-style array
 
 // userinfo validation bitflags
 // default is all except extended ascii
