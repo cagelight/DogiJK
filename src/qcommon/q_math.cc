@@ -1201,6 +1201,12 @@ void VectorOffset(vec3_t pos, vec3_t angles, float distance, vec3_t out) {
 	out[2] = z;
 }
 
+void VectorLerp(vec3_t in1, vec3_t in2, float lerp, vec3_t out) {
+	out[0] = in2[0] * lerp + in1[0] * (1 - lerp);
+	out[1] = in2[1] * lerp + in1[1] * (1 - lerp);
+	out[2] = in2[2] * lerp + in1[2] * (1 - lerp);
+}
+
 void SnapVector( float *v )
 {
 #if defined(_MSC_VER) && !defined(idx64)

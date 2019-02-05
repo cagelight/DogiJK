@@ -26,6 +26,120 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/q_shared.hh"
 #include "qfiles.hh"
 
+typedef struct cNode_s {
+	cplane_t	*plane;
+	int			children[2];		// negative numbers are leafs
+} cNode_t;
+
+typedef struct cLeaf_s {
+	int			cluster;
+	int			area;
+
+	ptrdiff_t	firstLeafBrush;
+	int			numLeafBrushes;
+
+	ptrdiff_t	firstLeafSurface;
+	int			numLeafSurfaces;
+} cLeaf_t;
+
+typedef struct cmodel_s {
+	vec3_t		mins, maxs;
+	cLeaf_t		leaf;			// submodels don't reference the main tree
+	int			firstNode;		// only for cmodel[0] (for the main and bsp instances)
+} cmodel_t;
+
+typedef struct cbrushside_s {
+	cplane_t	*plane;
+	int			shaderNum;
+} cbrushside_t;
+
+typedef struct cbrush_s {
+	int					shaderNum;		// the shader that determined the contents
+	int					contents;
+	vec3_t				bounds[2];
+	cbrushside_t		*sides;
+	unsigned short		numsides;
+	unsigned short		checkcount;		// to avoid repeated testings
+} cbrush_t;
+
+class CCMShader
+{
+public:
+	char		shader[MAX_QPATH];
+	class CCMShader	*mNext;
+	int			surfaceFlags;
+	int			contentFlags;
+
+	const char	*GetName(void) const { return(shader); }
+	class CCMShader *GetNext(void) const { return(mNext); }
+	void	SetNext(class CCMShader *next) { mNext = next; }
+	void	Destroy(void) { }
+};
+
+typedef struct cPatch_s {
+	int			checkcount;				// to avoid repeated testings
+	int			surfaceFlags;
+	int			contents;
+	struct patchCollide_s	*pc;
+} cPatch_t;
+
+
+typedef struct cArea_s {
+	int			floodnum;
+	int			floodvalid;
+} cArea_t;
+
+typedef struct clipMap_s {
+	char		name[MAX_QPATH];
+
+	int			numShaders;
+	CCMShader	*shaders;
+
+	int			numBrushSides;
+	cbrushside_t *brushsides;
+
+	int			numPlanes;
+	cplane_t	*planes;
+
+	int			numNodes;
+	cNode_t		*nodes;
+
+	int			numLeafs;
+	cLeaf_t		*leafs;
+
+	int			numLeafBrushes;
+	int			*leafbrushes;
+
+	int			numLeafSurfaces;
+	int			*leafsurfaces;
+
+	int			numSubModels;
+	cmodel_t	*cmodels;
+
+	int			numBrushes;
+	cbrush_t	*brushes;
+
+	int			numClusters;
+	int			clusterBytes;
+	byte		*visibility;
+	qboolean	vised;			// if false, visibility is just a single cluster of ffs
+
+	int			numEntityChars;
+	char		*entityString;
+
+	int			numAreas;
+	cArea_t		*areas;
+	int			*areaPortals;	// [ numAreas*numAreas ] reference counts
+
+	int			numSurfaces;
+	cPatch_t	**surfaces;			// non-patches will be NULL
+
+	int			floodvalid;
+	int			checkcount;					// incremented on each trace
+} clipMap_t;
+
+clipMap_t const * CM_Get();
+
 void		CM_LoadMap( const char *name, qboolean clientload, int *checksum);
 
 void		CM_ClearMap( void );

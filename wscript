@@ -6,7 +6,7 @@ import os, sys
 top = os.getcwd()
 out = 'build'
 	
-g_comflags = ['-pthread', '-Wall', '-Wno-unused-variable', '-Werror=invalid-offsetof']
+g_comflags = ['-pthread', '-Wall', '-Wextra', '-Wno-unused-variable', '-Wno-unused-parameter', '-Werror=invalid-offsetof']
 g_cflags = ['-std=c99'] + g_comflags
 g_cxxflags = ['-std=c++17'] + g_comflags
 
@@ -41,12 +41,13 @@ def configure(ctx):
 	
 	ctx.check(features='c cprogram', lib='z', uselib_store='ZLIB')
 	ctx.check(features='c cprogram', lib='dl', uselib_store='DL')
+	ctx.check(features='c cprogram', lib='pthread', uselib_store='PTHREAD')
 	
 	if ctx.env.BUILD_CLIENT:
 		ctx.check(features='c cprogram', lib='jpeg', uselib_store='JPEG')
 		ctx.check(features='c cprogram', lib='png', uselib_store='PNG')
-		
-	ctx.check(features='c cprogram', lib='pthread', uselib_store='PTHREAD')
+	
+	ctx.check_cfg(path='pkg-config', args='--cflags --libs', package='bullet', uselib_store='BULLET')
 	ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
 	btup = ctx.options.build_type.upper()
@@ -165,7 +166,7 @@ def build(bld):
 			target = 'jampgame',
 			includes = ['src'],
 			source = gcgui_files + game_files,
-			uselib = ['PTHREAD'],
+			uselib = ['PTHREAD', 'BULLET'],
 			defines = ['_GAME'],
 			install_path = os.path.join(top, 'install', 'base')
 		)
@@ -189,7 +190,7 @@ def build(bld):
 			target = 'cgame',
 			includes = ['src'],
 			source = gcgui_files + cgame_files,
-			uselib = ['PTHREAD'],
+			uselib = ['PTHREAD', 'BULLET'],
 			defines = ['_CGAME'],
 			install_path = os.path.join(top, 'install', 'base')
 		)

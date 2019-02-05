@@ -2959,7 +2959,7 @@ void FinishSpawningItem( gentity_t *ent ) {
 		VectorSet( dest, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] - 4096 );
 		trap->Trace( &tr, ent->s.origin, ent->r.mins, ent->r.maxs, dest, ent->s.number, MASK_SOLID, qfalse, 0, 0 );
 		if ( tr.startsolid ) {
-			trap->Print ("FinishSpawningItem: %s startsolid at %s\n", ent->classname, vtos(ent->s.origin));
+			trap->Print ("FinishSpawningItem: %s startsolid at %s\n", ent->classname.c_str(), vtos(ent->s.origin));
 			G_FreeEntity( ent );
 			return;
 		}

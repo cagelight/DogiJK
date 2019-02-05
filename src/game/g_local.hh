@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_public.hh"
 #include "bg_vehicles.hh"
 #include "g_public.hh"
+#include "bg_physics.hh"
 
 struct gentity_t;
 struct gclient_t;
@@ -178,6 +179,11 @@ struct gentity_t : public sharedEntity_t {
 	
 	gentity_t();
 	~gentity_t();
+	
+	inline void clear() {
+		this->~gentity_t();
+		new (this) (gentity_t);
+	}
 
 	gclient_t	*client = nullptr;			// NULL if not a client
 
@@ -1469,10 +1475,9 @@ int BotAIStartFrame( int time );
 
 #include "g_team.hh" // teamplay specific stuff
 
-
-extern	level_locals_t	level;
-extern	gentity_t * g_entities; // always maps to g_entities_actual.data(), here for compatibility reasons (laziness)
-extern	std::vector<gentity_t> g_entities_actual; // g_entities is now a vector so constructors and destructors are called appropriately vs a C-style array
+extern std::vector<gentity_t> g_entities_actual; // g_entities is now a vector so constructors and destructors are called appropriately vs a C-style array
+extern gentity_t * g_entities; // always maps to g_entities_actual.data(), here for compatibility reasons (laziness)
+extern level_locals_t	level;
 
 // userinfo validation bitflags
 // default is all except extended ascii
@@ -1497,4 +1502,10 @@ void Svcmd_ToggleAllowVote_f( void );
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );
 
+// g_physics.c
+void G_Physics_Init();
+void G_Physics_Shutdown();
+extern std::unique_ptr<physics_world_t> g_phys;
+
+// trap
 extern gameImport_t *trap;

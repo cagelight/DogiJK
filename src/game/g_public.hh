@@ -1044,6 +1044,7 @@ typedef struct gameImport_s {
 	qhandle_t	(*R_RegisterSkin)						( const char *name );
 	const char *(*SetActiveSubBSP)						( int index );
 	int			(*CM_RegisterTerrain)					( const char *config );
+	void const * (*CM_Get)								( void );
 	void		(*RMG_Init)								( void );
 
 	void		(*G2API_ListModelBones)					( void *ghlInfo, int frame );

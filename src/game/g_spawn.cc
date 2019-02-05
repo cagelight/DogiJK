@@ -228,6 +228,7 @@ void SP_func_bobbing (gentity_t *ent);
 void SP_func_pendulum( gentity_t *ent );
 void SP_func_button (gentity_t *ent);
 void SP_func_door (gentity_t *ent);
+void SP_func_fish (gentity_t *ent);
 void SP_func_train (gentity_t *ent);
 void SP_func_timer (gentity_t *self);
 void SP_func_breakable (gentity_t *ent);
@@ -482,6 +483,7 @@ spawn_t	spawns[] = {
 	{ "func_breakable",						SP_func_breakable },
 	{ "func_button",						SP_func_button },
 	{ "func_door",							SP_func_door },
+	{ "func_fish",							SP_func_fish },
 	{ "func_glass",							SP_func_glass },
 	{ "func_group",							SP_info_null },
 	{ "func_pendulum",						SP_func_pendulum },

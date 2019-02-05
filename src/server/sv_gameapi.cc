@@ -1303,6 +1303,10 @@ static int SV_CM_RegisterTerrain( const char *config ) {
 	return 0;
 }
 
+static void const * SV_CM_Get() {
+	return CM_Get();
+}
+
 static void SV_RMG_Init( void ) { }
 
 static void SV_G2API_ListModelSurfaces( void *ghlInfo ) {
@@ -1883,6 +1887,7 @@ void SV_BindGame( void ) {
 	gi.R_RegisterSkin						= SV_RE_RegisterSkin;
 	gi.SetActiveSubBSP						= SV_SetActiveSubBSP;
 	gi.CM_RegisterTerrain					= SV_CM_RegisterTerrain;
+	gi.CM_Get								= SV_CM_Get;
 	gi.RMG_Init								= SV_RMG_Init;
 	gi.G2API_ListModelBones					= SV_G2API_ListModelBones;
 	gi.G2API_ListModelSurfaces				= SV_G2API_ListModelSurfaces;

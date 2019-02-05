@@ -285,7 +285,7 @@ static void Howler_Attack( float enemyDist, qboolean howl = qfalse )
 	case BOTH_ATTACK1:
 	case BOTH_MELEE1:
 		if ( NPCS.NPC->client->ps.legsTimer > 650//more than 13 frames left
-			&& PM_AnimLength( 0, (animNumber_t)NPCS.NPC->client->ps.legsAnim ) - NPCS.NPC->client->ps.legsTimer >= 800 )//at least 16 frames into anim
+			/*&& PM_AnimLength( 0, (animNumber_t)NPCS.NPC->client->ps.legsAnim ) - NPCS.NPC->client->ps.legsTimer >= 800*/  )//at least 16 frames into anim // FIXME
 		{
 			Howler_TryDamage( dmg, qfalse, qfalse );
 		}
@@ -293,7 +293,7 @@ static void Howler_Attack( float enemyDist, qboolean howl = qfalse )
 	case BOTH_ATTACK2:
 	case BOTH_MELEE2:
 		if ( NPCS.NPC->client->ps.legsTimer > 350//more than 7 frames left
-			&& PM_AnimLength( 0, (animNumber_t)NPCS.NPC->client->ps.legsAnim ) - NPCS.NPC->client->ps.legsTimer >= 550 )//at least 11 frames into anim
+			/*&& PM_AnimLength( 0, (animNumber_t)NPCS.NPC->client->ps.legsAnim ) - NPCS.NPC->client->ps.legsTimer >= 550*/ )//at least 11 frames into anim // FIXME
 		{
 			Howler_TryDamage( dmg, qtrue, qfalse );
 		}
@@ -301,7 +301,7 @@ static void Howler_Attack( float enemyDist, qboolean howl = qfalse )
 	case BOTH_GESTURE1:
 		{
 			if ( NPCS.NPC->client->ps.legsTimer > 1800//more than 36 frames left
-				&& PM_AnimLength( 0, (animNumber_t)NPCS.NPC->client->ps.legsAnim ) - NPCS.NPC->client->ps.legsTimer >= 950 )//at least 19 frames into anim
+				/*&& PM_AnimLength( 0, (animNumber_t)NPCS.NPC->client->ps.legsAnim ) - NPCS.NPC->client->ps.legsTimer >= 950*/ )//at least 19 frames into anim // FIXME
 			{
 				Howler_Howl();
 				if ( !NPCS.NPC->count )

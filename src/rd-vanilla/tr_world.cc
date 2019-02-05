@@ -548,7 +548,7 @@ void R_AddBrushModelSurfaces ( trRefEntity_t *ent ) {
 		return;
 	}
 
-	if(pModel->bspInstance)
+	if(/*pModel->bspInstance*/ true) // HACK HACK HACK -- fix entity lighting on brushes until I can figure out the underlying cause
 	{ //rwwRMG - added
 		R_SetupEntityLighting(&tr.refdef, ent);
 	}

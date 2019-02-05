@@ -339,6 +339,10 @@ static int CL_PrecisionTimerEnd( void *p ) {
 	return r; //return the result
 }
 
+static void const * CL_CM_Get() {
+	return CM_Get();
+}
+
 static void CL_RMG_Init( int /* terrainID */, const char * /* terrainInfo */ ) { }
 
 static qboolean CGFX_PlayBoltedEffectID( int id, vec3_t org, void *ghoul2, const int boltNum, const int entNum, const int modelNum, int iLooptime, qboolean isRelative ) {
@@ -781,6 +785,7 @@ void CL_BindCGame( void ) {
 	cgi.CM_Trace							= CM_BoxTrace;
 	cgi.CM_TransformedPointContents			= CM_TransformedPointContents;
 	cgi.CM_TransformedTrace					= CM_TransformedBoxTrace;
+	cgi.CM_Get								= CL_CM_Get;
 	cgi.RMG_Init							= CL_RMG_Init;
 	cgi.S_AddLocalSet						= S_AddLocalSet;
 	cgi.S_AddLoopingSound					= S_AddLoopingSound;

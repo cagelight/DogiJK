@@ -1512,6 +1512,110 @@ void SP_func_door (gentity_t *ent)
 
 /*
 ===============================================================================
+FISH
+===============================================================================
+*/
+
+static void Think_FishOrient(gentity_t * fish);
+static void Think_FishMove(gentity_t * fish);
+
+static void Think_FishNothing(gentity_t * fish) {
+	fish->s.pos.trType = TR_STATIONARY;
+}
+
+static void Think_FishOrient(gentity_t * fish) {
+	vec3_t astart, adelta;
+	float duration = Q_flrand(200, 850) * ( 125.0f / fish->speed);
+	
+	VectorCopy(fish->r.currentOrigin, fish->s.origin);
+	VectorCopy(fish->r.currentOrigin, fish->s.pos.trBase);
+	fish->s.pos.trType = TR_STATIONARY;
+	
+	VectorCopy(fish->r.currentAngles, astart);
+	VectorCopy(astart, fish->s.angles);
+	VectorCopy(astart, fish->r.currentAngles);
+	VectorCopy(astart, fish->s.apos.trBase);
+	
+	adelta[PITCH] = Q_irand(-45 - astart[PITCH], 45 - astart[PITCH]);
+	adelta[YAW] = Q_irand(-180, 180);
+	adelta[ROLL] = 0;
+	
+	VectorScale(adelta, 1 / (duration * 0.001), adelta);
+	VectorCopy(adelta, fish->s.apos.trDelta);
+	fish->s.apos.trType = TR_COSINE_STOP;
+	fish->s.apos.trDuration = duration;
+	fish->s.apos.trTime = level.time;
+	
+	fish->think = Think_FishMove;
+	fish->nextthink = level.time + duration + fish->wait;
+	trap->LinkEntity((sharedEntity_t *) fish);
+}
+
+static void Think_FishMove(gentity_t * fish) {
+	vec3_t start, front, end, diff;
+	trace_t tr;
+	float dist;
+	
+	VectorCopy(fish->r.currentAngles, fish->s.angles);
+	VectorCopy(fish->r.currentAngles, fish->s.apos.trBase);
+	fish->s.apos.trType = TR_STATIONARY;
+	
+	VectorCopy(fish->r.currentOrigin, start);
+	VectorCopy(start, fish->s.origin);
+	VectorCopy(start, fish->r.currentOrigin);
+	VectorCopy(start, fish->s.pos.trBase);
+	
+	AngleVectors(fish->r.currentAngles, front, NULL, NULL);
+	VectorMA(start, 512, front, end);
+	trap->Trace(&tr, start, fish->r.mins, fish->r.maxs, end, 0, CONTENTS_SOLID, qfalse, 0, 0);
+	
+	VectorLerp(start, tr.endpos, Q_flrand(0.6, 0.95), end);
+	VectorSubtract(end, start, diff);
+	dist = Q_fabs(VectorLength(diff)) / (fish->speed / 1000.0f);
+	
+	if (Q_isnan(dist) || dist < 100) goto end;
+	
+	VectorScale(diff, 1000.0 / dist, fish->s.pos.trDelta);
+	fish->s.pos.trType = TR_COSINE_STOP;
+	fish->s.pos.trDuration = dist;
+	fish->s.pos.trTime = level.time;
+	
+	end:
+	fish->think = Think_FishOrient;
+	fish->nextthink = level.time + dist + fish->wait;
+	trap->LinkEntity((sharedEntity_t *) fish);
+}
+
+void SP_func_fish (gentity_t *ent) {
+
+	if (!ent->speed)
+		ent->speed = 125;
+
+	if (!ent->wait)
+		ent->wait = 0;
+
+	// default damage of 2 points
+	G_SpawnInt( "dmg", "2", &ent->damage );
+	if ( ent->damage < 0 )
+	{
+		ent->damage = 0;
+	}
+
+	// calculate second position
+	trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
+	G_SetMovedir( ent->s.angles, ent->movedir );
+
+	InitMover( ent );
+	ent->reached = NULL;
+
+	ent->nextthink = level.time + FRAMETIME;
+	ent->think = Think_FishOrient;
+	
+	G_SetOrigin(ent, ent->s.origin);
+}
+
+/*
+===============================================================================
 
 PLAT
 

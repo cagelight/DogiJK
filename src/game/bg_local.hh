@@ -27,6 +27,16 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "bg_public.hh"
 
+#if defined(_GAME)
+#include "g_local.hh"
+#define GAMEDO(s) s;
+#define CGAMEDO(s)
+#elif defined(_CGAME)
+#include "cgame/cg_local.hh"
+#define GAMEDO(s)
+#define CGAMEDO(s) s;
+#endif
+
 #define	MIN_WALK_NORMAL	0.7f		// can't walk on very steep slopes
 
 #define	TIMER_LAND		130

@@ -1036,7 +1036,7 @@ void G_FreeEntity( gentity_t * ent ) {
 		trap->SendServerCommand(-1, va("kls %i %i", ent->s.trickedentindex, ent->s.number));
 	}
 
-	*ent = {};
+	ent->clear();
 }
 
 /*

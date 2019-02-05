@@ -39,6 +39,7 @@ int killPlayerTimer = 0;
 
 std::vector<gentity_t> g_entities_actual;
 gentity_t * 	g_entities = nullptr;
+
 gclient_t		g_clients[MAX_CLIENTS];
 
 qboolean gDuelExit = qfalse;
@@ -253,6 +254,7 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	else
 		trap->Print( "Not logging security events to disk.\n" );
 
+	if (g_physics.integer) G_Physics_Init();
 
 	G_LogWeaponInit();
 
@@ -511,6 +513,8 @@ void G_ShutdownGame( int restart ) {
 	if ( trap->Cvar_VariableIntegerValue( "bot_enable" ) ) {
 		BotAIShutdown( restart );
 	}
+	
+	G_Physics_Shutdown();
 	
 	g_entities_actual.clear();
 
