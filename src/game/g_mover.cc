@@ -1569,7 +1569,7 @@ static void Think_FishMove(gentity_t * fish) {
 	VectorMA(start, 512, front, end);
 	trap->Trace(&tr, start, fish->r.mins, fish->r.maxs, end, 0, CONTENTS_SOLID, qfalse, 0, 0);
 	
-	VectorLerp(start, tr.endpos, Q_flrand(0.6, 0.95), end);
+	VectorLerp(start, tr.endpos, Q_flrand(0.4, 0.8), end);
 	VectorSubtract(end, start, diff);
 	dist = Q_fabs(VectorLength(diff)) / (fish->speed / 1000.0f);
 	

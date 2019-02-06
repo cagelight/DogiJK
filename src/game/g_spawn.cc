@@ -138,6 +138,7 @@ static const std::unordered_map<istring, std::function<void(gentity_t * ent, cha
 	{ "mindtrickscript",		FSTR( behaviorSet[BSET_MINDTRICK] ) },//name of script to run
 	{ "model",					FSTR( model ) },
 	{ "model2",					FSTR( model2 ) },
+	{ "model2scale",			FINT( s.iModelScale ) },
 	{ "npc_target",				FSTR( NPC_target ) },
 	{ "npc_target2",			FSTR( target2 ) },//NPC_spawner only
 	{ "npc_target4",			FSTR( target4 ) },//NPC_spawner only

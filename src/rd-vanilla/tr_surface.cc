@@ -1273,6 +1273,54 @@ void RB_SurfaceMesh(md3Surface_t *surface) {
 
 
 /*
+=============
+RB_SurfaceObj
+=============
+*/
+void RB_SurfaceObj(objSurface_t * surf) {
+	int index = tess.numIndexes, i = 0;
+	int vindex = tess.numVertexes;
+	objFace_t * face;
+	for (face = surf->faces; i < surf->numFaces; i++, face++) {
+		VectorSet4(tess.xyz[vindex+0], (*face)[0].vertex[0], (*face)[0].vertex[1], (*face)[0].vertex[2], 0);
+		VectorSet4(tess.xyz[vindex+1], (*face)[1].vertex[0], (*face)[1].vertex[1], (*face)[1].vertex[2], 0);
+		VectorSet4(tess.xyz[vindex+2], (*face)[2].vertex[0], (*face)[2].vertex[1], (*face)[2].vertex[2], 0);
+		tess.texCoords[vindex+0][0][0] = (*face)[0].uv[0];
+		tess.texCoords[vindex+0][0][1] = (*face)[0].uv[1];
+		tess.texCoords[vindex+1][0][0] = (*face)[1].uv[0];
+		tess.texCoords[vindex+1][0][1] = (*face)[1].uv[1];
+		tess.texCoords[vindex+2][0][0] = (*face)[2].uv[0];
+		tess.texCoords[vindex+2][0][1] = (*face)[2].uv[1];
+		VectorSet4(tess.normal[vindex+0], (*face)[0].normal[0], (*face)[0].normal[1], (*face)[0].normal[2], 0);
+		VectorSet4(tess.normal[vindex+1], (*face)[1].normal[0], (*face)[1].normal[1], (*face)[1].normal[2], 0);
+		VectorSet4(tess.normal[vindex+2], (*face)[2].normal[0], (*face)[2].normal[1], (*face)[2].normal[2], 0);
+		tess.indexes[index+0] = vindex+0;
+		tess.indexes[index+1] = vindex+1;
+		tess.indexes[index+2] = vindex+2;
+		index += 3;
+		vindex += 3;
+		tess.numIndexes += 3;
+		tess.numVertexes += 3;
+		
+		/*
+		Com_Printf("Obj Face:\n");
+		Com_Printf("\t{%f, %f, %f}\n", (*face)[0].vertex[0], (*face)[0].vertex[1], (*face)[0].vertex[2]);
+		Com_Printf("\t{%f, %f, %f}\n", (*face)[1].vertex[0], (*face)[1].vertex[1], (*face)[1].vertex[2]);
+		Com_Printf("\t{%f, %f, %f}\n", (*face)[2].vertex[0], (*face)[2].vertex[1], (*face)[2].vertex[2]);
+		
+		Com_Printf("\t{%f, %f}\n", (*face)[0].uv[0], (*face)[0].uv[1]);
+		Com_Printf("\t{%f, %f}\n", (*face)[1].uv[0], (*face)[1].uv[1]);
+		Com_Printf("\t{%f, %f}\n", (*face)[2].uv[0], (*face)[2].uv[1]);
+		
+		Com_Printf("\t{%f, %f, %f}\n", (*face)[0].normal[0], (*face)[0].normal[1], (*face)[0].normal[2]);
+		Com_Printf("\t{%f, %f, %f}\n", (*face)[1].normal[0], (*face)[1].normal[1], (*face)[1].normal[2]);
+		Com_Printf("\t{%f, %f, %f}\n", (*face)[2].normal[0], (*face)[2].normal[1], (*face)[2].normal[2]);
+		*/
+	}
+}
+
+
+/*
 ==============
 RB_SurfaceFace
 ==============
@@ -1765,6 +1813,7 @@ void (*rb_surfaceTable[SF_NUM_SURFACE_TYPES])( void *) = {
 	(void(*)(void*))RB_SurfaceTriangles,	// SF_TRIANGLES,
 	(void(*)(void*))RB_SurfacePolychain,	// SF_POLY,
 	(void(*)(void*))RB_SurfaceMesh,			// SF_MD3,
+	(void(*)(void*))RB_SurfaceObj,			// SF_OBJ,
 /*
 Ghoul2 Insert Start
 */

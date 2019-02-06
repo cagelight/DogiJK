@@ -31,6 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/cm_public.hh"
 #include "qcommon/MiniHeap.hh"
 #include "qcommon/stringed_ingame.hh"
+#include "qcommon/models.hh"
 #include "cl_cgameapi.hh"
 #include "cl_uiapi.hh"
 #include "cl_lan.hh"
@@ -2487,6 +2488,8 @@ void CL_InitRef( void ) {
 
 	ri.PD_Store = PD_Store;
 	ri.PD_Load = PD_Load;
+	
+	ri.Model_LoadObj = Model_LoadObj;
 	
 	typedef g2export_t *(*G2_GetInterface_f)();
 	G2_GetInterface_f g2gi = (G2_GetInterface_f)Sys_LoadFunction( g2Lib, "G2_GetInterface" );
