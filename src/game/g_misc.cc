@@ -258,8 +258,8 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles, qboolean s
 
 #define TELEPORT_P2P_FACE_DIST 80
 void TeleportPlayerToPlayer(gentity_t * playerFrom, gentity_t * playerTo, qboolean silent) {
-	float pos[3];
-	float ang[3];
+	float pos[3] {0, 0, 0};
+	float ang[3] {0, 0, 0};
 	VectorCopy(playerTo->client->ps.origin, pos);
 	ang[YAW] = -playerTo->client->ps.viewangles[YAW];
 	VectorOffset(pos, playerTo->client->ps.viewangles, TELEPORT_P2P_FACE_DIST, pos);
