@@ -22,6 +22,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
+#include <sstream>
+
 #include "g_local.hh"
 #include "bg_saga.hh"
 
@@ -3388,7 +3390,7 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 			trap->Argv(1, player2token, MAX_NETNAME);
 			for(player2 = g_entities, i = 0;i < MAX_CLIENTS;i++,player2++) {
 				if (!player2->client) continue;
-				if (strstr(player2->client->pers.netname, player2token)) {
+				if (Q_stristr(player2->client->pers.netname_nocolor, player2token)) {
 					break;
 				}
 			}
@@ -3404,13 +3406,13 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 			trap->Argv(2, player2token, MAX_NETNAME);
 			for(player1 = g_entities, i = 0;i < MAX_CLIENTS;i++,player1++) {
 				if (!player1->client) continue;
-				if (strstr(player1->client->pers.netname, player1token)) {
+				if (Q_stristr(player1->client->pers.netname_nocolor, player1token)) {
 					break;
 				}
 			}
 			for(player2 = g_entities, i = 0;i < MAX_CLIENTS;i++,player2++) {
 				if (!player2->client) continue;
-				if (strstr(player2->client->pers.netname, player2token)) {
+				if (Q_stristr(player2->client->pers.netname_nocolor, player2token)) {
 					break;
 				}
 			}
@@ -3439,7 +3441,7 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 			trap->Argv(1, player1token, MAX_NETNAME);
 			for(player1 = g_entities, i = 0;i < MAX_CLIENTS;i++,player1++) {
 				if (!player1->client) continue;
-				if (strstr(player1->client->pers.netname, player1token)) {
+				if (Q_stristr(player1->client->pers.netname_nocolor, player1token)) {
 					break;
 				}
 			}
@@ -3558,7 +3560,7 @@ static void Cmd_Kitty_f( gentity_t * ent ) {
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
 }
 
-void Cmd_Hercules_f( gentity_t *ent ) {
+static void Cmd_Hercules_f( gentity_t *ent ) {
 	char const * msg = nullptr;
 	//This cheat disables knockback
 
@@ -3569,6 +3571,98 @@ void Cmd_Hercules_f( gentity_t *ent ) {
 		msg = "You feel strong like Hercules!";
 
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+}
+
+static void Cmd_Target_Fire(gentity_t * player, gentity_t * target) {
+	GlobalUse(target, player, player);
+}
+
+static void Cmd_Target_Info(gentity_t * player, gentity_t * target) {
+	std::stringstream ss;
+	
+	ss << "print \"==== Entity " << (target - g_entities) << " ====\n";
+	
+	switch (target->s.eType) {
+		default: break;
+		case ET_MOVER:
+			ss << "\tType: MOVER\n";
+			ss << "\t\tDelay: '" << target->delay << "'\n";
+			ss << "\t\tSpeed: '" << target->speed << "'\n";
+			ss << "\t\tWait: '" << target->wait << "'\n";
+			break;
+		case ET_NPC:
+			ss << "\tType: NPC\n";
+			if (target->NPC_type.size())
+				ss << "\t\tNPC Type: '" << target->NPC_type.c_str() << "'\n";
+			break;
+	}
+	
+	if (target->classname.size())
+		ss << "\tClassname: '" << target->classname.c_str() << "'\n";
+	if (target->targetname && target->targetname[0])
+		ss << "\tTargetname: '" << target->targetname << "'\n";
+	if (target->target && target->target[0])
+		ss << "\tTarget: '" << target->target << "'\n";
+	
+	ss << "\"";
+	auto msg = ss.str();
+	
+	trap->SendServerCommand( player - g_entities, msg.c_str() );
+}
+
+static std::unordered_map<istring, void(*)(gentity_t *, gentity_t *)> const target_funcs {
+	{ "fire", Cmd_Target_Fire },
+	{ "info", Cmd_Target_Info },
+};
+
+static void Cmd_Target_f(gentity_t * player) {
+	if (trap->Argc() < 2) {
+		trap->SendServerCommand( player - g_entities, "print \"missing subcommand, options are: 'fire', 'info'\n\"" );
+		return;
+	}
+	
+	char subcmd[MAX_STRING_CHARS];
+	trap->Argv(1, subcmd, MAX_STRING_CHARS);
+	
+	auto const & func = target_funcs.find(subcmd);
+	if (func == target_funcs.end()) {
+		trap->SendServerCommand( player - g_entities, va( "print \"unknown subcommand: '%s', options are: 'fire', 'info'\n\"", subcmd ) );
+		return;
+	}
+	
+	if (trap->Argc() < 3) {
+		vec3_t forward, right, up, muzzle, start, end;
+		AngleVectors( player->client->ps.viewangles, forward, right, up );
+		CalcMuzzlePoint( player, forward, right, up, muzzle );
+		VectorCopy( player->client->ps.origin, start );
+		start[2] += player->client->ps.viewheight;//By eyes
+		VectorMA( start, 1 << 17, forward, end );
+		
+		trace_t tr;
+		trap->Trace( &tr, start, NULL, NULL, end, player - g_entities, MASK_PLAYERSOLID, qfalse, 0, 0 );
+		
+		if (!tr.entityNum || tr.entityNum == ENTITYNUM_WORLD) {
+			trap->SendServerCommand( player - g_entities, "print \"no entity found under cursor\n\"" );
+			return;
+		}
+		
+		func->second(player, &g_entities[tr.entityNum]);
+	} else {
+		char targetname[MAX_STRING_CHARS];
+		trap->Argv(2, targetname, MAX_STRING_CHARS);
+		
+		bool found_entity = false;
+		gentity_t * targ = nullptr;
+		while ((targ = G_Find (targ, [&targetname](gentity_t * ent){ return !Q_stricmp(ent->targetname, targetname); }))) {
+			found_entity = true;
+			func->second(player, targ);
+		}
+		
+		if (!found_entity) {
+			trap->SendServerCommand( player - g_entities, va( "print \"entity with targetname '%s' not found\n\"", targetname ) );
+			return;
+		}
+	}
 }
 
 /*
@@ -3627,6 +3721,7 @@ command_t commands[] = {
 	{ "score",				Cmd_Score_f,				0 },
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
+	{ "target",				Cmd_Target_f,				CMD_CHEAT|CMD_ALIVE },
 	{ "team",				Cmd_Team_f,					CMD_NOINTERMISSION },
 //	{ "teamtask",			Cmd_TeamTask_f,				CMD_NOINTERMISSION },
 	{ "teamvote",			Cmd_TeamVote_f,				CMD_NOINTERMISSION },
