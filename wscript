@@ -46,9 +46,9 @@ def configure(ctx):
 	if ctx.env.BUILD_CLIENT:
 		ctx.check(features='c cprogram', lib='jpeg', uselib_store='JPEG')
 		ctx.check(features='c cprogram', lib='png', uselib_store='PNG')
+		ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
 	ctx.check_cfg(path='pkg-config', args='--cflags --libs', package='bullet', uselib_store='BULLET')
-	ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
 	btup = ctx.options.build_type.upper()
 	if btup in ['DEBUG', 'NATIVE', 'RELEASE']:
@@ -74,7 +74,7 @@ def build(bld):
 	
 	build_game = build_server or build_client
 	build_cgame = build_client
-	build_ui = uild_client
+	build_ui = build_client
 	build_rdvan = build_client
 	build_ghoul2 = build_client
 
