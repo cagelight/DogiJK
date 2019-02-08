@@ -521,13 +521,12 @@ G_PickTarget
 Selects a random entity from among the targets
 =============
 */
-#define MAXCHOICES	32
 
 gentity_t *G_PickTarget (char *targetname)
 {
 	gentity_t	*ent = NULL;
-	int		num_choices = 0;
-	gentity_t	*choice[MAXCHOICES];
+	
+	std::vector<gentity_t *> choices;
 
 	if (!targetname)
 	{
@@ -540,18 +539,18 @@ gentity_t *G_PickTarget (char *targetname)
 		ent = G_Find (ent, [targetname](gentity_t * ent){ return !Q_stricmp(ent->targetname, targetname); });
 		if (!ent)
 			break;
-		choice[num_choices++] = ent;
-		if (num_choices == MAXCHOICES)
-			break;
+		choices.push_back(ent);
 	}
+	
 
-	if (!num_choices)
+	if (!choices.size())
 	{
 		trap->Print("G_PickTarget: target %s not found\n", targetname);
 		return NULL;
 	}
-
-	return choice[rand() % num_choices];
+	
+	if (choices.size() == 1) return choices[0];
+	return choices[Q_irand(0, choices.size() - 1)];
 }
 
 void GlobalUse(gentity_t *self, gentity_t *other, gentity_t *activator)

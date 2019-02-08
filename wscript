@@ -71,9 +71,10 @@ def build(bld):
 	
 	build_server = bld.env.BUILD_SERVER
 	build_client = bld.env.BUILD_CLIENT
+	
 	build_game = build_server or build_client
-	build_cgame = build_server or build_client
-	build_ui = build_server or build_client
+	build_cgame = build_client
+	build_ui = uild_client
 	build_rdvan = build_client
 	build_ghoul2 = build_client
 
