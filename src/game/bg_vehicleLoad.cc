@@ -44,24 +44,20 @@ extern stringID_table_t animTable [MAX_ANIMATIONS+1];
 std::unordered_map<istring, std::string> VehWeaponParms;
 std::unordered_map<istring, std::string> VehicleParms;
 
-void BG_ListVehicleWeapons() {
+std::vector<istring> BG_ListVehicleWeapons() {
 	std::vector<istring> NPCs;
 	for (auto const & i : VehWeaponParms) 
 		NPCs.push_back(i.first);
 	std::sort(NPCs.begin(), NPCs.end());
-	for (auto const & i : NPCs) {
-		Com_Printf("\t%s\n", i.c_str());
-	}
+	return NPCs;
 }
 
-void BG_ListVehicles() {
+std::vector<istring> BG_ListVehicles() {
 	std::vector<istring> NPCs;
 	for (auto const & i : VehicleParms) 
 		NPCs.push_back(i.first);
 	std::sort(NPCs.begin(), NPCs.end());
-	for (auto const & i : NPCs) {
-		Com_Printf("\t%s\n", i.c_str());
-	}
+	return NPCs;
 }
 
 void BG_ClearVehicleParseParms(void)

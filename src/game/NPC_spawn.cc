@@ -4262,6 +4262,7 @@ Svcmd_NPC_f
 
 parse and dispatch bot commands
 */
+
 qboolean	showBBoxes = qfalse;
 void Cmd_NPC_f( gentity_t *ent )
 {
@@ -4322,12 +4323,5 @@ void Cmd_NPC_f( gentity_t *ent )
 				Com_Printf( "ERROR: NPC score - no such NPC %s\n", cmd2 );
 			}
 		}
-	}
-	else if ( ! Q_stricmp( cmd, "listveh" ) ) {
-		Com_Printf("\nVehicles:\n");
-		BG_ListVehicles();
-	} else if ( ! Q_stricmp( cmd, "list" ) ) {
-		Com_Printf("\nNPCs:\n");
-		BG_ListNPCs();
 	}
 }

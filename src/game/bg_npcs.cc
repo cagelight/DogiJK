@@ -21,15 +21,31 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
 //NPC_stats.cpp
-#include "b_local.hh"
-#include "b_public.hh"
-#include "anims.hh"
-#include "ghoul2/G2.hh"
 
+#include "qcommon/q_shared.hh"
 #include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+std::unordered_map<istring, std::string> NPCParms;
+std::unordered_map<istring, std::string> NPCMetaParms;
+
+std::vector<istring> BG_ListNPCs() {
+	std::vector<istring> NPCs;
+	for (auto const & i : NPCParms) 
+		NPCs.push_back(i.first);
+	for (auto const & i : NPCMetaParms) 
+		NPCs.push_back(i.first);
+	std::sort(NPCs.begin(), NPCs.end());
+	return NPCs;
+}
+
+#if defined(_GAME)
+#include "b_local.hh"
+#include "b_public.hh"
+#include "anims.hh"
+#include "ghoul2/G2.hh"
 
 extern qboolean NPCsPrecached;
 
@@ -237,21 +253,6 @@ int NPC_ReactionTime ( void )
 //
 
 extern qboolean BG_ParseLiteral( const char **data, const char *string );
-
-std::unordered_map<istring, std::string> NPCParms;
-std::unordered_map<istring, std::string> NPCMetaParms;
-
-void BG_ListNPCs() {
-	std::vector<istring> NPCs;
-	for (auto const & i : NPCParms) 
-		NPCs.push_back(i.first);
-	for (auto const & i : NPCMetaParms) 
-		NPCs.push_back(i.first);
-	std::sort(NPCs.begin(), NPCs.end());
-	for (auto const & i : NPCs) {
-		Com_Printf("\t%s\n", i.c_str());
-	}
-}
 
 /*
 team_t TranslateTeamName( const char *name )
@@ -3572,7 +3573,12 @@ Ghoul2 Insert End
 	return qtrue;
 }
 
-void NPC_LoadParms( void )
+#elif defined(_CGAME)
+#include "cgame/cg_local.hh"
+#endif
+
+
+void BG_NPCLoadParms( void )
 {
 	int			len, npcExtFNLen, fileCnt, i;
 	char		*holdChar;

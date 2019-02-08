@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 // cg_main.c -- initialization and primary entry point for cgame
 #include "cg_local.hh"
+#include "game/bg_local.hh"
 
 #include "ui/ui_shared.hh"
 // display context for new ui stuff
@@ -2404,6 +2405,7 @@ void CG_Init( int serverMessageNum, int serverCommandSequence, int clientNum )
 	trap->RegisterSharedMemory( cg.sharedBuffer.raw );
 
 	//Load external vehicle data
+	BG_NPCLoadParms();
 	BG_VehicleLoadParms();
 
 	// clear everything

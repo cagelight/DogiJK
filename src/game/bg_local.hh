@@ -132,3 +132,6 @@ void PM_SetForceJumpZStart(float value);
 
 void BG_CycleInven(playerState_t *ps, int direction);
 
+void BG_NPCLoadParms( void );
+std::vector<istring> BG_ListNPCs();
+

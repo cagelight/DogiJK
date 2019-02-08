@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // NPC.cpp - generic functions
 //
 #include "b_local.hh"
+#include "bg_local.hh"
 #include "anims.hh"
 #include "say.hh"
 #include "icarus/Q3_Interface.hh"
@@ -2018,7 +2019,7 @@ void NPC_InitGame( void )
 //	globals.NPCs = (gNPC_t *) trap->TagMalloc(game.maxclients * sizeof(game.bots[0]), TAG_GAME);
 //	trap->Cvar_Register(&debugNPCName, "d_npc", "0", CVAR_CHEAT);
 
-	NPC_LoadParms();
+	BG_NPCLoadParms();
 	NPC_InitAI();
 //	NPC_InitAnimTable();
 	/*

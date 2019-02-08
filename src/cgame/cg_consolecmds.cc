@@ -25,7 +25,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 // cg_consolecmds.c -- text commands typed in at the local console, or
 // executed by a key binding
 
-#include "cg_local.hh"
+#include "game/bg_local.hh"
 #include "game/bg_saga.hh"
 #include "ui/ui_shared.hh"
 
@@ -283,6 +283,28 @@ static void CG_LoadHud_f( void ) {
 	CG_LoadMenus( hudSet );
 }
 
+#include <sstream>
+
+static void CG_ListNPCs() {
+	std::vector<istring> list = BG_ListNPCs();
+	std::basic_stringstream<char, insensitive_char_traits> msg;
+	msg << "NPCs:\n";
+	for (istring const & str : list) {
+		msg << "\t" << str << "\n";
+	}
+	Com_Printf(msg.str().c_str());
+}
+
+static void CG_ListVehicles() {
+	std::vector<istring> list = BG_ListVehicles();
+	std::basic_stringstream<char, insensitive_char_traits> msg;
+	msg << "Vehicles:\n";
+	for (istring const & str : list) {
+		msg << "\t" << str << "\n";
+	}
+	Com_Printf(msg.str().c_str());
+}
+
 typedef struct consoleCommand_s {
 	const char	*cmd;
 	void		(*func)(void);
@@ -301,6 +323,8 @@ static consoleCommand_t	commands[] = {
 	{ "forceprev",					CG_PrevForcePower_f },
 	{ "invnext",					CG_NextInventory_f },
 	{ "invprev",					CG_PrevInventory_f },
+	{ "listnpcs",					CG_ListNPCs },
+	{ "listvehs",					CG_ListVehicles },
 	{ "loaddeferred",				CG_LoadDeferredPlayers },
 	{ "loadhud",					CG_LoadHud_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
@@ -350,6 +374,7 @@ static const char *gcmds[] = {
 	"addbot",
 	"callteamvote",
 	"callvote",
+	"dropsaber",
 	"duelteam",
 	"follow",
 	"follownext",
@@ -363,6 +388,8 @@ static const char *gcmds[] = {
 	"noclip",
 	"notarget",
 	"NPC",
+	"q",
+	"qui",
 	"say",
 	"say_team",
 	"setviewpos",

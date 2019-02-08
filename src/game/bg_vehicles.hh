@@ -637,5 +637,5 @@ typedef struct Vehicle_s
 
 extern int BG_VehicleGetIndex( const char *vehicleName );
 
-void BG_ListVehicleWeapons();
-void BG_ListVehicles();
+std::vector<istring> BG_ListVehicleWeapons();
+std::vector<istring> BG_ListVehicles();

@@ -191,7 +191,6 @@ extern void NPC_Spawn ( gentity_t *ent, gentity_t *other, gentity_t *activator )
 //NPC_stats
 extern int NPC_ReactionTime ( void );
 extern qboolean NPC_ParseParms( const char *NPCName, gentity_t *NPC );
-extern void NPC_LoadParms( void );
 
 //NPC_utils
 extern int	teamNumbers[TEAM_NUM_TEAMS];
