@@ -237,6 +237,11 @@ void Rancor_Swing( qboolean tryGrab )
 		{//must be a client
 			continue;
 		}
+		
+		if ( radiusEnt->client->noclip )
+		{//If noclipped, do not grab
+			continue;
+		}
 
 		if ( (radiusEnt->client->ps.eFlags2&EF2_HELD_BY_MONSTER) )
 		{//can't be one already being held
@@ -597,7 +602,7 @@ void Rancor_Attack( float distance, qboolean doCharge )
 					NPC_SetAnim( NPCS.NPC->activator, SETANIM_BOTH, BOTH_SWIM_IDLE1, SETANIM_FLAG_OVERRIDE | SETANIM_FLAG_HOLD );
 					G_AddEvent( NPCS.NPC->activator, EV_JUMP, NPCS.NPC->activator->health );
 				}
-				if ( NPCS.NPC->activator->client )
+				if ( NPCS.NPC->activator->client && !NPCS.NPC->activator->client->noclip && !(NPCS.NPC->activator->flags & FL_GODMODE) )
 				{//*sigh*, can't get tags right, just remove them?
 					NPCS.NPC->activator->client->ps.eFlags |= EF_NODRAW;
 				}

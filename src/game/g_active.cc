@@ -149,7 +149,7 @@ void P_WorldEffects( gentity_t *ent ) {
 #endif
 	int			waterlevel;
 
-	if ( ent->client->noclip ) {
+	if ( ent->client->noclip || ent->flags & FL_GODMODE ) {
 		ent->client->airOutTime = level.time + 12000;	// don't need air
 		return;
 	}

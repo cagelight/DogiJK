@@ -7490,6 +7490,11 @@ static qboolean G_KickDownable(gentity_t *ent)
 	{
 		return qfalse;
 	}
+	
+	if (ent->client->noclip)
+	{ //Am noclipped, don't knock me down
+		return qfalse;
+	}
 
 	if (BG_InKnockDown(ent->client->ps.legsAnim) ||
 		BG_InKnockDown(ent->client->ps.torsoAnim))

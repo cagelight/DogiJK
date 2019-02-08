@@ -511,6 +511,9 @@ void Cmd_TeamTask_f( gentity_t *ent ) {
 #endif
 
 void G_Kill( gentity_t *ent ) {
+	if(ent->flags & FL_GODMODE) {
+		return;
+	}
 	if ((level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL) &&
 		level.numPlayingClients > 1 && !level.warmupTime)
 	{
@@ -3499,6 +3502,75 @@ void Cmd_DropSaber_f( gentity_t * ent ) {
 		saberKnockOutOfHand(&g_entities[ent->client->ps.saberEntityNum], ent, vec3_origin);
 }
 
+static std::vector<char const *> const taunts = {
+    "I can't disappear, any more than you could win a beauty contest.",
+    "Oh, you're so stolid! You weren't like that before the beard.",
+    "Eat any good books lately?",
+    "I add a little excitement, a little spice to your lives, and all you do is complain. Where is your adventurous spirit, your imagination?",
+    "If you can't take a little bloody nose, maybe you ought to go back home and crawl under your bed.",
+    "It's terrible, isn't it? But it's also a wonderful opportunity.",
+    "Oh, you'd like me to connect the dots for you, lead you from A to B to C, so that your puny mind could comprehend? How boring.",
+    "Where is your mommy? Well, I don't know.",
+};
+
+static void Cmd_Q_f( gentity_t * ent ) {
+    trap->SendServerCommand( ent-g_entities, va("print \"^8%s\n\"", taunts[Q_irand(0, taunts.size() - 1)]));
+}
+
+static void Cmd_Qui_f( gentity_t * ent ) {
+	if (trap->Argc() < 2) {
+		trap->SendServerCommand( ent-g_entities, "print \"qui who?\n\"" );
+		return;
+	}
+	char gon[MAX_STRING_CHARS];
+	trap->Argv(1, gon, MAX_STRING_CHARS);
+	if (strcmp(gon, "gon")) {
+		trap->SendServerCommand( ent-g_entities, va("print \"qui %s? Who's that...\n\"", gon) );
+		return;
+	}
+	if (trap->Argc() < 3) {
+		trap->SendServerCommand( ent-g_entities, "print \"qui gon who?\n\"" );
+		return;
+	}
+	trap->Argv(2, gon, MAX_STRING_CHARS);
+	if (strcmp(gon, "jinn")) {
+		trap->SendServerCommand( ent-g_entities, va("print \"qui gon %s? Who's that...\n\"", gon) );
+		return;
+	}
+	G_Kill( ent );
+}
+
+static void Cmd_wrist_f( gentity_t * ent ) {
+	//     /wrist
+	G_Kill( ent );
+}
+
+static void Cmd_Kitty_f( gentity_t * ent ) {
+	//Turn the player invisible
+	char const * msg = nullptr;
+
+	ent->client->ps.eFlags ^= EF_NODRAW;
+	if ( !(ent->client->ps.eFlags & EF_NODRAW) )
+		msg = "You are no longer stealth like a kitty!";
+	else
+		msg = "You are stealth like a kitty!";
+
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+}
+
+void Cmd_Hercules_f( gentity_t *ent ) {
+	char const * msg = nullptr;
+	//This cheat disables knockback
+
+	ent->flags ^= FL_NO_KNOCKBACK;
+	if ( !(ent->flags & FL_NO_KNOCKBACK) )
+		msg = "You do not feel like Hercules any more!";
+	else
+		msg = "You feel strong like Hercules!";
+
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+}
+
 /*
 =================
 ClientCommand
@@ -3538,14 +3610,18 @@ command_t commands[] = {
 	{ "give",				Cmd_Give_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "giveother",			Cmd_GiveOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "god",				Cmd_God_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "hercules",			Cmd_Hercules_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "kill",				Cmd_Kill_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "killother",			Cmd_KillOther_f,			CMD_CHEAT|CMD_NOINTERMISSION },
+	{ "kitty",				Cmd_Kitty_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 //	{ "kylesmash",			TryGrapple,					0 },
 	{ "levelshot",			Cmd_LevelShot_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "maplist",			Cmd_MapList_f,				CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "npc",				Cmd_NPC_f,					CMD_CHEAT|CMD_ALIVE },
+	{ "q",					Cmd_Q_f,					CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "qui",				Cmd_Qui_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
 	{ "score",				Cmd_Score_f,				0 },
@@ -3562,6 +3638,7 @@ command_t commands[] = {
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
+	{ "wrist",				Cmd_wrist_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 

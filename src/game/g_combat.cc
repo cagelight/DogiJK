@@ -4394,7 +4394,7 @@ qboolean G_ThereIsAMaster(void)
 
 void G_Knockdown( gentity_t *victim )
 {
-	if ( victim && victim->client && BG_KnockDownable(&victim->client->ps) )
+	if ( victim && victim->client && BG_KnockDownable(&victim->client->ps) && !(victim->flags & FL_NO_KNOCKBACK ) )
 	{
 		victim->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
 		victim->client->ps.forceDodgeAnim = 0;
@@ -4441,6 +4441,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 
 	if (!targ)
 		return;
+	
+	if ( targ->client && targ->client->noclip )
+	{//if this is a noclipped client, do nothing
+		return;
+	}
 
 	if (targ && targ->damageRedirect)
 	{
@@ -4800,6 +4805,11 @@ void G_Damage( gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_
 	{ //this class is flagged to take less damage from physical attacks.
 		//For now I'm just decreasing against any client-based attack, this can be changed later I guess.
 		damage *= 0.5;
+	}
+	
+	if ( targ->flags & FL_GODMODE )
+	{//if the entity is a god, prevent damage
+		return;
 	}
 
 	// check for completely getting out of the damage

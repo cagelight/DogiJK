@@ -1319,6 +1319,8 @@ void hurt_use( gentity_t *self, gentity_t *other, gentity_t *activator ) {
 
 void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 	int		dflags;
+	
+	if(other->flags & FL_GODMODE) return;
 
 	if (level.gametype == GT_SIEGE && self->team && self->team[0])
 	{
@@ -1463,6 +1465,12 @@ void space_touch( gentity_t *self, gentity_t *other, trace_t *trace )
 		//NOTE: we need vehicles to know this, too...
 		//|| other->s.number >= MAX_CLIENTS)
 	{
+		return;
+	}
+	
+	if (other->flags & FL_GODMODE) {
+		other->client->inSpaceSuffocation = 0;
+		other->client->inSpaceIndex = ENTITYNUM_NONE;
 		return;
 	}
 

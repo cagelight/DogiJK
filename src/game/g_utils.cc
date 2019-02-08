@@ -334,6 +334,8 @@ void G_Throw( gentity_t *targ, vec3_t newDir, float push )
 {
 	vec3_t	kvel;
 	float	mass;
+	
+	if ( targ->flags & FL_NO_KNOCKBACK ) return;
 
 	if ( targ->physicsBounce > 0 )	//overide the mass
 	{
