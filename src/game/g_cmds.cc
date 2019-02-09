@@ -22,6 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
+#include <iomanip>
 #include <sstream>
 
 #include "g_local.hh"
@@ -3577,47 +3578,187 @@ static void Cmd_Target_Fire(gentity_t * player, gentity_t * target) {
 	GlobalUse(target, player, player);
 }
 
-static void Cmd_Target_Info(gentity_t * player, gentity_t * target) {
-	std::stringstream ss;
+struct target_info_builder {
 	
-	ss << "print \"==== Entity " << (target - g_entities) << " ====\n";
+	inline target_info_builder(uint16_t entity_num) {
+		ss << "print \"\n==== Entity " << entity_num << " ====\n";
+	}
+	
+	inline void inc_subfield() { field_level++; }
+	inline void dec_subfield() { field_level--; }
+	
+	inline std::string finish() {
+		ss << "\"";
+		return ss.str();
+	}
+	
+	inline void field(char const * name) {
+		add_indents();
+		ss << name << ":\n";
+	}
+	
+	inline void field(char const * name, char const * v, bool ignore_if_zero = false) {
+		if (ignore_if_zero && (!v || !v[0])) return;
+		add_indents();
+		ss << name << ": '" << (v ? v : "") << "'\n";
+	}
+	
+	inline void field(char const * name, istring const & v, bool ignore_if_zero = false) {
+		if (ignore_if_zero && !v.size()) return;
+		add_indents();
+		ss << name << ": '" << v.c_str() << "'\n";
+	}
+	
+	template <typename T, std::enable_if_t<std::is_integral<T>::value, int> = 0>
+	inline void field(char const * name, T const & v, bool ignore_if_zero = false) {
+		if (ignore_if_zero && !v) return;
+		add_indents();
+		ss << name << ": " << v << "\n";
+	}
+	
+	template <typename T, std::enable_if_t<std::is_floating_point<T>::value, int> = 0>
+	inline void field(char const * name, T const & v, bool ignore_if_zero = false) {
+		if (ignore_if_zero && !v) return;
+		add_indents();
+		std::stringstream temp;
+		temp << std::fixed << std::setprecision(3) << v;
+		ss << name << ": " << temp.str() << "\n";
+	}
+	
+	inline void field(char const * name, vec3_t const & v, bool ignore_if_zero = false) {
+		if (ignore_if_zero && !v[0] && !v[1] && !v[2]) return;
+		add_indents();
+		std::stringstream temp;
+		temp << std::fixed << std::setprecision(3) << "(" << v[0] << ", " << v[1] << ", " << v[2] << ")";
+		ss << name << ": " << temp.str() << "\n";
+	}
+	
+	inline void field(char const * name, trType_t v) {
+		add_indents();
+		ss << name << ": ";
+		switch(v) {
+			case TR_STATIONARY:
+				ss << "STATIONARY";
+				break;
+			case TR_INTERPOLATE:
+				ss << "INTERPOLATE";
+				break;
+			case TR_LINEAR:
+				ss << "LINEAR";
+				break;
+			case TR_LINEAR_STOP:
+				ss << "LINEAR_STOP";
+				break;
+			case TR_NONLINEAR_STOP:
+				ss << "NONLINEAR_STOP";
+				break;
+			case TR_SINE:
+				ss << "SINE";
+				break;
+			case TR_COSINE_STOP:
+				ss << "COSINE_STOP";
+				break;
+			case TR_GRAVITY:
+				ss << "GRAVITY";
+				break;
+			default:
+				ss << "UNKNOWN";
+				break;
+		}
+		ss << "\n";
+	}
+	
+private:
+	std::stringstream ss;
+	uint8_t field_level = 1;
+	
+	void add_indents() {
+		for (uint8_t i = 0; i < field_level; i++) ss << "\t";
+	}
+};
+
+static void Cmd_Target_InfoMaster(gentity_t * player, gentity_t * target, bool verbose) {
+	std::stringstream ss;
+	target_info_builder tib { static_cast<uint16_t>(target - g_entities) };
 	
 	switch (target->s.eType) {
-		default: break;
 		case ET_MOVER:
-			ss << "\tType: MOVER\n";
-			ss << "\t\tDelay: '" << target->delay << "'\n";
-			ss << "\t\tSpeed: '" << target->speed << "'\n";
-			ss << "\t\tWait: '" << target->wait << "'\n";
+			tib.field("Type", "MOVER");
+			tib.inc_subfield();
+			tib.field("Delay", target->delay, true);
+			tib.field("Speed", target->speed);
+			tib.field("Wait", target->wait);
+			tib.dec_subfield();
 			break;
 		case ET_NPC:
-			ss << "\tType: NPC\n";
-			if (target->NPC_type.size())
-				ss << "\t\tNPC Type: '" << target->NPC_type.c_str() << "'\n";
+			tib.field("Type", "NPC");
+			tib.inc_subfield();
+			tib.field("NPC Type", target->NPC_type);
+			tib.dec_subfield();
+			break;
+		default:
+			tib.field("Type", "UNKNOWN");
 			break;
 	}
 	
-	if (target->classname.size())
-		ss << "\tClassname: '" << target->classname.c_str() << "'\n";
-	if (target->targetname && target->targetname[0])
-		ss << "\tTargetname: '" << target->targetname << "'\n";
-	if (target->target && target->target[0])
-		ss << "\tTarget: '" << target->target << "'\n";
+	tib.field("Classname", target->classname);
+	tib.field("Target", target->target, true);
+	tib.field("Targetname", target->targetname, true);
 	
-	ss << "\"";
-	auto msg = ss.str();
+	tib.field("STATE");
+	tib.inc_subfield();
+	tib.field("Health", target->s.health, true);
+	tib.field("Origin", target->s.origin);
+	tib.field("Angles", target->s.angles);
+	if (verbose) {
+		tib.field("Origin2", target->s.origin2, true);
+		tib.field("Angles2", target->s.angles2, true);
+	}
+	tib.dec_subfield();
 	
+	if (verbose) {
+		tib.field("TRAJECTORY");
+		tib.inc_subfield();
+		tib.field("Base", target->s.pos.trBase);
+		tib.field("Delta", target->s.pos.trDelta, true);
+		tib.field("Duration", target->s.pos.trDuration, true);
+		tib.field("Time", target->s.pos.trTime, true);
+		tib.field("Type", target->s.pos.trType);
+		tib.dec_subfield();
+	}
+	
+	tib.field("SHARED");
+	tib.inc_subfield();
+	tib.field("Current Origin", target->r.currentOrigin);
+	tib.field("Current Angles", target->r.currentAngles);
+	if (verbose) {
+		tib.field("Contents", target->r.contents);
+		tib.field("MINS", target->r.mins, true);
+		tib.field("MAXS", target->r.maxs, true);
+	}
+	tib.dec_subfield();
+	
+	auto msg = tib.finish();
 	trap->SendServerCommand( player - g_entities, msg.c_str() );
+}
+
+static void Cmd_Target_Info(gentity_t * player, gentity_t * target) {
+	Cmd_Target_InfoMaster(player, target, false);
+}
+
+static void Cmd_Target_InfoVerbose(gentity_t * player, gentity_t * target) {
+	Cmd_Target_InfoMaster(player, target, true);
 }
 
 static std::unordered_map<istring, void(*)(gentity_t *, gentity_t *)> const target_funcs {
 	{ "fire", Cmd_Target_Fire },
 	{ "info", Cmd_Target_Info },
+	{ "infov", Cmd_Target_InfoVerbose },
 };
 
 static void Cmd_Target_f(gentity_t * player) {
 	if (trap->Argc() < 2) {
-		trap->SendServerCommand( player - g_entities, "print \"missing subcommand, options are: 'fire', 'info'\n\"" );
+		trap->SendServerCommand( player - g_entities, "print \"missing subcommand, options are: 'fire', 'info', 'infov'\n\"" );
 		return;
 	}
 	
@@ -3626,7 +3767,7 @@ static void Cmd_Target_f(gentity_t * player) {
 	
 	auto const & func = target_funcs.find(subcmd);
 	if (func == target_funcs.end()) {
-		trap->SendServerCommand( player - g_entities, va( "print \"unknown subcommand: '%s', options are: 'fire', 'info'\n\"", subcmd ) );
+		trap->SendServerCommand( player - g_entities, va( "print \"unknown subcommand: '%s', options are: 'fire', 'info', 'infov'\n\"", subcmd ) );
 		return;
 	}
 	
