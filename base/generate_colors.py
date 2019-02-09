@@ -324,8 +324,13 @@ textures/colors/g_{c}
 	qer_trans	0.5
 	
 	{{
+		map $whiteimage
+		rgbGen const ( {r:.6f} {g:.6f} {b:.6f} )
+		blendFunc GL_DST_COLOR GL_ZERO
+	}}
+	{{
 		map $lightmap
-		alphaGen const 0.15
+		alphaGen const 0.10
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 	}}
 	{{
