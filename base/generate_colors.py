@@ -330,13 +330,13 @@ textures/colors/g_{c}
 	}}
 	{{
 		map $lightmap
-		alphaGen const 0.10
+		alphaGen const 0.05
 		blendFunc GL_SRC_ALPHA GL_ONE_MINUS_SRC_ALPHA
 	}}
 	{{
 		map textures/colors/crystal_env
 		blendFunc GL_DST_COLOR GL_ONE
-		rgbGen const ( {r:.6f} {g:.6f} {b:.6f} )
+		rgbGen const ( {rvd:.6f} {gvd:.6f} {bvd:.6f} )
 		tcGen environment
 	}}
 }}
@@ -417,6 +417,9 @@ def lcol(c):
 
 def dcol(c):
 	return c / 2
+	
+def vdcol(c):
+	return c / 4
 
 def lighten(c, v):
 	return c + ((1 - c) * v)
@@ -455,6 +458,7 @@ for color in colors:
 			'r':colors[color][0], 'g':colors[color][1], 'b':colors[color][2],
 			'rl':lcol(colors[color][0]), 'gl':lcol(colors[color][1]), 'bl':lcol(colors[color][2]),
 			'rd':dcol(colors[color][0]), 'gd':dcol(colors[color][1]), 'bd':dcol(colors[color][2]),
+			'rvd':vdcol(colors[color][0]), 'gvd':vdcol(colors[color][1]), 'bvd':vdcol(colors[color][2]),
 		}
 		output += set.format(**obj)
 
