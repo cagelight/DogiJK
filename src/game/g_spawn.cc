@@ -101,6 +101,7 @@ void Q3_SetParm ( int entID, int parmNum, const char *parmValue );
 #define FINT(f) [](gentity_t * ent, char const * str){ ent->f = std::strtol(str, nullptr, 10); }
 #define FFLT(f) [](gentity_t * ent, char const * str){ ent->f = std::strtod(str, nullptr); }
 #define FSTR(f) [](gentity_t * ent, char const * str){ ent->f = G_NewString(str); }
+#define FVAL(f) [](gentity_t * ent, char const * str){ ent->f = str; }
 #define FVEC(f) [](gentity_t * ent, char const * str){ parse_vec3_field(#f, str, ent->f); }
 #define FAHK(f) [](gentity_t * ent, char const * str){ VectorClear(ent->f); ent->f[1] = std::strtod(str, nullptr); }
 #define FPRM(n) [](gentity_t * ent, char const * str){ Q3_SetParm( ent->s.number, n, str ); }
@@ -114,7 +115,7 @@ static const std::unordered_map<istring, std::function<void(gentity_t * ent, cha
 	{ "awakescript",			FSTR( behaviorSet[BSET_AWAKE] ) },//name of script to run
 	{ "blockedscript",			FSTR( behaviorSet[BSET_BLOCKED] ) },//name of script to run
 	{ "chunksize",				FFLT( mass ) },//for func_breakables
-	{ "classname",				FSTR( classname ) },
+	{ "classname",				FVAL( classname ) },
 	{ "closetarget",			FSTR( closetarget ) },//for doors
 	{ "count",					FINT( count ) },
 	{ "deathscript",			FSTR( behaviorSet[BSET_DEATH] ) },//name of script to run

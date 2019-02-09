@@ -3527,7 +3527,7 @@ static void Cmd_Qui_f( gentity_t * ent ) {
 	}
 	char gon[MAX_STRING_CHARS];
 	trap->Argv(1, gon, MAX_STRING_CHARS);
-	if (strcmp(gon, "gon")) {
+	if (Q_stricmp(gon, "gon")) {
 		trap->SendServerCommand( ent-g_entities, va("print \"qui %s? Who's that...\n\"", gon) );
 		return;
 	}
@@ -3536,7 +3536,11 @@ static void Cmd_Qui_f( gentity_t * ent ) {
 		return;
 	}
 	trap->Argv(2, gon, MAX_STRING_CHARS);
-	if (strcmp(gon, "jinn")) {
+	if (!Q_stricmp(gon, "gin")) {
+		trap->SendServerCommand( ent-g_entities, va("print \"qui gon %s? What's that, some kind of alcoholic beverage?...\n\"", gon) );
+		return;
+	}
+	if (Q_stricmp(gon, "jinn")) {
 		trap->SendServerCommand( ent-g_entities, va("print \"qui gon %s? Who's that...\n\"", gon) );
 		return;
 	}
@@ -3594,7 +3598,7 @@ struct target_info_builder {
 	
 	inline void field(char const * name) {
 		add_indents();
-		ss << name << ":\n";
+		ss << name << "\n";
 	}
 	
 	inline void field(char const * name, char const * v, bool ignore_if_zero = false) {
@@ -3668,12 +3672,21 @@ struct target_info_builder {
 		ss << "\n";
 	}
 	
+	inline void flags(char const * name, int v, int count = 16) {
+		add_indents();
+		ss << name << ": " << v << " ";
+		for (int i = 0; i < count; i++) {
+			bool f = (1 << i) & v;
+			ss << '|' << (f ? 'X' : '_');
+		}
+		ss << "|\n";
+	}
 private:
 	std::stringstream ss;
 	uint8_t field_level = 1;
 	
 	void add_indents() {
-		for (uint8_t i = 0; i < field_level; i++) ss << "\t";
+		for (uint8_t i = 0; i < field_level; i++) ss << "    ";
 	}
 };
 
@@ -3682,11 +3695,26 @@ static void Cmd_Target_InfoMaster(gentity_t * player, gentity_t * target, bool v
 	target_info_builder tib { static_cast<uint16_t>(target - g_entities) };
 	
 	switch (target->s.eType) {
-		case ET_MOVER:
-			tib.field("Type", "MOVER");
+		case ET_GENERAL:
+			tib.field("Type: GENERAL");
 			tib.inc_subfield();
+			tib.field("Count", target->count, true);
+			tib.field("Damage", target->damage, true);
 			tib.field("Delay", target->delay, true);
+			tib.field("Speed", target->speed, true);
+			tib.field("Wait", target->wait);
+			tib.dec_subfield();
+			break;
+		case ET_MOVER:
+			tib.field("Type: MOVER");
+			tib.inc_subfield();
+			tib.field("Count", target->count, true);
+			tib.field("Damage", target->damage);
+			tib.field("Delay", target->delay, true);
+			tib.field("Linear", target->alt_fire, true);
+			tib.field("SoundSet", target->soundSet, true);
 			tib.field("Speed", target->speed);
+			tib.field("Team", target->team, true);
 			tib.field("Wait", target->wait);
 			tib.dec_subfield();
 			break;
@@ -3701,11 +3729,14 @@ static void Cmd_Target_InfoMaster(gentity_t * player, gentity_t * target, bool v
 			break;
 	}
 	
+	tib.field((target->flags & FL_INACTIVE) ? "Active: No" : "Active: Yes");
 	tib.field("Classname", target->classname);
+	tib.flags("Spawnflags", target->spawnflags, 12);
 	tib.field("Target", target->target, true);
+	tib.field("Target2", target->target2, true);
 	tib.field("Targetname", target->targetname, true);
 	
-	tib.field("STATE");
+	tib.field("STATE:");
 	tib.inc_subfield();
 	tib.field("Health", target->s.health, true);
 	tib.field("Origin", target->s.origin);
@@ -3717,7 +3748,7 @@ static void Cmd_Target_InfoMaster(gentity_t * player, gentity_t * target, bool v
 	tib.dec_subfield();
 	
 	if (verbose) {
-		tib.field("TRAJECTORY");
+		tib.field("TRAJECTORY:");
 		tib.inc_subfield();
 		tib.field("Base", target->s.pos.trBase);
 		tib.field("Delta", target->s.pos.trDelta, true);
@@ -3727,12 +3758,12 @@ static void Cmd_Target_InfoMaster(gentity_t * player, gentity_t * target, bool v
 		tib.dec_subfield();
 	}
 	
-	tib.field("SHARED");
+	tib.field("SHARED:");
 	tib.inc_subfield();
 	tib.field("Current Origin", target->r.currentOrigin);
 	tib.field("Current Angles", target->r.currentAngles);
 	if (verbose) {
-		tib.field("Contents", target->r.contents);
+		tib.flags("Contents", target->r.contents, 32);
 		tib.field("MINS", target->r.mins, true);
 		tib.field("MAXS", target->r.maxs, true);
 	}
