@@ -376,7 +376,9 @@ struct rend final {
 	std::vector<q3model_ptr> models;
 	
 	void model_load(qhandle_t);
-	q3model_ptr model_get(qhandle_t);
+	inline q3model_ptr model_get(qhandle_t h) {
+		return models[h];
+	}
 	
 // ================================
 // SHADER
