@@ -49,6 +49,7 @@ def configure(ctx):
 		ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
 	ctx.check_cfg(path='pkg-config', args='--cflags --libs', package='bullet', uselib_store='BULLET')
+	ctx.check(features='c cprogram', lib='mruby', uselib_store='MRUBY')
 	
 	btup = ctx.options.build_type.upper()
 	if btup in ['DEBUG', 'NATIVE', 'RELEASE']:
@@ -116,6 +117,7 @@ def build(bld):
 	clsv_files += bld.path.ant_glob('src/sys/con_log.cc')
 	clsv_files += bld.path.ant_glob('src/sys/sys_unix.cc')
 	clsv_files += bld.path.ant_glob('src/sys/con_tty.cc')
+	clsv_files += bld.path.ant_glob('src/ruby/*.cc')
 	
 	# SERVER
 	if build_server:
@@ -130,7 +132,7 @@ def build(bld):
 			includes = ['src', '/usr/include/tirpc'],
 			source = clsv_files + server_files,
 			defines = ['_CONSOLE', 'DEDICATED'],
-			uselib = ['ZLIB', 'DL', 'PTHREAD'],
+			uselib = ['ZLIB', 'DL', 'PTHREAD', 'MRUBY'],
 			use = ['minizip', 'botlib'],
 			install_path = os.path.join(top, 'install')
 		)
@@ -149,7 +151,7 @@ def build(bld):
 			target = 'dogijk',
 			includes = ['src', '/usr/include/tirpc'],
 			source = clsv_files + client_files,
-			uselib = ['SDL', 'ZLIB', 'DL', 'PTHREAD'],
+			uselib = ['SDL', 'ZLIB', 'DL', 'PTHREAD', 'MRUBY'],
 			use = ['minizip', 'botlib'],
 			install_path = os.path.join(top, 'install')
 		)

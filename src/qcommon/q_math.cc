@@ -812,6 +812,29 @@ void MatrixMultiply(float in1[3][3], float in2[3][3], float out[3][3]) {
 		in1[2][2] * in2[2][2];
 }
 
+void MatrixInverse(matrix3_t inMatrix, matrix3_t outMatrix) {
+	float det = inMatrix[0][0] * (inMatrix[2][2] * inMatrix[1][1] - inMatrix[2][1] * inMatrix[1][2]) -
+				inMatrix[0][1] * (inMatrix[2][2] * inMatrix[1][0] - inMatrix[2][0] * inMatrix[1][2]) +
+				inMatrix[0][2] * (inMatrix[2][1] * inMatrix[1][0] - inMatrix[2][0] * inMatrix[1][1]);
+
+	outMatrix[0][0] = (inMatrix[2][2] * inMatrix[1][1] - inMatrix[2][1] * inMatrix[1][2]) / det;
+	outMatrix[0][1] = (inMatrix[2][0] * inMatrix[1][2] - inMatrix[2][2] * inMatrix[1][0]) / det;
+	outMatrix[0][2] = (inMatrix[2][1] * inMatrix[1][0] - inMatrix[2][0] * inMatrix[1][1]) / det;
+
+	outMatrix[1][0] = (inMatrix[0][2] * inMatrix[2][1] - inMatrix[0][1] * inMatrix[2][2]) / det;
+	outMatrix[1][1] = (inMatrix[0][0] * inMatrix[2][2] - inMatrix[0][2] * inMatrix[2][0]) / det;
+	outMatrix[1][2] = (inMatrix[0][1] * inMatrix[2][0] - inMatrix[0][0] * inMatrix[2][1]) / det;
+
+	outMatrix[2][0] = (inMatrix[1][2] * inMatrix[0][1] - inMatrix[1][1] * inMatrix[0][2]) / det;
+	outMatrix[2][1] = (inMatrix[1][0] * inMatrix[0][2] - inMatrix[1][2] * inMatrix[0][0]) / det;
+	outMatrix[2][2] = (inMatrix[1][1] * inMatrix[0][0] - inMatrix[1][0] * inMatrix[0][1]) / det;
+}
+
+void MatrixVectorMultiply(matrix3_t matrix, vec3_t vector, vec3_t out) {
+	out[0] = matrix[0][0] * vector[0] + matrix[0][1] * vector[1] + matrix[0][2] * vector[2];
+	out[1] = matrix[1][0] * vector[0] + matrix[1][1] * vector[1] + matrix[1][2] * vector[2];
+	out[2] = matrix[2][0] * vector[0] + matrix[2][1] * vector[1] + matrix[2][2] * vector[2];
+}
 
 ///////////////////////////////////////////////////////////////////////////
 //

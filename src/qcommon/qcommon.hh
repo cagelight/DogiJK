@@ -1054,3 +1054,15 @@ const void *PD_Load ( const char *name, size_t *size );
 uint32_t ConvertUTF8ToUTF32( char *utf8CurrentChar, char **utf8NextChar );
 
 #include "sys/sys_public.hh"
+
+/*
+==============================================================
+
+RUBY SCRIPTING ENGINE
+
+==============================================================
+*/
+
+#include "ruby/ruby.hh"
+
+extern std::unique_ptr<ruby_core> rubyse;

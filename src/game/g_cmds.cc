@@ -22,9 +22,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-#include <iomanip>
-#include <sstream>
-
 #include "g_local.hh"
 #include "bg_saga.hh"
 
@@ -3781,15 +3778,30 @@ static void Cmd_Target_InfoVerbose(gentity_t * player, gentity_t * target) {
 	Cmd_Target_InfoMaster(player, target, true);
 }
 
-static std::unordered_map<istring, void(*)(gentity_t *, gentity_t *)> const target_funcs {
+static void Cmd_Target_Activate(gentity_t * player, gentity_t * target) {
+	target->flags &= ~FL_INACTIVE;
+}
+
+static void Cmd_Target_Deactivate(gentity_t * player, gentity_t * target) {
+	target->flags |= FL_INACTIVE;
+}
+
+static std::map<istring, void(*)(gentity_t *, gentity_t *)> const target_funcs {
 	{ "fire", Cmd_Target_Fire },
 	{ "info", Cmd_Target_Info },
 	{ "infov", Cmd_Target_InfoVerbose },
+	{ "activate", Cmd_Target_Activate },
+	{ "deactivate", Cmd_Target_Deactivate },
 };
 
 static void Cmd_Target_f(gentity_t * player) {
 	if (trap->Argc() < 2) {
-		trap->SendServerCommand( player - g_entities, "print \"missing subcommand, options are: 'fire', 'info', 'infov'\n\"" );
+		
+		std::stringstream ss;
+		ss << "print \"missing subcommand, options are:\n";
+		for (auto const & sc : target_funcs) ss << "    " << sc.first.c_str() << "\n";
+		
+		trap->SendServerCommand( player - g_entities, ss.str().c_str() );
 		return;
 	}
 	
@@ -3798,7 +3810,12 @@ static void Cmd_Target_f(gentity_t * player) {
 	
 	auto const & func = target_funcs.find(subcmd);
 	if (func == target_funcs.end()) {
-		trap->SendServerCommand( player - g_entities, va( "print \"unknown subcommand: '%s', options are: 'fire', 'info', 'infov'\n\"", subcmd ) );
+		
+		std::stringstream ss;
+		ss << "print \"unknown subcommand '" << subcmd << "', options are:\n";
+		for (auto const & sc : target_funcs) ss << "    " << sc.first.c_str() << "\n";
+		
+		trap->SendServerCommand( player - g_entities, ss.str().c_str() );
 		return;
 	}
 	

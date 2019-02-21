@@ -3355,6 +3355,8 @@ void G_RunFrame( int levelTime ) {
 #ifdef _G_FRAME_PERFANAL
 	iTimer_ItemRun = trap->PrecisionTimer_End(timer_ItemRun);
 #endif
+	
+	G_Physics_Frame(g_TimeSinceLastFrame);
 
 	SiegeCheckTimers();
 

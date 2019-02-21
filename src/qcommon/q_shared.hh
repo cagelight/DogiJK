@@ -55,7 +55,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <algorithm>
 #include <functional>
+#include <iomanip>
+#include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>

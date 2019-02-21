@@ -138,6 +138,8 @@ void ProjectPointOnPlane( vec3_t dst, const vec3_t p, const vec3_t normal );
 qboolean G_FindClosestPointOnLineSegment( const vec3_t start, const vec3_t end, const vec3_t from, vec3_t result );
 float G_PointDistFromLineSegment( const vec3_t start, const vec3_t end, const vec3_t from );
 void MatrixMultiply(float in1[3][3], float in2[3][3], float out[3][3]);
+void MatrixInverse(matrix3_t inMatrix, matrix3_t outMatrix);
+void MatrixVectorMultiply(matrix3_t matrix, vec3_t vector, vec3_t out);
 
 
 ///////////////////////////////////////////////////////////////////////////

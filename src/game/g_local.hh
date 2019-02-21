@@ -1505,6 +1505,9 @@ void G_UpdateCvars( void );
 // g_physics.c
 void G_Physics_Init();
 void G_Physics_Shutdown();
+
+void G_Physics_Frame(int time);
+
 extern std::unique_ptr<physics_world_t> g_phys;
 
 // trap
