@@ -1,9 +1,12 @@
+#include <thread>
+
 #include <btBulletDynamicsCommon.h>
 
 #include "bg_local.hh"
 #include "bg_physics.hh"
 
 #include "qcommon/q_math2.hh"
+#include "qcommon/rw_spinlock.hh"
 
 static inline btVector3 q2b( qm::vec3_t const & v ) { return { static_cast<btScalar>(v[0]), static_cast<btScalar>(v[1]), static_cast<btScalar>(v[2]) }; }
 static inline qm::vec3_t b2q( btVector3 const & v ) { return { static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]) }; }
@@ -60,8 +63,11 @@ struct submodel_t {
 	
 	clipMap_t const * map;
 	
-	std::unordered_set<cbrush_t *> brushes;
-	std::unordered_set<cPatch_t *> patches;
+	std::vector<cbrush_t *> brushes;
+	std::vector<cPatch_t *> patches;
+	
+	std::unordered_set<cbrush_t *> brushes_proto;
+	std::unordered_set<cPatch_t *> patches_proto;
 	
 	submodel_t ( clipMap_t const * map, int index ) : map { map } {
 		
@@ -69,12 +75,17 @@ struct submodel_t {
 		
 		if ( smod.firstNode < 0 ) {
 			for ( int i = 0; i < smod.leaf.numLeafBrushes; i++ )
-				brushes.insert( &map->brushes[ map->leafbrushes[ smod.leaf.firstLeafBrush + i ]]);
+				brushes_proto.insert( &map->brushes[ map->leafbrushes[ smod.leaf.firstLeafBrush + i ]]);
 			for ( int i = 0; i < smod.leaf.numLeafSurfaces; i++ )
-				patches.insert( map->surfaces[ map->leafsurfaces[ smod.leaf.firstLeafSurface + i ]]);
+				patches_proto.insert( map->surfaces[ map->leafsurfaces[ smod.leaf.firstLeafSurface + i ]]);
 		} else {
 			submodel_recurse( map->nodes[ smod.firstNode ]);
 		}
+		
+		brushes.reserve(brushes_proto.size());
+		std::move(brushes_proto.begin(), brushes_proto.end(), std::back_inserter(brushes));
+		patches.reserve(patches_proto.size());
+		std::move(patches_proto.begin(), patches_proto.end(), std::back_inserter(patches));
 		
 		Com_Printf("BSP Submodel: %i\n", index);
 		Com_Printf("  Brushes: %zu\n", brushes.size());
@@ -88,17 +99,17 @@ private:
 		if (node.children[0] < 0) {
 			cLeaf_t const & leaf = map->leafs[-node.children[0] - 1];
 			for ( int i = 0; i < leaf.numLeafBrushes; i++ )
-				brushes.insert( &map->brushes[ map->leafbrushes[ leaf.firstLeafBrush + i ]]);
+				brushes_proto.insert( &map->brushes[ map->leafbrushes[ leaf.firstLeafBrush + i ]]);
 			for ( int i = 0; i < leaf.numLeafSurfaces; i++ )
-				patches.insert( map->surfaces[ map->leafsurfaces[ leaf.firstLeafSurface + i ]]);
+				patches_proto.insert( map->surfaces[ map->leafsurfaces[ leaf.firstLeafSurface + i ]]);
 		} else submodel_recurse( map->nodes[ node.children[0] ] );
 		
 		if (node.children[1] < 0) {
 			cLeaf_t const & leaf = map->leafs[-node.children[1] - 1];
 			for ( int i = 0; i < leaf.numLeafBrushes; i++ )
-				brushes.insert( &map->brushes[ map->leafbrushes[ leaf.firstLeafBrush + i ]]);
+				brushes_proto.insert( &map->brushes[ map->leafbrushes[ leaf.firstLeafBrush + i ]]);
 			for ( int i = 0; i < leaf.numLeafSurfaces; i++ )
-				patches.insert( map->surfaces[ map->leafsurfaces[ leaf.firstLeafSurface + i ]]);
+				patches_proto.insert( map->surfaces[ map->leafsurfaces[ leaf.firstLeafSurface + i ]]);
 		} else submodel_recurse( map->nodes[ node.children[1] ] );
 		
 	}
@@ -203,23 +214,52 @@ struct bullet_world_t : public physics_world_t {
 			btVector3 inertia;
 			
 			shape = new btCompoundShape;
-			submodel_t subm {map, 0};
 			
-			for (cbrush_t * brush : subm.brushes) {
-				if (!(brush->contents & CONTENTS_SOLID)) continue;
-				
-				std::vector<qm::vec3_t> points = calculate_brush_hull_points(*brush);
-				if (points.size() < 4) continue;
-				
-				btConvexHullShape * brush_shape = new btConvexHullShape;
-				components.push_back(brush_shape);
-				
-				for (qm::vec3_t const & vec : points) brush_shape->addPoint({vec[0], vec[1],vec[2]}, false);
-				brush_shape->recalcLocalAabb();
-				shape->addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, brush_shape );
-				shape->recalculateLocalAabb();
+			struct {
+				submodel_t subm;
+				std::atomic_size_t brush_index;
+				rw_spinlock mut;
+			} td = {
+				.subm = { map, 0 },
+				.brush_index = 0,
+				.mut = {},
+			};
+			
+			auto const thread_func = [this, &td](){
+				size_t index;
+				while ((index = td.brush_index.fetch_add(1)) < td.subm.brushes.size()) {
+					cbrush_t * brush = td.subm.brushes[index];
+					
+					if (!(brush->contents & CONTENTS_SOLID)) continue;
+					
+					std::vector<qm::vec3_t> points = calculate_brush_hull_points(*brush);
+					if (points.size() < 4) continue;
+					
+					btConvexHullShape * brush_shape = new btConvexHullShape;
+					for (qm::vec3_t const & vec : points) brush_shape->addPoint({vec[0], vec[1],vec[2]}, false);
+					brush_shape->recalcLocalAabb();
+					
+					td.mut.write_lock();
+					components.push_back(brush_shape);
+					shape->addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, brush_shape );
+					td.mut.write_unlock();
+				}
+			};
+			
+			Com_Printf("Spawning %zu threads to process BSP brushes/patches...\n", std::thread::hardware_concurrency());
+			
+			std::vector<std::thread *> threads;
+			for (size_t i = 0; i < std::thread::hardware_concurrency(); i++) {
+				threads.emplace_back( new std::thread {thread_func} );
+			}
+			for (std::thread * thread : threads) {
+				thread->join();
+				delete thread;
 			}
 			
+			Com_Printf("...done\n\n");
+
+			shape->recalculateLocalAabb();
 			shape->calculateLocalInertia( 0, inertia );
 			
 			motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
