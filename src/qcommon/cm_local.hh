@@ -107,7 +107,6 @@ cmodel_t	*CM_ClipHandleToModel( clipHandle_t handle, clipMap_t **clipMap = 0 );
 // cm_patch.c
 
 struct patchCollide_s	*CM_GeneratePatchCollide( int width, int height, vec3_t *points );
-std::vector<qm::vec3_t> CM_PatchPointsSubdivide( int width, int height );
 void CM_TraceThroughPatchCollide( traceWork_t *tw, trace_t &trace, const struct patchCollide_s *pc );
 qboolean CM_PositionTestInPatchCollide( traceWork_t *tw, const struct patchCollide_s *pc );
 void CM_ClearLevelPatches( void );
