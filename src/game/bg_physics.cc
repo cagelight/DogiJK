@@ -169,6 +169,24 @@ struct bullet_world_t : public physics_world_t {
 			return b2q(body->getWorldTransform().getOrigin());
 		}
 		
+		void set_angles( qm::vec3_t const & angles ) override {
+			btTransform & trans = body->getWorldTransform();
+			trans.setRotation( btQuaternion { 
+				qm::deg2rad(angles[0]),
+				qm::deg2rad(angles[2]),
+				qm::deg2rad(angles[1]),
+			});
+		}
+		
+		qm::vec3_t get_angles() override {
+			btVector3 ypr;
+			btMatrix3x3 { body->getWorldTransform().getRotation() } .getEulerYPR(ypr[1], ypr[0], ypr[2]);
+			return {
+				static_cast<float>(qm::rad2deg(ypr[0])),
+				static_cast<float>(qm::rad2deg(ypr[1])),
+				static_cast<float>(qm::rad2deg(ypr[2])),
+			};
+		}
 	};
 	
 	struct world_shape_t {

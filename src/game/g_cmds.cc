@@ -3866,7 +3866,7 @@ static void Prop_RemoveAll() {
 	
 }
 
-static void Prop_Spawn() {
+static void Prop_Spawn( qm::vec3_t location ) {
 	
 	char const * model = "models/dogijk/testbox.obj";
 	
@@ -3879,6 +3879,7 @@ static void Prop_Spawn() {
 	
 	ent->s.modelindex = G_ModelIndex(model);
 	ent->add_obj_physics(model);
+	ent->physics->set_origin(location);
 	ent->link();
 }
 
@@ -3895,7 +3896,7 @@ static void Cmd_Prop_f( gentity_t * player ) {
 		Prop_RemoveAll();
 	}
 	else if (!Q_stricmp(subcmd, "spawn")) {
-		Prop_Spawn();
+		Prop_Spawn( player->r.currentOrigin );
 	}
 }
 

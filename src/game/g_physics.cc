@@ -33,6 +33,11 @@ void G_RunPhysicsProp( gentity_t * ent ) {
 		new_origin.assign_to(ent->s.origin);
 		new_origin.assign_to(ent->r.currentOrigin);
 		new_origin.assign_to(ent->s.pos.trBase);
+		
+		qm::vec3_t new_angles = ent->physics->get_angles();
+		new_angles.assign_to(ent->s.angles);
+		new_angles.assign_to(ent->r.currentAngles);
+		new_angles.assign_to(ent->s.apos.trBase);
 	}
 	
 	ent->link();
