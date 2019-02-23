@@ -85,6 +85,8 @@ typedef struct patchCollide_s {
 	patchPlane_t	*planes;
 	int		numFacets;
 	facet_t	*facets;
+	int width, height;
+	vec3_t * points;
 } patchCollide_t;
 
 #define	MAX_GRID_SIZE	129

@@ -1,6 +1,26 @@
 #pragma once
 #include <atomic>
 
+struct spinlock final {
+	
+	spinlock() = default;
+	
+	inline void lock() {
+		while (sem.test_and_set()) __asm volatile ("pause" ::: "memory");
+	}
+	
+	inline bool lock_try() {
+		return !sem.test_and_set();
+	}
+	
+	inline void unlock() {
+		sem.clear();
+	}
+	
+private:
+	std::atomic_flag sem {false};
+};
+
 struct rw_spinlock final {
 	
 	rw_spinlock() = default;

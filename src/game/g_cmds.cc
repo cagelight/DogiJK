@@ -3863,7 +3863,10 @@ static void Cmd_Target_f(gentity_t * player) {
 // ================================================================
 
 static void Prop_RemoveAll() {
-	
+	gentity_t * targ = nullptr;
+	while ((targ = G_Find (targ, [](gentity_t * ent){ return ent->s.eType == ET_PROP; }))) {
+		targ->clear();
+	}
 }
 
 static void Prop_Spawn( qm::vec3_t location ) {

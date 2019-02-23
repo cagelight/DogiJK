@@ -6,7 +6,9 @@
 #include "bg_physics.hh"
 
 #include "qcommon/q_math2.hh"
-#include "qcommon/rw_spinlock.hh"
+#include "qcommon/sync.hh"
+
+#include "qcommon/cm_patch.hh"
 
 static inline btVector3 q2b( qm::vec3_t const & v ) { return { static_cast<btScalar>(v[0]), static_cast<btScalar>(v[1]), static_cast<btScalar>(v[2]) }; }
 static inline qm::vec3_t b2q( btVector3 const & v ) { return { static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]) }; }
@@ -204,33 +206,37 @@ struct bullet_world_t : public physics_world_t {
 		
 		world_data_ptr parent;
 		
-		btCompoundShape * shape = nullptr;
-		btMotionState * motion = nullptr;
-		btRigidBody * body = nullptr;
-		std::vector<btConvexHullShape *> components;
+		bullet_object_t solid;
+		bullet_object_t slick;
 		
-		world_shape_t(world_data_ptr parent, clipMap_t const * map) : parent { parent } {
+		world_shape_t(world_data_ptr parent, clipMap_t const * map) : parent { parent }, solid { parent }, slick { parent } {
 			
 			btVector3 inertia;
 			
-			shape = new btCompoundShape;
+			btCompoundShape * shape_solid = new btCompoundShape;
+			btCompoundShape * shape_slick = new btCompoundShape;
+			solid.shape = shape_solid;
+			slick.shape = shape_slick;
 			
 			struct {
 				submodel_t subm;
 				std::atomic_size_t brush_index;
-				rw_spinlock mut;
+				std::atomic_size_t patch_index;
+				spinlock mut;
 			} td = {
 				.subm = { map, 0 },
 				.brush_index = 0,
+				.patch_index = 0,
 				.mut = {},
 			};
 			
-			auto const thread_func = [this, &td](){
+			auto thread_func = [&](){
 				size_t index;
 				while ((index = td.brush_index.fetch_add(1)) < td.subm.brushes.size()) {
 					cbrush_t * brush = td.subm.brushes[index];
+					if (!brush) continue;
 					
-					if (!(brush->contents & CONTENTS_SOLID)) continue;
+					if (!(brush->contents & MASK_PLAYERSOLID)) continue;
 					
 					std::vector<qm::vec3_t> points = calculate_brush_hull_points(*brush);
 					if (points.size() < 4) continue;
@@ -239,10 +245,32 @@ struct bullet_world_t : public physics_world_t {
 					for (qm::vec3_t const & vec : points) brush_shape->addPoint({vec[0], vec[1],vec[2]}, false);
 					brush_shape->recalcLocalAabb();
 					
-					td.mut.write_lock();
-					components.push_back(brush_shape);
-					shape->addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, brush_shape );
-					td.mut.write_unlock();
+					td.mut.lock();
+					(std::any_of(brush->sides, brush->sides + brush->numsides, [&map](cbrushside_t const & side){ return map->shaders[side.shaderNum].surfaceFlags & SURF_SLICK; }) ? shape_slick : shape_solid)
+						-> addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, brush_shape );
+					td.mut.unlock();
+				}
+				
+				while ((index = td.patch_index.fetch_add(1)) < td.subm.patches.size()) {
+					cPatch_t * patch = td.subm.patches[index];
+					if (!patch) continue;
+					
+					if (!(patch->contents & MASK_PLAYERSOLID)) continue;
+					
+					for (int x = 0; x < patch->pc->width - 1; x++) {
+						for (int y = 0; y < patch->pc->height - 1; y++) {
+							btConvexHullShape * chs = new btConvexHullShape();
+							chs->addPoint(btVector3 {patch->pc->points[((y + 0) * patch->pc->width) + (x + 0)][0], patch->pc->points[((y + 0) * patch->pc->width) + (x + 0)][1], patch->pc->points[((y + 0) * patch->pc->width) + (x + 0)][2]}, false);
+							chs->addPoint(btVector3 {patch->pc->points[((y + 1) * patch->pc->width) + (x + 0)][0], patch->pc->points[((y + 1) * patch->pc->width) + (x + 0)][1], patch->pc->points[((y + 1) * patch->pc->width) + (x + 0)][2]}, false);
+							chs->addPoint(btVector3 {patch->pc->points[((y + 0) * patch->pc->width) + (x + 1)][0], patch->pc->points[((y + 0) * patch->pc->width) + (x + 1)][1], patch->pc->points[((y + 0) * patch->pc->width) + (x + 1)][2]}, false);
+							chs->addPoint(btVector3 {patch->pc->points[((y + 1) * patch->pc->width) + (x + 1)][0], patch->pc->points[((y + 1) * patch->pc->width) + (x + 1)][1], patch->pc->points[((y + 1) * patch->pc->width) + (x + 1)][2]}, false);
+							chs->recalcLocalAabb();
+							
+							td.mut.lock();
+							((patch->surfaceFlags & SURF_SLICK) ? shape_slick : shape_solid) -> addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, chs );
+							td.mut.unlock();
+						}
+					}
 				}
 			};
 			
@@ -259,31 +287,30 @@ struct bullet_world_t : public physics_world_t {
 			
 			Com_Printf("...done\n\n");
 
-			shape->recalculateLocalAabb();
-			shape->calculateLocalInertia( 0, inertia );
+			shape_solid->recalculateLocalAabb();
+			shape_solid->calculateLocalInertia( 0, inertia );
+			solid.motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
+			solid.body = new btRigidBody {{ 0, solid.motion, solid.shape, inertia }};
 			
-			motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
-			body = new btRigidBody {{ 0, motion, shape, inertia }};
+			shape_slick->recalculateLocalAabb();
+			shape_slick->calculateLocalInertia( 0, inertia );
+			slick.motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
+			slick.body = new btRigidBody {{ 0, slick.motion, slick.shape, inertia }};
+			slick.body->setFriction(0);
 			
-			parent->world->addRigidBody(body);
+			parent->world->addRigidBody(solid.body);
+			parent->world->addRigidBody(slick.body);
 		}
 		
 		~world_shape_t() {
 			
-			if (body) parent->world->removeRigidBody(body);
-			
-			if (shape) delete shape;
-			if (motion) delete motion;
-			if (body) delete body;
-			for (btConvexHullShape * chs : components) {
-				if (chs) delete chs;
-			}
 		}
 	};
 	
 	std::shared_ptr<world_data_t> world_data;
 	std::unique_ptr<world_shape_t> world_solid;
 	std::unordered_set<physics_object_ptr> objects;
+	
 	float resolution = 120;
 	
 	bullet_world_t() {
@@ -371,6 +398,8 @@ struct bullet_world_t : public physics_world_t {
 		world_data->world->addRigidBody(object->body);
 		
 		objects.insert(object);
+		
+		object->body->activate(true);
 		return object;
 	}
 };

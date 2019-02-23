@@ -1210,6 +1210,15 @@ struct patchCollide_s	*CM_GeneratePatchCollide( int width, int height, vec3_t *p
 		}
 	}
 
+	pf->width = grid.width;
+	pf->height = grid.height;
+	pf->points = (vec3_t*) Hunk_Alloc(pf->width * pf->height * sizeof(vec3_t), h_high );
+	for ( i = 0 ; i < pf->width ; i++ ) {
+		for ( j = 0 ; j < pf->height ; j++ ) {
+			VectorCopy( grid.points[i][j], pf->points[j*pf->width + i] );
+		}
+	}
+
 	c_totalPatchBlocks += ( grid.width - 1 ) * ( grid.height - 1 );
 
 	// generate a bsp tree for the surface
