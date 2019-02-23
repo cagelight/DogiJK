@@ -628,7 +628,7 @@ typedef enum {
 #define EF_ALT_FIRING			(1<<10)		// for alt-fires, mostly for lightning guns though
 #define	EF_JETPACK_ACTIVE		(1<<11)		//jetpack is activated
 
-#define EF_NOT_USED_1			(1<<12)		// not used
+#define EF_PHYSICS				(1<<12)		// entity uses modern physics simulation
 
 #define	EF_TALK					(1<<13)		// draw a talk balloon
 #define	EF_CONNECTION			(1<<14)		// draw a connection trouble sprite
@@ -1242,6 +1242,7 @@ typedef enum {
 	ET_BODY,
 	ET_TERRAIN,
 	ET_FX,
+	ET_PROP,
 
 	ET_EVENTS				// any of the EV_* events can be added freestanding
 							// by setting eType to ET_EVENTS + eventNum

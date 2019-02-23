@@ -3575,6 +3575,10 @@ static void Cmd_Hercules_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
 }
 
+// ================================================================
+// TARGET COMMAND
+// ================================================================
+
 static void Cmd_Target_Fire(gentity_t * player, gentity_t * target) {
 	GlobalUse(target, player, player);
 }
@@ -3854,6 +3858,47 @@ static void Cmd_Target_f(gentity_t * player) {
 	}
 }
 
+// ================================================================
+// PROP COMMAND
+// ================================================================
+
+static void Prop_RemoveAll() {
+	
+}
+
+static void Prop_Spawn() {
+	
+	char const * model = "models/dogijk/testbox.obj";
+	
+	gentity_t * ent = G_Spawn();
+	ent->s.eType = ET_PROP;
+	
+	ent->s.pos.trType = TR_INTERPOLATE;
+	
+	//ent->r.svFlags |= SVF_USE_CURRENT_ORIGIN;
+	
+	ent->s.modelindex = G_ModelIndex(model);
+	ent->add_obj_physics(model);
+	ent->link();
+}
+
+static void Cmd_Prop_f( gentity_t * player ) {
+	
+	if (trap->Argc() < 2) {
+		trap->SendServerCommand( player-g_entities, va( "print \"%s\n\"", "missing subcommand, options are: removeall, spawn" ) );
+	}
+	
+	char subcmd[MAX_STRING_CHARS];
+	trap->Argv(1, subcmd, MAX_STRING_CHARS);
+	
+	if (!Q_stricmp(subcmd, "removeall")) {
+		Prop_RemoveAll();
+	}
+	else if (!Q_stricmp(subcmd, "spawn")) {
+		Prop_Spawn();
+	}
+}
+
 /*
 =================
 ClientCommand
@@ -3903,6 +3948,7 @@ command_t commands[] = {
 	{ "noclip",				Cmd_Noclip_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "npc",				Cmd_NPC_f,					CMD_CHEAT|CMD_ALIVE },
+	{ "prop",				Cmd_Prop_f,					CMD_CHEAT|CMD_ALIVE },
 	{ "q",					Cmd_Q_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "qui",				Cmd_Qui_f,					CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "say",				Cmd_Say_f,					0 },

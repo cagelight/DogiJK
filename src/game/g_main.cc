@@ -3117,6 +3117,11 @@ void G_RunFrame( int levelTime ) {
 		if ( !ent->r.linked && ent->neverFree ) {
 			continue;
 		}
+		
+		if ( ent->s.eType == ET_PROP ) {
+			G_RunPhysicsProp( ent );
+			continue;
+		}
 
 		if ( ent->s.eType == ET_MISSILE ) {
 			G_RunMissile( ent );

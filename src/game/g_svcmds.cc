@@ -366,6 +366,9 @@ void	Svcmd_EntityList_f (void) {
 		case ET_FX:
 			trap->Print("ET_FX               ");
 			break;
+		case ET_PROP:
+			trap->Print("ET_PROP             ");
+			break;
 		default:
 			trap->Print("%-3i                ", check->s.eType);
 			break;

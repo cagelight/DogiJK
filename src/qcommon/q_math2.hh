@@ -33,6 +33,14 @@ namespace qm {
 		
 		// ================================
 		
+		inline constexpr void assign_to ( float * v ) const {
+			v[0] = data[0];
+			v[1] = data[1];
+			v[2] = data[2];
+		}
+		
+		// ================================
+		
 		static inline constexpr float dot ( vec3_t const & A, vec3_t const & B ) {
 			return A.data[0] * B.data[0] + A.data[1] * B.data[1] + A.data[2] * B.data[2];
 		}
@@ -53,6 +61,18 @@ namespace qm {
 		
 		inline constexpr vec3_t cross ( vec3_t const & other ) {
 			return cross( *this, other );
+		}
+		
+		// ================================
+		
+		inline constexpr bool is_valid () const {
+			if ( std::isnan(data[0]) ) return false;
+			if ( std::isnan(data[1]) ) return false;
+			if ( std::isnan(data[2]) ) return false;
+			if ( std::isinf(data[0]) ) return false;
+			if ( std::isinf(data[1]) ) return false;
+			if ( std::isinf(data[2]) ) return false;
+			return true;
 		}
 		
 		// ================================

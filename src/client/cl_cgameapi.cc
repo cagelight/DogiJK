@@ -29,6 +29,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "snd_ambient.hh"
 #include "FXExport.hh"
 #include "FxUtil.hh"
+#include "qcommon/models.hh"
 
 extern IHeapAllocator *G2VertSpaceClient;
 extern botlib_export_t *botlib_export;
@@ -953,6 +954,8 @@ void CL_BindCGame( void ) {
 	cgi.G2API_CleanEntAttachments			= CL_G2API_CleanEntAttachments;
 	cgi.G2API_OverrideServer				= CL_G2API_OverrideServer;
 	cgi.G2API_GetSurfaceName				= CL_G2API_GetSurfaceName;
+	
+	cgi.Model_LoadObj 						= Model_LoadObj;
 
 	cgi.ext.R_Font_StrLenPixels				= re->ext.Font_StrLenPixels;
 

@@ -30,6 +30,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "icarus/GameInterface.hh"
 #include "qcommon/timing.hh"
 #include "NPCNav/navigator.hh"
+#include "qcommon/models.hh"
 
 botlib_export_t	*botlib_export;
 
@@ -1936,6 +1937,8 @@ void SV_BindGame( void ) {
 	gi.G2API_CleanEntAttachments			= SV_G2API_CleanEntAttachments;
 	gi.G2API_OverrideServer					= SV_G2API_OverrideServer;
 	gi.G2API_GetSurfaceName					= SV_G2API_GetSurfaceName;
+	
+	gi.Model_LoadObj 						= Model_LoadObj;
 
 	GetGameAPI = (GetGameAPI_t)gvm->GetModuleAPI;
 	ret = GetGameAPI( GAME_API_VERSION, &gi );

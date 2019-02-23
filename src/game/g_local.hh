@@ -180,10 +180,12 @@ struct gentity_t : public sharedEntity_t {
 	gentity_t();
 	~gentity_t();
 	
-	inline void clear() {
-		this->~gentity_t();
-		new (this) (gentity_t);
-	}
+	void clear();
+	
+	void link();
+	void unlink();
+	
+	void add_obj_physics( char const * model_name );
 
 	gclient_t	*client = nullptr;			// NULL if not a client
 
@@ -376,6 +378,8 @@ struct gentity_t : public sharedEntity_t {
 
 	// OpenJK add
 	int			useDebounceTime = 0;	// for cultist_destroyer
+	
+	physics_object_ptr physics;
 };
 
 void G_FreeEntity( gentity_t *e );
@@ -1506,7 +1510,8 @@ void G_UpdateCvars( void );
 void G_Physics_Init();
 void G_Physics_Shutdown();
 
-void G_Physics_Frame(int time);
+void G_Physics_Frame( int time );
+void G_RunPhysicsProp( gentity_t *ent );
 
 extern std::unique_ptr<physics_world_t> g_phys;
 

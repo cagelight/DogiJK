@@ -26,6 +26,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #include "qcommon/q_shared.hh"
+#include "qcommon/qfiles.hh"
 
 #define Q3_INFINITE			16777216
 
@@ -1094,6 +1095,8 @@ typedef struct gameImport_s {
 	void		(*G2API_CleanEntAttachments)			( void );
 	qboolean	(*G2API_OverrideServer)					( void *serverInstance );
 	void		(*G2API_GetSurfaceName)					( void *ghoul2, int surfNumber, int modelIndex, char *fillBuf );
+	
+	objModel_t * 	(*Model_LoadObj)					( char const * name);
 } gameImport_t;
 
 typedef struct gameExport_s {
