@@ -81,8 +81,6 @@ qboolean	com_fullyInitialized = qfalse;
 
 char	com_errorMessage[MAXPRINTMSG] = {0};
 
-std::unique_ptr<ruby_core> rubyse;
-
 void Com_WriteConfig_f( void );
 
 //============================================================================
@@ -1122,19 +1120,6 @@ static void Com_CatchError ( int code )
 }
 
 /*
-=============
-Com_Ruby_f
-
-Both client and server can use this, and it will
-do the appropriate things.
-=============
-*/
-
-static void Com_Ruby_f() {
-	rubyse->eval(Cmd_Args());
-}
-
-/*
 =================
 Com_Init
 =================
@@ -1193,8 +1178,6 @@ void Com_Init( char *commandLine ) {
 #endif
 		Cmd_AddCommand ("writeconfig", Com_WriteConfig_f, "Write the configuration to file" );
 		Cmd_SetCommandCompletionFunc( "writeconfig", Cmd_CompleteCfgName );
-		
-		Cmd_AddCommand ("ruby", Com_Ruby_f, "Evaluate the provided text in the ruby scripting engine" );
 
 		Com_ExecuteCfg();
 
@@ -1264,8 +1247,6 @@ void Com_Init( char *commandLine ) {
 		// Pick a random port value
 		Com_RandomBytes( (byte*)&qport, sizeof(int) );
 		Netchan_Init( qport & 0xffff );	// pick a port value that should be nice and random
-		
-		rubyse = create_rubycore();
 
 		VM_Init();
 		SV_Init();
@@ -1684,8 +1665,6 @@ void Com_Shutdown (void)
 	}
 
 	MSG_shutdownHuffman();
-	
-	rubyse.reset();
 /*
 	// Only used for testing changes to huffman frequency table when tuning.
 	{
