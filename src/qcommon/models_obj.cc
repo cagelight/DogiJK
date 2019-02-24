@@ -2,6 +2,8 @@
 
 #include <vector>
 
+static constexpr float size_mult = 10.0f;
+
 static std::vector<objModel_t *> loaded_models;
 /*
 int Model_ObjGetVerticies(char const * name, vec3_t * points, int points_num) {
@@ -169,7 +171,7 @@ objModel_t * Model_LoadObj(char const * name) {
 					break;
 				}
 				obj_buf_i += vi + 1;
-				float val = strtod(float_buf, nullptr);
+				float val = strtod(float_buf, nullptr) * size_mult;
 				verts.push_back(val);
 				memset(float_buf, FLOAT_BUF_LEN, sizeof(char));
 			}

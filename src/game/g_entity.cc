@@ -131,7 +131,9 @@ void gentity_t::unlink() {
 	trap->UnlinkEntity ((sharedEntity_t *)this);
 }
 
-void gentity_t::add_obj_physics( char const * model_name ) {
-	this->s.eFlags |= EF_PHYSICS;
+bool gentity_t::add_obj_physics( char const * model_name ) {
 	this->physics = g_phys->add_object_obj(model_name);
+	if (!this->physics) return false;
+	this->s.eFlags |= EF_PHYSICS;
+	return true;
 }

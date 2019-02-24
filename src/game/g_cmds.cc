@@ -3869,9 +3869,7 @@ static void Prop_RemoveAll() {
 	}
 }
 
-static void Prop_Spawn( qm::vec3_t location ) {
-	
-	char const * model = "models/dogijk/testbox.obj";
+static void Prop_Spawn( gentity_t * player, qm::vec3_t location, char const * model ) {
 	
 	gentity_t * ent = G_Spawn();
 	ent->s.eType = ET_PROP;
@@ -3881,15 +3879,29 @@ static void Prop_Spawn( qm::vec3_t location ) {
 	//ent->r.svFlags |= SVF_USE_CURRENT_ORIGIN;
 	
 	ent->s.modelindex = G_ModelIndex(model);
-	ent->add_obj_physics(model);
+	if (!ent->add_obj_physics(model)) {
+		trap->SendServerCommand( player-g_entities, va( "print \"could not spawn prop, OBJ model '%s' not found or was invalid\n\"", model ) );
+		ent->clear();
+		return;
+	}
 	ent->physics->set_origin(location);
 	ent->link();
 }
 
+std::vector<char const *> test_boxes = {
+	"models/dogijk/testbox.obj",
+	"models/dogijk/testbox2.obj"
+};
+
 static void Cmd_Prop_f( gentity_t * player ) {
 	
+	if (!g_phys) {
+		trap->SendServerCommand( player-g_entities, va( "print \"this command is disabled, enable serverside physics to use the prop system\n\"" ) );
+		return;
+	}
+	
 	if (trap->Argc() < 2) {
-		trap->SendServerCommand( player-g_entities, va( "print \"%s\n\"", "missing subcommand, options are: removeall, spawn" ) );
+		trap->SendServerCommand( player-g_entities, va( "print \"missing subcommand, options are: removeall, spawn\n\"" ) );
 	}
 	
 	char subcmd[MAX_STRING_CHARS];
@@ -3899,7 +3911,13 @@ static void Cmd_Prop_f( gentity_t * player ) {
 		Prop_RemoveAll();
 	}
 	else if (!Q_stricmp(subcmd, "spawn")) {
-		Prop_Spawn( player->r.currentOrigin );
+		if (trap->Argc() < 3) {
+			Prop_Spawn( player, player->r.currentOrigin, test_boxes[ Q_irand(0, test_boxes.size() - 1) ] );
+		} else {
+			char model[MAX_QPATH];
+			trap->Argv(2, model, MAX_QPATH);
+			Prop_Spawn( player, player->r.currentOrigin, model );
+		}
 	}
 }
 

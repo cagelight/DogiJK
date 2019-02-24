@@ -185,7 +185,7 @@ struct gentity_t : public sharedEntity_t {
 	void link();
 	void unlink();
 	
-	void add_obj_physics( char const * model_name );
+	bool add_obj_physics( char const * model_name );
 
 	gclient_t	*client = nullptr;			// NULL if not a client
 
