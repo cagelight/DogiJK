@@ -1892,7 +1892,6 @@ Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
 	re.RegisterShaderNoMip					= RE_RegisterShaderNoMip;
 	re.ShaderNameFromIndex					= RE_ShaderNameFromIndex;
 	re.LoadWorld							= RE_LoadWorldMap;
-	re.SetWorldVisData						= RE_SetWorldVisData;
 	re.EndRegistration						= RE_EndRegistration;
 	re.BeginFrame							= RE_BeginFrame;
 	re.EndFrame								= RE_EndFrame;

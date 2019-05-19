@@ -51,15 +51,15 @@ typedef struct pcx_s {
     char	version;
     char	encoding;
     char	bits_per_pixel;
-    unsigned short	xmin,ymin,xmax,ymax;
-    unsigned short	hres,vres;
-    unsigned char	palette[48];
-    char	reserved;
-    char	color_planes;
-    unsigned short	bytes_per_line;
-    unsigned short	palette_type;
-    char	filler[58];
-    unsigned char	data;			// unbounded
+    uint16_t	xmin,ymin,xmax,ymax;
+    uint16_t	hres,vres;
+    uint8_t	palette[48];
+    int8_t	reserved;
+    int8_t	color_planes;
+    uint16_t	bytes_per_line;
+    uint16_t	palette_type;
+    int8_t	filler[58];
+    uint8_t	data;			// unbounded
 } pcx_t;
 
 
@@ -110,33 +110,33 @@ typedef struct md3Tag_s {
 ** XyzNormals		sizeof( md3XyzNormal_t ) * numVerts * numFrames
 */
 typedef struct md3Surface_s {
-	int		ident;				//
+	int32_t		ident;				//
 
 	char	name[MAX_QPATH];	// polyset name
 
-	int		flags;
-	int		numFrames;			// all surfaces in a model should have the same
+	int32_t		flags;
+	int32_t		numFrames;			// all surfaces in a model should have the same
 
-	int		numShaders;			// all surfaces in a model should have the same
-	int		numVerts;
+	int32_t		numShaders;			// all surfaces in a model should have the same
+	int32_t		numVerts;
 
-	int		numTriangles;
-	int		ofsTriangles;
+	int32_t		numTriangles;
+	int32_t		ofsTriangles;
 
-	int		ofsShaders;			// offset from start of md3Surface_t
-	int		ofsSt;				// texture coords are common for all frames
-	int		ofsXyzNormals;		// numVerts * numFrames
+	int32_t		ofsShaders;			// offset from start of md3Surface_t
+	int32_t		ofsSt;				// texture coords are common for all frames
+	int32_t		ofsXyzNormals;		// numVerts * numFrames
 
-	int		ofsEnd;				// next surface follows
+	int32_t		ofsEnd;				// next surface follows
 } md3Surface_t;
 
 typedef struct md3Shader_s {
 	char			name[MAX_QPATH];
-	int				shaderIndex;	// for in-game use
+	int32_t				shaderIndex;	// for in-game use
 } md3Shader_t;
 
 typedef struct md3Triangle_s {
-	int			indexes[3];
+	int32_t			indexes[3];
 } md3Triangle_t;
 
 typedef struct md3St_s {
@@ -144,29 +144,29 @@ typedef struct md3St_s {
 } md3St_t;
 
 typedef struct md3XyzNormal_s {
-	short		xyz[3];
-	short		normal;
+	int16_t		xyz[3];
+	int16_t		normal;
 } md3XyzNormal_t;
 
 typedef struct md3Header_s {
-	int			ident;
-	int			version;
+	int32_t			ident;
+	int32_t			version;
 
 	char		name[MAX_QPATH];	// model name
 
-	int			flags;
+	int32_t			flags;
 
-	int			numFrames;
-	int			numTags;
-	int			numSurfaces;
+	int32_t			numFrames;
+	int32_t			numTags;
+	int32_t			numSurfaces;
 
-	int			numSkins;
+	int32_t			numSkins;
 
-	int			ofsFrames;			// offset for first frame
-	int			ofsTags;			// numFrames * numTags
-	int			ofsSurfaces;		// first surface, others follow
+	int32_t			ofsFrames;			// offset for first frame
+	int32_t			ofsTags;			// numFrames * numTags
+	int32_t			ofsSurfaces;		// first surface, others follow
 
-	int			ofsEnd;				// end of file
+	int32_t			ofsEnd;				// end of file
 } md3Header_t;
 
 
@@ -188,19 +188,19 @@ typedef struct objElement_s {
 typedef objElement_t objFace_t[3];
 
 typedef struct objSurface_s {
-	int					ident;
+	int32_t					ident;
 	char				shader[MAX_QPATH];
-	int					shaderIndex;
-	int					numFaces;
+	int32_t					shaderIndex;
+	int32_t					numFaces;
 	objFace_t *			faces;
 } objSurface_t;
 
 typedef struct objModel_s {
 	char				name[MAX_QPATH];
-	int					numVerts;
-	int					numUVs;
-	int					numNormals;
-	int 				numSurfaces;
+	int32_t					numVerts;
+	int32_t					numUVs;
+	int32_t					numNormals;
+	int32_t 				numSurfaces;
 	float *				verts;
 	float *				UVs;
 	float *				normals;
@@ -265,7 +265,7 @@ typedef struct objModel_s {
 //=============================================================================
 
 typedef struct lump_s {
-	int		fileofs, filelen;
+	int32_t		fileofs, filelen;
 } lump_t;
 
 #define	LUMP_ENTITIES		0
@@ -289,22 +289,22 @@ typedef struct lump_s {
 #define	HEADER_LUMPS		18
 
 typedef struct dheader_s {
-	int			ident;
-	int			version;
+	int32_t			ident;
+	int32_t			version;
 
 	lump_t		lumps[HEADER_LUMPS];
 } dheader_t;
 
 typedef struct dmodel_s {
 	float		mins[3], maxs[3];
-	int			firstSurface, numSurfaces;
-	int			firstBrush, numBrushes;
+	int32_t			firstSurface, numSurfaces;
+	int32_t			firstBrush, numBrushes;
 } dmodel_t;
 
 typedef struct dshader_s {
 	char		shader[MAX_QPATH];
-	int			surfaceFlags;
-	int			contentFlags;
+	int32_t			surfaceFlags;
+	int32_t			contentFlags;
 } dshader_t;
 
 // planes x^1 is allways the opposite of plane x
@@ -315,42 +315,42 @@ typedef struct dplane_s {
 } dplane_t;
 
 typedef struct dnode_s {
-	int			planeNum;
-	int			children[2];	// negative numbers are -(leafs+1), not nodes
-	int			mins[3];		// for frustom culling
-	int			maxs[3];
+	int32_t			planeNum;
+	int32_t			children[2];	// negative numbers are -(leafs+1), not nodes
+	int32_t			mins[3];		// for frustom culling
+	int32_t			maxs[3];
 } dnode_t;
 
 typedef struct dleaf_s {
-	int			cluster;			// -1 = opaque cluster (do I still store these?)
-	int			area;
+	int32_t			cluster;			// -1 = opaque cluster (do I still store these?)
+	int32_t			area;
 
-	int			mins[3];			// for frustum culling
-	int			maxs[3];
+	int32_t			mins[3];			// for frustum culling
+	int32_t			maxs[3];
 
-	int			firstLeafSurface;
-	int			numLeafSurfaces;
+	int32_t			firstLeafSurface;
+	int32_t			numLeafSurfaces;
 
-	int			firstLeafBrush;
-	int			numLeafBrushes;
+	int32_t			firstLeafBrush;
+	int32_t			numLeafBrushes;
 } dleaf_t;
 
 typedef struct dbrushside_s {
-	int			planeNum;			// positive plane side faces out of the leaf
-	int			shaderNum;
-	int			drawSurfNum;
+	int32_t			planeNum;			// positive plane side faces out of the leaf
+	int32_t			shaderNum;
+	int32_t			drawSurfNum;
 } dbrushside_t;
 
 typedef struct dbrush_s {
-	int			firstSide;
-	int			numSides;
-	int			shaderNum;		// the shader that determines the contents flags
+	int32_t			firstSide;
+	int32_t			numSides;
+	int32_t			shaderNum;		// the shader that determines the contents flags
 } dbrush_t;
 
 typedef struct dfog_s {
 	char		shader[MAX_QPATH];
-	int			brushNum;
-	int			visibleSide;	// the brush side that ray tests need to clip against (-1 == none)
+	int32_t			brushNum;
+	int32_t			visibleSide;	// the brush side that ray tests need to clip against (-1 == none)
 } dfog_t;
 
 // Light Style Constants
@@ -392,26 +392,26 @@ typedef enum {
 } mapSurfaceType_t;
 
 typedef struct dsurface_s {
-	int			shaderNum;
-	int			fogNum;
-	int			surfaceType;
+	int32_t			shaderNum;
+	int32_t			fogNum;
+	int32_t			surfaceType;
 
-	int			firstVert;
-	int			numVerts;
+	int32_t			firstVert;
+	int32_t			numVerts;
 
-	int			firstIndex;
-	int			numIndexes;
+	int32_t			firstIndex;
+	int32_t			numIndexes;
 
 	byte		lightmapStyles[MAXLIGHTMAPS], vertexStyles[MAXLIGHTMAPS];
-	int			lightmapNum[MAXLIGHTMAPS];
-	int			lightmapX[MAXLIGHTMAPS], lightmapY[MAXLIGHTMAPS];
-	int			lightmapWidth, lightmapHeight;
+	int32_t			lightmapNum[MAXLIGHTMAPS];
+	int32_t			lightmapX[MAXLIGHTMAPS], lightmapY[MAXLIGHTMAPS];
+	int32_t			lightmapWidth, lightmapHeight;
 
 	vec3_t		lightmapOrigin;
 	matrix3_t	lightmapVecs;	// for patches, [0] and [1] are lodbounds
 
-	int			patchWidth;
-	int			patchHeight;
+	int32_t			patchWidth;
+	int32_t			patchHeight;
 } dsurface_t;
 
 /////////////////////////////////////////////////////////////
@@ -427,11 +427,11 @@ typedef struct dsurface_s {
 
 typedef struct
 {
-	short		width;					// number of pixels wide
-	short		height;					// number of scan lines
-	short		horizAdvance;			// number of pixels to advance to the next char
-	short		horizOffset;			// x offset into space to render glyph
-	int			baseline;				// y offset
+	int16_t		width;					// number of pixels wide
+	int16_t		height;					// number of scan lines
+	int16_t		horizAdvance;			// number of pixels to advance to the next char
+	int16_t		horizOffset;			// x offset int32_to space to render glyph
+	int32_t			baseline;				// y offset
 	float		s;						// x start tex coord
 	float		t;						// y start tex coord
 	float		s2;						// x end tex coord
@@ -446,12 +446,12 @@ typedef struct dfontdat_s
 {
 	glyphInfo_t		mGlyphs[GLYPH_COUNT];
 
-	short			mPointSize;
-	short			mHeight;				// max height of font
-	short			mAscender;
-	short			mDescender;
+	int16_t			mPointSize;
+	int16_t			mHeight;				// max height of font
+	int16_t			mAscender;
+	int16_t			mDescender;
 
-	short			mKoreanHack;
+	int16_t			mKoreanHack;
 } dfontdat_t;
 
 /////////////////// fonts end ////////////////////////////////////

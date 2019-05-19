@@ -1326,8 +1326,6 @@ void		RE_BeginRegistration( glconfig_t *glconfig );
 void		R_ColorShiftLightingBytes( byte in[4], byte out[4] ); //rwwRMG - added
 void		RE_LoadWorldMap( const char *mapname );
 
-void		RE_SetWorldVisData( const byte *vis );
-
 qhandle_t	RE_RegisterServerModel( const char *name );
 qhandle_t	RE_RegisterModel( const char *name );
 qhandle_t	RE_RegisterSkin( const char *name );

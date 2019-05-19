@@ -256,20 +256,6 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	}
 }
 
-
-/*
-=================
-RE_SetWorldVisData
-
-This is called by the clipmodel subsystem so we can share the 1.8 megs of
-space in big maps...
-=================
-*/
-void		RE_SetWorldVisData( const byte *vis ) {
-	tr.externalVisData = vis;
-}
-
-
 /*
 =================
 R_LoadVisibility

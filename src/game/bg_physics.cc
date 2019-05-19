@@ -127,6 +127,7 @@ struct bullet_world_t : public physics_world_t {
 		btCollisionDispatcher * dispatch = nullptr;
 		btSequentialImpulseConstraintSolver * solver = nullptr;
 		btDiscreteDynamicsWorld * world = nullptr;
+		clipMap_t const * map = nullptr;
 		
 		world_data_t() {
 			broadphase = new btDbvtBroadphase;
@@ -209,7 +210,7 @@ struct bullet_world_t : public physics_world_t {
 		bullet_object_t solid;
 		bullet_object_t slick;
 		
-		world_shape_t(world_data_ptr parent, clipMap_t const * map) : parent { parent }, solid { parent }, slick { parent } {
+		world_shape_t(world_data_ptr parent) : parent { parent }, solid { parent }, slick { parent } {
 			
 			btVector3 inertia;
 			
@@ -224,7 +225,7 @@ struct bullet_world_t : public physics_world_t {
 				std::atomic_size_t patch_index;
 				spinlock mut;
 			} td = {
-				.subm = { map, 0 },
+				.subm = { parent->map, 0 },
 				.brush_index = 0,
 				.patch_index = 0,
 				.mut = {},
@@ -246,7 +247,7 @@ struct bullet_world_t : public physics_world_t {
 					brush_shape->recalcLocalAabb();
 					
 					td.mut.lock();
-					(std::any_of(brush->sides, brush->sides + brush->numsides, [&map](cbrushside_t const & side){ return map->shaders[side.shaderNum].surfaceFlags & SURF_SLICK; }) ? shape_slick : shape_solid)
+					(std::any_of(brush->sides, brush->sides + brush->numsides, [&td](cbrushside_t const & side){ return td.subm.map->shaders[side.shaderNum].surfaceFlags & SURF_SLICK; }) ? shape_slick : shape_solid)
 						-> addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, brush_shape );
 					td.mut.unlock();
 				}
@@ -326,7 +327,8 @@ struct bullet_world_t : public physics_world_t {
 	}
 	
 	void add_world( clipMap_t const * map ) override {
-		world_solid = std::make_unique<world_shape_t>( world_data, map );
+		world_data->map = map;
+		world_solid = std::make_unique<world_shape_t>( world_data );
 	}
 	
 	void set_gravity( float grav ) override {
@@ -401,6 +403,12 @@ struct bullet_world_t : public physics_world_t {
 		
 		object->body->activate(true);
 		return object;
+	}
+	
+	physics_object_ptr add_object_bmodel( int submodel_idx ) override {
+		
+		submodel_t subm { world_data->map, submodel_idx };
+		
 	}
 };
 

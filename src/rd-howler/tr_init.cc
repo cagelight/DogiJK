@@ -16,7 +16,6 @@ std::shared_ptr<frame_t> r_frame;
 
 rend::~rend() {
 	R_ShutdownFonts();
-	this->destruct_world();
 }
 
 void rend::initialize() {
@@ -59,7 +58,6 @@ void rend::initialize() {
 	this->initialize_texture();
 	this->initialize_shader();
 	this->initialize_model();
-	this->initialize_world();
 	
 	R_InitFonts();
 	
@@ -126,11 +124,7 @@ const char * RE_ShaderNameFromIndex (int index) {
 }
 
 void RE_LoadWorldMap (const char *name) {
-	r->world_load(name);
-}
-
-void RE_SetWorldVisData (const byte *vis) {
-
+	r->load_world(name);
 }
 
 void RE_EndRegistration (void) {
@@ -192,6 +186,7 @@ void RE_RenderScene (const refdef_t *fd) {
 	v *= rm4_t {roq};
 	
 	r_frame->cmds3d.back().vp = v * p;
+	r_frame->cmds3d.back().def = *fd;
 	r_frame->cmds3d.emplace_back();
 	// HACK ???
 	// nothing is actually drawn until EndFrame
@@ -468,7 +463,6 @@ extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *r
 	re.RegisterShaderNoMip					= RE_RegisterShaderNoMip;
 	re.ShaderNameFromIndex					= RE_ShaderNameFromIndex;
 	re.LoadWorld							= RE_LoadWorldMap;
-	re.SetWorldVisData						= RE_SetWorldVisData;
 	re.EndRegistration						= RE_EndRegistration;
 	re.BeginFrame							= RE_BeginFrame;
 	re.EndFrame								= RE_EndFrame;

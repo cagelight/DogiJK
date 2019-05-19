@@ -33,6 +33,7 @@ struct physics_world_t {
 	
 	virtual void remove_object( physics_object_ptr object ) = 0;
 	virtual physics_object_ptr add_object_obj( char const * model ) = 0;
+	virtual physics_object_ptr add_object_bmodel( int submodel_idx ) = 0;
 	
 	
 protected:

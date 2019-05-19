@@ -335,6 +335,7 @@ struct rseq {
 	}
 	
 	rm4_t vp;
+	refdef_t def;
 	std::vector<cmd3d> cmds3d;
 };
 
@@ -442,7 +443,7 @@ struct rend final {
 	std::vector<q3shader_ptr> shaders;
 	
 	q3shader_ptr & shader_register(char const * name, bool mipmaps = true);
-	inline q3shader_ptr & shader_get(qhandle_t h) { return (h < 0 || h >= shaders.size()) ? shaders[0] : shaders[h]; }
+	inline q3shader_ptr & shader_get(qhandle_t h) { return (h < 0 || static_cast<size_t>(h) >= shaders.size()) ? shaders[0] : shaders[h]; }
 	void shader_set_mvp(rm4_t const & m);
 	void shader_presetup(q3shader const &);
 	void shader_setup_stage(q3stage const &, rm3_t const & uvm, float time);
@@ -461,24 +462,75 @@ struct rend final {
 // WORLD
 // ================================
 	
-	void world_load(char const * name);
+	void load_world(char const * name);
 	qboolean get_entity_token(char *buffer, int size); // not entirely sure what this does
 	
 	q3model opaque_world;
 	q3model trans_world;
 	
 private:
+	
+	struct world_t {
+		
+		struct surface_t {
+			q3shader_ptr shader {nullptr};
+			int32_t fogIndex = 0;
+			std::vector<float> vert_data;
+			std::vector<float> uv_data;
+		};
+		
+		struct mapnode_t {
+			
+			struct node_data {
+					mapnode_t * children [2] {};
+					cplane_t const * plane;
+			};
+			
+			struct leaf_data {
+					int32_t cluster;
+					int32_t area;
+					std::vector<surface_t *> surfaces;
+			};
+			
+			mapnode_t * parent = nullptr;
+			vec3_t mins, maxs;
+			
+			std::variant<node_data, leaf_data> data;
+		};
+		
+		char		name[MAX_QPATH];
+		char		baseName[MAX_QPATH];
+		vec3_t		lightGridSize;
+		istring		entityString;
+		char const	*entityParsePoint;
+		
+		std::vector<dshader_t> shaders;
+		std::vector<surface_t> surfaces;
+		std::vector<mapnode_t> nodes;
+		
+		void load(char const * name);
+		
+	private:
+		
+		union {
+			byte const * base = nullptr;
+			dheader_t const * header;
+		};
+		
+		void load_entities();
+		void load_shaders();
+		void load_surfaces(int index);
+		void load_nodesleafs();
+	};
+	
+	std::unique_ptr<world_t> world;
 		
 	bool initialized = false;
 	window_t window;
-	void * world_data = nullptr;
 	
 	void initialize_model();
 	void initialize_shader();
 	void initialize_texture();
-	void initialize_world();
-	
-	void destruct_world() noexcept;
 };
 
 extern std::unique_ptr<rend> r;

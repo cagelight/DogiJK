@@ -166,6 +166,7 @@ struct visitor_2d {
 		
 		r->shader_set_mvp(m * projection_2d);
 		r->unitquad.bind();
+		
 		for (size_t i = 0; i < pic.shader->stages.size(); i++) {
 			r->shader_setup_stage(pic.shader->stages[i], uv, shader_time);
 			r->unitquad.draw();
@@ -176,16 +177,102 @@ struct visitor_2d {
 struct visitor_3d {
 	
 	float shader_time = 0.4f;
+	rm4_t vp;
 	
+	void operator () (basic_mesh const & ref) {
+		
+		/*
+		qhandle_t model = 0;
+		bool ghoul2 = false;
+		
+		if (ref.hModel) model = ent.hModel;
+		else if (ent.ghoul2) {
+			model = ri.G2_At(*(CGhoul2Info_v *)ent.ghoul2, 0).mModel;
+			ghoul2 = true;
+		}
+		*/
+		
+		if (!ref.model) return;
+		
+		rm4_t v = rm4_t::translate({ref.origin[1], -ref.origin[2], ref.origin[0]});
+		rm4_t a = {
+			ref.pre[1][1], -ref.pre[1][2], ref.pre[1][0], 0,
+			ref.pre[2][1], -ref.pre[2][2], ref.pre[2][0], 0,
+			ref.pre[0][1], -ref.pre[0][2], ref.pre[0][0], 0,
+			0, 0, 0, 1
+		};
+		
+		auto m = a * v;
+		r->shader_set_mvp(m * vp);
+		
+		for (q3mesh const & mesh : ref.model->meshes) {
+			mesh.bind();
+			
+			if (!mesh.shader || !mesh.shader->index) {
+				glDepthMask(GL_TRUE);
+				r->missingnoise_program->use();
+				r->shader_set_mvp(m * vp);
+				glUniform1f(UNIFORM_TIME, shader_time);
+				mesh.draw();
+				r->q3program->use();
+				continue;
+			}
+			
+			glDepthMask( mesh.shader->opaque ? GL_TRUE : GL_FALSE );
+			r->shader_presetup(*mesh.shader);
+			glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, mesh.shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+			
+			for (size_t i = 0; i < mesh.shader->stages.size(); i++) {
+				r->shader_setup_stage(mesh.shader->stages[i], {}, shader_time);
+				mesh.draw();
+			}
+		}
+		
+	}
 	
 };
 
 void rend::draw(std::shared_ptr<frame_t> frame) {
 	
+	rstate::reset();
+	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_BLEND);
+	glDepthFunc(GL_LEQUAL);
 	q3program->use();
+	
+	for (auto const & scene : frame->cmds3d) {
+		
+		bool render_world = !(scene.def.rdflags & RDF_NOWORLDMODEL);
+		
+		if (render_world) {
+			shader_set_mvp(scene.vp);
+			for (q3mesh const & worldmesh : opaque_world.meshes) {
+				worldmesh.bind();
+				r->shader_presetup(*worldmesh.shader);
+				glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, worldmesh.shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+				for (size_t i = 0; i < worldmesh.shader->stages.size(); i++) {
+					r->shader_setup_stage(worldmesh.shader->stages[i], {}, frame->shader_time);
+					worldmesh.draw();
+				}
+				worldmesh.draw();
+			}
+		}
+		
+		visitor_3d v3d {
+			.shader_time = frame->shader_time,
+			.vp = scene.vp
+		};
+		
+		for (cmd3d const & cmd : scene.cmds3d) {
+			std::visit(v3d, cmd);
+		}
+	}
+	
+	glDepthMask(GL_FALSE);
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
 	
 	visitor_2d v2d {
 		.shader_time = frame->shader_time

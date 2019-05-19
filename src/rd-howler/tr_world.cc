@@ -1,55 +1,11 @@
 #include "tr_local.hh"
 
-struct world_data_t {
-	char		name[MAX_QPATH];		// ie: maps/tim_dm2.bsp
-	char		baseName[MAX_QPATH];	// ie: tim_dm2
-	vec3_t		lightGridSize;
-	char		*entityString;
-	char		*entityParsePoint;
+#include <stack>
+
+void rend::load_world(char const * name) {
 	
-	std::vector<dshader_t> shaders;
-};
-
-#define WORL reinterpret_cast<world_data_t *>(this->world_data)
-
-void rend::initialize_world() {
-	this->world_data = new world_data_t;
-	memset(this->world_data, 0, sizeof(world_data_t));
-}
-
-void rend::destruct_world() noexcept {
-	if (WORL) delete WORL;
-}
-
-static void R_LoadEntities( lump_t *l, world_data_t * worldData, byte const * base );
-static void R_LoadShaders( lump_t * l, world_data_t * worl, byte * base );
-static void R_LoadSurfaces( lump_t *surfs, lump_t *verts, lump_t *indexLump, world_data_t * worl, int index, byte * base );
-
-void rend::world_load(char const * name) {
-	
-	byte * buffer = nullptr;
-	
-	if (ri.CM_GetCachedMapDiskImage()) {
-		buffer = (byte *)ri.CM_GetCachedMapDiskImage();
-	} else {
-		ri.FS_ReadFile( name, (void **)&buffer );
-		if ( !buffer ) {
-			Com_Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
-		}
-	}
-	
-	memset( WORL, 0, sizeof( *WORL ) );
-	Q_strncpyz( WORL->name, name, sizeof( WORL->name ) );
-	Q_strncpyz( WORL->baseName, COM_SkipPath( WORL->name ), sizeof( WORL->name ) );
-
-	COM_StripExtension( WORL->baseName, WORL->baseName, sizeof( WORL->baseName ) );
-
-	dheader_t * header = (dheader_t *)buffer;
-	byte * base = (byte *)header;
-	
-	R_LoadEntities(&header->lumps[LUMP_ENTITIES], WORL, base);
-	R_LoadShaders( &header->lumps[LUMP_SHADERS], WORL, base );
-	R_LoadSurfaces(&header->lumps[LUMP_SURFACES], &header->lumps[LUMP_DRAWVERTS], &header->lumps[LUMP_DRAWINDEXES], WORL, 0, base);
+	world.reset( new world_t );
+	world->load(name);
 }
 
 // copied directly from rd-vanilla R_GetEntityToken, not sure what it does
@@ -58,38 +14,283 @@ qboolean rend::get_entity_token(char * buffer, int size) {
 
 	if (size <= 0)
 	{ //force reset
-		WORL->entityParsePoint = WORL->entityString;
+		world->entityParsePoint = world->entityString.data();
 		return qtrue;
 	}
 
-	s = COM_Parse( (const char **) &WORL->entityParsePoint );
+	s = COM_Parse( (const char **) &world->entityParsePoint );
 	Q_strncpyz( buffer, s, size );
-	if ( !WORL->entityParsePoint || !s[0] ) {
+	if ( !world->entityParsePoint || !s[0] ) {
 		return qfalse;
 	} else {
 		return qtrue;
 	}
 }
 
-static void R_LoadEntities( lump_t *l, world_data_t * worl, byte const * base ) {
+void rend::world_t::load(char const * name) {
+	
+	base = reinterpret_cast<byte const *>(ri.CM_GetCachedMapDiskImage());
+	if (!base) {
+		ri.FS_ReadFile(name, (void **)&base);
+		if (!base) Com_Error (ERR_DROP, "RE_LoadWorldMap: %s not found", name);
+	}
+	
+	Q_strncpyz(this->name, name, sizeof( this->name ));
+	Q_strncpyz(this->baseName, COM_SkipPath( this->name ), sizeof( this->baseName ));
+	COM_StripExtension( this->baseName, this->baseName, sizeof( this->baseName ) );
+	
+	load_shaders();
+	// TODO -- lightmaps
+	// TODO -- planes
+	// TODO -- fogs
+	load_surfaces(0);
+	load_nodesleafs();
+	// TODO -- submodels
+	// TODO -- visibility
+	load_entities();
+	// TODO -- lightgrid
+	// TODO -- lightgridarray
+}
+
+//================================================================
+// LOAD SHADERS
+//================================================================
+
+void rend::world_t::load_shaders() {
+	
+	lump_t const & l = header->lumps[LUMP_SHADERS];
+	
+	if (l.filelen % sizeof(dshader_t))
+		Com_Error (ERR_DROP, "world_t::load_shaders: funny lump size in %s", name);
+	
+	shaders.resize(l.filelen / sizeof(dshader_t));
+	memcpy(shaders.data(), base + l.fileofs, l.filelen);
+}
+
+//================================================================
+// LOAD LIGHTMAPS
+//================================================================
+
+// TODO
+
+//================================================================
+// LOAD PLANES
+//================================================================
+
+// TODO
+
+//================================================================
+// LOAD FOGS
+//================================================================
+
+// TODO
+
+//================================================================
+// LOAD SURFACES
+//================================================================
+
+void rend::world_t::load_surfaces(int index) {
+	
+	lump_t const & lsurf = header->lumps[LUMP_SURFACES];
+	lump_t const & lvert = header->lumps[LUMP_DRAWVERTS];
+	lump_t const & lindx = header->lumps[LUMP_DRAWINDEXES];
+	
+	dsurface_t const * msurf = reinterpret_cast<dsurface_t const *>(base + lsurf.fileofs);
+	mapVert_t const * mvert = reinterpret_cast<mapVert_t const *>(base + lvert.fileofs);
+	int32_t const * mindx = reinterpret_cast<int32_t const *>(base + lindx.fileofs);
+	
+	int num_surfs = lsurf.filelen / sizeof(dsurface_t);
+	surfaces.resize(num_surfs);
+	
+	for (int i = 0; i < num_surfs; i++) {
+		
+		dsurface_t const & surfi = msurf[i];
+		surface_t & surfo = surfaces[i];
+		
+		surfo.shader = r->shader_register(shaders[surfi.shaderNum].shader);
+		
+		switch (surfi.surfaceType) {
+		case MST_PLANAR: {
+			
+			mapVert_t const * surf_verts = mvert + surfi.firstVert;
+			int const * surf_indicies = mindx + surfi.firstIndex;
+			
+			for (size_t i = 0; i < surfi.numIndexes; i ++) {
+				surfo.vert_data.push_back(surf_verts[surf_indicies[i]].xyz[1]);
+				surfo.vert_data.push_back(-surf_verts[surf_indicies[i]].xyz[2]);
+				surfo.vert_data.push_back(surf_verts[surf_indicies[i]].xyz[0]);
+				surfo.uv_data.push_back(surf_verts[surf_indicies[i]].st[0]);
+				surfo.uv_data.push_back(surf_verts[surf_indicies[i]].st[1]);
+			}
+			
+		} break;
+		// TODO -- MST_PATCH
+		// TODO -- MST_TRIANGLE_SOUP
+		// TODO -- MST_FLARE
+		default: break;
+		}
+	}
+}
+
+/*
+	
+	for (auto [handle, proto] : buckets) {
+		
+		q3mesh & mesh = (proto.shader->opaque ? r->opaque_world : r->trans_world).meshes.emplace_back();
+		
+		mesh.shader = std::move(proto.shader);
+		mesh.size = proto.vert_data.size() / 3;
+		glCreateVertexArrays(1, &mesh.vao);
+		glCreateBuffers(2, mesh.vbo);
+		glNamedBufferData(mesh.vbo[0], proto.vert_data.size() * 4, proto.vert_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(mesh.vao, 0, 0);
+		glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
+		glEnableVertexArrayAttrib(mesh.vao, 0);
+		glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+		glNamedBufferData(mesh.vbo[1], proto.uv_data.size() * 4, proto.uv_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(mesh.vao, 1, 1);
+		glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
+		glEnableVertexArrayAttrib(mesh.vao, 1);
+		glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+	}
+}
+*/
+
+//================================================================
+// LOAD NODES & LEAFS
+//================================================================
+
+void rend::world_t::load_nodesleafs() {
+	
+	lump_t const & lmark = header->lumps[LUMP_LEAFSURFACES];
+	lump_t const & lnode = header->lumps[LUMP_NODES];
+	lump_t const & lleaf = header->lumps[LUMP_LEAFS];
+
+	int32_t const * marks = reinterpret_cast<int32_t const *>(base + lmark.fileofs);
+	dnode_t const * nodes = reinterpret_cast<dnode_t const *>(base + lnode.fileofs);
+	dleaf_t const * leafs = reinterpret_cast<dleaf_t const *>(base + lleaf.fileofs);
+	
+	int32_t num_marks = lmark.filelen / sizeof(*marks);
+	int32_t num_nodes = lnode.filelen / sizeof(dnode_t);
+	int32_t num_leafs = lleaf.filelen / sizeof(dleaf_t);
+	
+	if (lmark.filelen % sizeof(*marks))
+		Com_Error (ERR_DROP, "world_t::load_nodesleafs: funny leafsurfaces size in %s", name);
+	if (lnode.filelen % sizeof(dnode_t))
+		Com_Error (ERR_DROP, "world_t::load_nodesleafs: funny node lump size in %s", name);
+	if (lleaf.filelen % sizeof(dleaf_t))
+		Com_Error (ERR_DROP, "world_t::load_nodesleafs: funny leaf lump size in %s", name);
+	
+	this->nodes.resize(num_nodes + num_leafs);
+	
+	int32_t mapnode_i;
+	for (int32_t i = 0; i < num_nodes; i++, mapnode_i++) {
+		
+		mapnode_t & mn = this->nodes[mapnode_i];
+		dnode_t const & node = nodes[i];
+		
+		for (int j = 0; j < 3; j++) {
+			mn.mins[j] = node.mins[j];
+			mn.maxs[j] = node.maxs[j];
+		}
+		
+		auto & data = mn.data.emplace<mapnode_t::node_data>();
+		
+		// TODO -- planes
+		
+		for (int j = 0; j < 2; j++) {
+			int offs = node.children[j];
+			if (offs >= 0) {
+				data.children[j] = &this->nodes[offs];
+			} else {
+				offs = -offs - 1;
+				data.children[j] = &this->nodes[offs + num_nodes];
+			}
+		}
+		
+	}
+	
+	for (int32_t i = 0; i < num_leafs; i++, mapnode_i++) {
+		
+		mapnode_t & mn = this->nodes[mapnode_i];
+		dleaf_t const & leaf = leafs[i];
+		
+		for (int j = 0; j < 3; j++) {
+			mn.mins[j] = leaf.mins[j];
+			mn.maxs[j] = leaf.maxs[j];
+		}
+		
+		auto & data = mn.data.emplace<mapnode_t::leaf_data>();
+		
+		data.cluster = leaf.cluster;
+		data.area = leaf.area;
+		
+		data.surfaces.resize(leaf.numLeafSurfaces);
+		for (int j = 0; j < leaf.numLeafSurfaces; j++) {
+			data.surfaces[j] = &surfaces[marks[leaf.firstLeafSurface + j]];
+		}
+	}
+	
+	struct reparent_iterator {
+		reparent_iterator(mapnode_t * mn, mapnode_t * parent) : mn(mn), parent(parent) {}
+		mapnode_t * mn = nullptr;
+		mapnode_t * parent = nullptr;
+	};
+	
+	std::stack<reparent_iterator> reparent_stack;
+	reparent_stack.emplace(&this->nodes[0], nullptr);
+	
+	while (reparent_stack.size()) {
+		reparent_iterator cur = reparent_stack.top();
+		reparent_stack.pop();
+		
+		cur.mn->parent = cur.parent;
+		
+		if (std::holds_alternative<mapnode_t::leaf_data>(cur.mn->data)) continue;
+		mapnode_t::node_data & data = std::get<mapnode_t::node_data>(cur.mn->data);
+		
+		reparent_stack.emplace(data.children[0], cur.mn);
+		reparent_stack.emplace(data.children[1], cur.mn);
+	}
+}
+
+//================================================================
+// LOAD SUBMODELS
+//================================================================
+
+// TODO
+
+//================================================================
+// LOAD VISIBILITY
+//================================================================
+
+// TODO
+
+//================================================================
+// LOAD ENTITIES (WORLDSPAWN)
+//================================================================
+
+void rend::world_t::load_entities() {
+	
+	lump_t const & l = header->lumps[LUMP_ENTITIES];
+	
 	const char *p;
 	char *token, *s;
 	char keyname[MAX_TOKEN_CHARS];
 	char value[MAX_TOKEN_CHARS];
 	float ambient = 1;
 
-	worl->lightGridSize[0] = 64;
-	worl->lightGridSize[1] = 64;
-	worl->lightGridSize[2] = 128;
+	lightGridSize[0] = 64;
+	lightGridSize[1] = 64;
+	lightGridSize[2] = 128;
 
-	p = (char *)(base + l->fileofs);
+	p = (char *)(base + l.fileofs);
 
 	// store for reference by the cgame
-	worl->entityString = (char *)Hunk_Alloc( l->filelen + 1, h_low );
-	strcpy( worl->entityString, p );
-	worl->entityParsePoint = worl->entityString;
+	entityString = p;
+	entityParsePoint = entityString.data();
 
-	COM_BeginParseSession ("R_LoadEntities");
+	COM_BeginParseSession ("world_t::load_entities");
 
 	token = COM_ParseExt( &p, qtrue );
 	if (!*token || *token != '{') {
@@ -150,7 +351,7 @@ static void R_LoadEntities( lump_t *l, world_data_t * worl, byte const * base ) 
 		*/
 		// check for a different grid size
 		if (!Q_stricmp(keyname, "gridsize")) {
-			sscanf(value, "%f %f %f", &worl->lightGridSize[0], &worl->lightGridSize[1], &worl->lightGridSize[2] );
+			sscanf(value, "%f %f %f", &lightGridSize[0], &lightGridSize[1], &lightGridSize[2] );
 			continue;
 		}
 	// find the optional world ambient for arioche
@@ -169,82 +370,14 @@ static void R_LoadEntities( lump_t *l, world_data_t * worl, byte const * base ) 
 	//VectorScale( tr.sunAmbient, ambient, tr.sunAmbient);
 }
 
-static void R_LoadShaders( lump_t * l, world_data_t * worl, byte * base ) {
-	int		i, count;
-	dshader_t	*in;
+//================================================================
+// LOAD LIGHTGRID
+//================================================================
 
-	in = (dshader_t *)(base + l->fileofs);
-	if (l->filelen % sizeof(*in))
-		Com_Error (ERR_DROP, "LoadMap: funny lump size in %s",worl->name);
-	count = l->filelen / sizeof(*in);
-	
-	for (size_t i = 0 ; i < count; i++) {
-		worl->shaders.emplace_back(in[i]);
-	}
-}
+// TODO
 
-struct protomodel {
-	std::vector<float> vert_data;
-	std::vector<float> uv_data;
-	q3shader_ptr shader;
-};
+//================================================================
+// LOAD LIGHTGRIDARRAY
+//================================================================
 
-static void R_LoadSurfaces( lump_t *lsurf, lump_t *lvert, lump_t *lind, world_data_t * worl, int index, byte * base ) {
-	dsurface_t * msurf;
-	mapVert_t * mvert;
-	int * mind;
-	
-	msurf = reinterpret_cast<dsurface_t *>(base + lsurf->fileofs);
-	mvert = reinterpret_cast<mapVert_t *>(base + lvert->fileofs);
-	mind = reinterpret_cast<int *>(base + lind->fileofs);
-	
-	std::unordered_map<qhandle_t, protomodel> buckets;
-	
-	size_t count = lsurf->filelen / sizeof(dsurface_t);
-	for (size_t i = 0; i < count; i++) {
-		
-		dsurface_t & surf = msurf[i];
-		
-		q3shader_ptr shader = r->shader_register(worl->shaders[surf.shaderNum].shader);
-		protomodel & mod = buckets[shader->index];
-		mod.shader = shader;
-		
-		switch (surf.surfaceType) {
-		case MST_PLANAR: {
-			
-			mapVert_t * surf_verts = mvert + surf.firstVert;
-			int * surf_indicies = mind + surf.firstIndex;
-			
-			for (size_t i = 0; i < surf.numIndexes; i ++) {
-				mod.vert_data.push_back(surf_verts[surf_indicies[i]].xyz[1]);
-				mod.vert_data.push_back(-surf_verts[surf_indicies[i]].xyz[2]);
-				mod.vert_data.push_back(surf_verts[surf_indicies[i]].xyz[0]);
-				mod.uv_data.push_back(surf_verts[surf_indicies[i]].st[0]);
-				mod.uv_data.push_back(surf_verts[surf_indicies[i]].st[1]);
-			}
-			
-		} break;
-		default: break;
-		}
-	}
-	
-	for (auto [handle, proto] : buckets) {
-		
-		q3mesh & mesh = (proto.shader->opaque ? r->opaque_world : r->trans_world).meshes.emplace_back();
-		
-		mesh.shader = std::move(proto.shader);
-		mesh.size = proto.vert_data.size() / 3;
-		glCreateVertexArrays(1, &mesh.vao);
-		glCreateBuffers(2, mesh.vbo);
-		glNamedBufferData(mesh.vbo[0], proto.vert_data.size() * 4, proto.vert_data.data(), GL_STATIC_DRAW);
-		glVertexArrayAttribBinding(mesh.vao, 0, 0);
-		glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
-		glEnableVertexArrayAttrib(mesh.vao, 0);
-		glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-		glNamedBufferData(mesh.vbo[1], proto.uv_data.size() * 4, proto.uv_data.data(), GL_STATIC_DRAW);
-		glVertexArrayAttribBinding(mesh.vao, 1, 1);
-		glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
-		glEnableVertexArrayAttrib(mesh.vao, 1);
-		glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
-	}
-}
+// TODO
