@@ -465,9 +465,6 @@ struct rend final {
 	void load_world(char const * name);
 	qboolean get_entity_token(char *buffer, int size); // not entirely sure what this does
 	
-	q3model opaque_world;
-	q3model trans_world;
-	
 private:
 	
 	struct world_t {
@@ -498,6 +495,12 @@ private:
 			std::variant<node_data, leaf_data> data;
 		};
 		
+		struct clustermodel_t {
+			q3model_ptr opque;
+		};
+		
+		std::vector<clustermodel_t> render_clusters;
+		
 		char		name[MAX_QPATH];
 		char		baseName[MAX_QPATH];
 		vec3_t		lightGridSize;
@@ -507,6 +510,8 @@ private:
 		std::vector<dshader_t> shaders;
 		std::vector<surface_t> surfaces;
 		std::vector<mapnode_t> nodes;
+		
+		bool vis = false;
 		
 		void load(char const * name);
 		
@@ -521,6 +526,8 @@ private:
 		void load_shaders();
 		void load_surfaces(int index);
 		void load_nodesleafs();
+		
+		void generate_render_clusters();
 	};
 	
 	std::unique_ptr<world_t> world;

@@ -61,7 +61,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <variant>
 #include <vector>
+
+template<class... Ts> struct lambda_visit : Ts... { using Ts::operator()...; };
+template<class... Ts> lambda_visit(Ts...) -> lambda_visit<Ts...>;
 
 #include "game/teams.hh" //npc team stuff
 

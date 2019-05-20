@@ -232,9 +232,51 @@ struct visitor_3d {
 	
 };
 
-void rend::draw(std::shared_ptr<frame_t> frame) {
+struct objectdraw {
+	objectdraw(q3mesh const * mesh, rm4_t const & m) : mesh(mesh), m(m) {}
+	q3mesh const * mesh;
+	rm4_t m;
+};
+
+using drawvariant = std::variant<
+	q3mesh const *,
+	objectdraw
+>;
+
+struct visitor_draw3d {
 	
-	rstate::reset();
+	float shader_time = 0.4f;
+	rm4_t vp;
+	
+	void operator () (q3mesh const *) {
+		
+	}
+	
+	void operator () (objectdraw const & ref) {
+		r->shader_set_mvp(ref.m * vp);
+		ref.mesh->bind();
+		
+		if (!ref.mesh->shader || !ref.mesh->shader->index) {
+			glDepthMask(GL_TRUE);
+			r->missingnoise_program->use();
+			glUniform1f(UNIFORM_TIME, shader_time);
+			ref.mesh->draw();
+			r->q3program->use();
+			return;
+		}
+		
+		glDepthMask( ref.mesh->shader->opaque ? GL_TRUE : GL_FALSE );
+		r->shader_presetup(*ref.mesh->shader);
+		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, ref.mesh->shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+		
+		for (size_t i = 0; i < ref.mesh->shader->stages.size(); i++) {
+			r->shader_setup_stage(ref.mesh->shader->stages[i], {}, shader_time);
+			ref.mesh->draw();
+		}
+	}
+};
+
+void rend::draw(std::shared_ptr<frame_t> frame) {
 	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	glEnable(GL_DEPTH_TEST);
@@ -244,11 +286,15 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 	
 	for (auto const & scene : frame->cmds3d) {
 		
-		bool render_world = !(scene.def.rdflags & RDF_NOWORLDMODEL);
+		std::map<float, std::vector<drawvariant>> rmap;
 		
+		bool render_world = !(scene.def.rdflags & RDF_NOWORLDMODEL);
+		if (!world) render_world = false;
+		
+		/*
 		if (render_world) {
 			shader_set_mvp(scene.vp);
-			for (q3mesh const & worldmesh : opaque_world.meshes) {
+			for (q3mesh const & worldmesh : world->render_clusters[1].opque->meshes) {
 				worldmesh.bind();
 				r->shader_presetup(*worldmesh.shader);
 				glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, worldmesh.shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
@@ -259,14 +305,49 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 				worldmesh.draw();
 			}
 		}
+		*/
 		
+		/*
 		visitor_3d v3d {
 			.shader_time = frame->shader_time,
 			.vp = scene.vp
 		};
+		*/
 		
+		visitor_draw3d v3d {
+			.shader_time = frame->shader_time,
+			.vp = scene.vp
+		};
+		
+		/*
 		for (cmd3d const & cmd : scene.cmds3d) {
 			std::visit(v3d, cmd);
+		}
+		*/
+		for (cmd3d const & cmd : scene.cmds3d) {
+			std::visit(lambda_visit{
+				[&](basic_mesh const & ref) {
+					
+					if (!ref.model) return;
+					
+					rm4_t v = rm4_t::translate({ref.origin[1], -ref.origin[2], ref.origin[0]});
+					rm4_t a = {
+						ref.pre[1][1], -ref.pre[1][2], ref.pre[1][0], 0,
+						ref.pre[2][1], -ref.pre[2][2], ref.pre[2][0], 0,
+						ref.pre[0][1], -ref.pre[0][2], ref.pre[0][0], 0,
+						0, 0, 0, 1
+					};
+					auto m = a * v;
+					
+					for (q3mesh const & mesh : ref.model->meshes) {
+						rmap[mesh.shader->sort].emplace_back( objectdraw{&mesh, m} );
+					}
+				}
+			}, cmd);
+		}
+		
+		for (auto const & [sort, draws] : rmap) {
+			for (auto const & draw : draws) std::visit(v3d, draw);
 		}
 	}
 	
