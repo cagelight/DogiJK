@@ -270,7 +270,7 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 		default: 
 			break;
 		case q3stage::gen_func::sine:
-			return base + sin((in + phase) * frequency * math::pi<float> * 2) * amplitude;
+			return base + sin((in + phase) * frequency * qm::pi * 2) * amplitude;
 	}
 	return 0;
 }
@@ -546,7 +546,7 @@ static void parse_texmod(char const * name, q3stage & stg, char const * p) {
 			return;
 		}
 		tc.rotate_data.rot = strtof(token, nullptr);
-		tc.rotate_data.rot = math::deg2rad<float>(tc.rotate_data.rot);
+		tc.rotate_data.rot = qm::deg2rad(tc.rotate_data.rot);
 	} else {
 		Com_Printf(S_COLOR_RED "ERROR: unknown tcMod parameter \"%s\" in shader (\"%s\")\n", token, name);
 		return;

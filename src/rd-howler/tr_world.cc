@@ -1,6 +1,7 @@
 #include "tr_local.hh"
 
 #include <stack>
+#include <unordered_set>
 
 void rend::load_world(char const * name) {
 	
@@ -41,84 +42,128 @@ void rend::world_t::load(char const * name) {
 	
 	load_shaders();
 	// TODO -- lightmaps
-	// TODO -- planes
+	load_planes();
 	// TODO -- fogs
 	load_surfaces(0);
 	load_nodesleafs();
 	// TODO -- submodels
-	// TODO -- visibility
+	load_visibility();
 	load_entities();
 	// TODO -- lightgrid
 	// TODO -- lightgridarray
-	
-	generate_render_clusters();
 }
 
-void rend::world_t::generate_render_clusters() {
+q3model_ptr rend::world_t::get_model(int32_t visnum) {
 	
-	std::stack<mapnode_t *> node_stack;
-	node_stack.emplace(&nodes[0]);
+	if (visnum < 0) visnum = -1;
 	
-	int32_t max_cluster = 0;
+	for (auto const & entry : vis_cache_queue) {
+		if (entry.cluster == visnum) return entry.model;
+	}
 	
-	struct protomodel_t {
+	if (vis_cache_queue.size() > 20) vis_cache_queue.erase(vis_cache_queue.end() - 1);
+	vis_cache_queue.emplace(vis_cache_queue.begin());
+	
+	vis_cache_queue[0].cluster = visnum;
+	auto & cache_model = vis_cache_queue[0].model = std::make_shared<q3model>();
+	
+	struct protomodel {
 		std::vector<float> vert_data;
 		std::vector<float> uv_data;
 	};
 	
-	using cluster_bucket_t = std::unordered_map<int32_t, protomodel_t>;
-	std::unordered_map<int32_t, cluster_bucket_t> cluster_buckets;
+	std::unordered_set<surface_t const *> marked_surfaces;
 	
-	while(node_stack.size()) {
+	if (visnum > 0) {
 		
-		mapnode_t * node = node_stack.top(); node_stack.pop();
-		
-		std::visit(lambda_visit{
-			[&](mapnode_t::node_data const & data){
-				node_stack.emplace(data.children[0]);
-				node_stack.emplace(data.children[1]);
-			},[&](mapnode_t::leaf_data const & data){
-				if (data.cluster > max_cluster) max_cluster = data.cluster;
-				auto & bucket = cluster_buckets[data.cluster];
-				for (surface_t const * surf : data.surfaces) {
-					auto & model = bucket[surf->shader->index];
-					model.vert_data.insert(model.vert_data.end(), surf->vert_data.begin(), surf->vert_data.end());
-					model.uv_data.insert(model.uv_data.end(), surf->uv_data.begin(), surf->uv_data.end());
-				}
-			},
-		}, node->data);
+		/*
+		for (int32_t cluster = 0; cluster < >render_clusters.size(); cluster++) {
+			q3model_ptr const & ptr = world->render_clusters[cluster];
+			if (!ptr) continue;
+			
+			if ( (scene.def.areamask[leaf->area>>3] & (1<<(leaf->area&7)) ) ) {
+				continue;		// not visible
+			}
+			
+			for (auto const & wmesh : ptr->meshes) {
+				rmap[wmesh.shader->sort].emplace_back(&wmesh);
+			}
+		}
+		*/
 	}
 	
-	render_clusters.resize(max_cluster);
-	for (int32_t i = 0; i < max_cluster; i++) {
+	if (visnum > 0) {
 		
-		auto const & cluster = cluster_buckets[i];
-		auto & model = render_clusters[i];
+		byte const * cluster_vis = &vis->data[visnum * vis->cluster_bytes];
 		
-		model.opque = std::make_unique<q3model>();
-		
-		for (auto const & [shader_id, proto] : cluster) {
-			q3shader_ptr shader = r->shader_get(shader_id);
-			if (!shader->opaque) continue; // TODO -- trans
+		for (mapnode_t const & node : nodes) {
 			
-			q3mesh & mesh = model.opque->meshes.emplace_back();
+			std::visit(lambda_visit{
+					[&](mapnode_t::node_data const &){},
+					[&](mapnode_t::leaf_data const & data){
+						if ( !(cluster_vis[data.cluster>>3] & (1<<(data.cluster&7))) ) {
+							return;
+						}
+						for (auto const & surf : data.surfaces) marked_surfaces.emplace(surf);
+					}
+				}, node.data);
 			
-			mesh.shader = std::move(shader);
-			mesh.size = proto.vert_data.size() / 3;
-			glCreateVertexArrays(1, &mesh.vao);
-			glCreateBuffers(2, mesh.vbo);
-			glNamedBufferData(mesh.vbo[0], proto.vert_data.size() * 4, proto.vert_data.data(), GL_STATIC_DRAW);
-			glVertexArrayAttribBinding(mesh.vao, 0, 0);
-			glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
-			glEnableVertexArrayAttrib(mesh.vao, 0);
-			glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-			glNamedBufferData(mesh.vbo[1], proto.uv_data.size() * 4, proto.uv_data.data(), GL_STATIC_DRAW);
-			glVertexArrayAttribBinding(mesh.vao, 1, 1);
-			glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
-			glEnableVertexArrayAttrib(mesh.vao, 1);
-			glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+		}
+		
+	} else {
+		for (mapnode_t const & node : nodes) {
+			std::visit(lambda_visit{
+					[&](mapnode_t::node_data const &){},
+					[&](mapnode_t::leaf_data const & data){
+						for (auto const & surf : data.surfaces) marked_surfaces.emplace(surf);
+					}
+				}, node.data);
 		}
 	}
+	
+	std::unordered_map<q3shader_ptr, protomodel> buckets;
+	
+	for (auto const & surf : marked_surfaces) {
+		auto & model = buckets[surf->shader];
+		model.vert_data.insert(model.vert_data.end(), surf->vert_data.begin(), surf->vert_data.end());
+		model.uv_data.insert(model.uv_data.end(), surf->uv_data.begin(), surf->uv_data.end());
+	}
+	
+	for (auto const & [shader, proto] : buckets) {
+		q3mesh & mesh = cache_model->meshes.emplace_back();
+		
+		mesh.shader = shader;
+		mesh.size = proto.vert_data.size() / 3;
+		glCreateVertexArrays(1, &mesh.vao);
+		glCreateBuffers(2, mesh.vbo);
+		glNamedBufferData(mesh.vbo[0], proto.vert_data.size() * 4, proto.vert_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(mesh.vao, 0, 0);
+		glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
+		glEnableVertexArrayAttrib(mesh.vao, 0);
+		glVertexArrayAttribFormat(mesh.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+		glNamedBufferData(mesh.vbo[1], proto.uv_data.size() * 4, proto.uv_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(mesh.vao, 1, 1);
+		glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
+		glEnableVertexArrayAttrib(mesh.vao, 1);
+		glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+	}
+	
+	return cache_model;
+}
+
+rend::world_t::mapnode_t const * rend::world_t::point_in_leaf(rv3_t const & point) {
+	
+	mapnode_t const * node = &nodes[0];
+	while(true) {
+		if (!std::holds_alternative<mapnode_t::node_data>(node->data)) break;
+		auto const & data = std::get<mapnode_t::node_data>(node->data);
+		
+		if (DotProduct(point, data.plane->normal) - data.plane->dist > 0)
+			node = data.children[0];
+		else
+			node = data.children[1];
+	}
+	return node;
 }
 
 //================================================================
@@ -146,7 +191,32 @@ void rend::world_t::load_shaders() {
 // LOAD PLANES
 //================================================================
 
-// TODO
+void rend::world_t::load_planes() {
+	
+	lump_t const & l = header->lumps[LUMP_PLANES];
+	
+	if (l.filelen % sizeof(dplane_t))
+		Com_Error (ERR_DROP, "world_t::load_planes: funny lump size in %s", name);
+	
+	dplane_t const * dplanes = reinterpret_cast<dplane_t const *>(base + l.fileofs);
+	int32_t dplanes_num = l.filelen / sizeof(dplane_t);
+	
+	planes.resize(dplanes_num);
+	for (int32_t i = 0; i < dplanes_num; i++) {
+		dplane_t const & in = dplanes[i];
+		cplane_t & out = planes[i];
+		
+		int32_t bits = 0;
+		for (int32_t j = 0; j < 3; j++) {
+			out.normal[j] = in.normal[j];
+			if (out.normal[j] < 0) bits |= 1 << j;
+		}
+		
+		out.dist = in.dist;
+		out.type = PlaneTypeForNormal(out.normal);
+		out.signbits = bits;
+	}
+}
 
 //================================================================
 // LOAD FOGS
@@ -198,6 +268,25 @@ void rend::world_t::load_surfaces(int index) {
 		// TODO -- MST_FLARE
 		default: break;
 		}
+		
+		if (!surfo.vert_data.size()) continue;
+		
+		surfo.mesh = std::make_shared<q3mesh>();
+		surfo.mesh->shader = surfo.shader;
+		
+		surfo.mesh->size = surfo.vert_data.size() / 3;
+		glCreateVertexArrays(1, &surfo.mesh->vao);
+		glCreateBuffers(2, surfo.mesh->vbo);
+		glNamedBufferData(surfo.mesh->vbo[0], surfo.vert_data.size() * 4, surfo.vert_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(surfo.mesh->vao, 0, 0);
+		glVertexArrayVertexBuffer(surfo.mesh->vao, 0, surfo.mesh->vbo[0], 0, 12);
+		glEnableVertexArrayAttrib(surfo.mesh->vao, 0);
+		glVertexArrayAttribFormat(surfo.mesh->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+		glNamedBufferData(surfo.mesh->vbo[1], surfo.uv_data.size() * 4, surfo.uv_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(surfo.mesh->vao, 1, 1);
+		glVertexArrayVertexBuffer(surfo.mesh->vao, 1, surfo.mesh->vbo[1], 0, 8);
+		glEnableVertexArrayAttrib(surfo.mesh->vao, 1);
+		glVertexArrayAttribFormat(surfo.mesh->vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
 	}
 }
 
@@ -264,7 +353,7 @@ void rend::world_t::load_nodesleafs() {
 		
 		auto & data = mn.data.emplace<mapnode_t::node_data>();
 		
-		// TODO -- planes
+		data.plane = &planes[node.planeNum];
 		
 		for (int j = 0; j < 2; j++) {
 			int offs = node.children[j];
@@ -291,6 +380,8 @@ void rend::world_t::load_nodesleafs() {
 		
 		data.cluster = leaf.cluster;
 		data.area = leaf.area;
+		
+		if (data.cluster > num_clusters) num_clusters = data.cluster;
 		
 		data.surfaces.resize(leaf.numLeafSurfaces);
 		for (int j = 0; j < leaf.numLeafSurfaces; j++) {
@@ -331,7 +422,22 @@ void rend::world_t::load_nodesleafs() {
 // LOAD VISIBILITY
 //================================================================
 
-// TODO
+void rend::world_t::load_visibility() {
+	
+	lump_t const & l = header->lumps[LUMP_VISIBILITY];
+	if (!l.filelen) return;
+	
+	vis = std::make_unique<vis_t>();
+	
+	byte const * buffer = base + l.fileofs;
+	int32_t const * buffer_ints = reinterpret_cast<int32_t const *>(buffer);
+	
+	vis->num_clusters = buffer_ints[0];
+	vis->cluster_bytes = buffer_ints[1];
+	
+	vis->data.resize(l.filelen - 8);
+	memcpy(vis->data.data(), buffer + 8, vis->data.size());
+}
 
 //================================================================
 // LOAD ENTITIES (WORLDSPAWN)

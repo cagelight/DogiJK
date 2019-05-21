@@ -1,11 +1,11 @@
 #pragma once
 
-#include <variant>
+#include <queue>
 
 #include "glad.hh"
 #include "rd-common/tr_public.hh"
 #include "rd-common/tr_types.hh"
-
+#include "qcommon/q_math2.hh"
 #include "hmath.hh"
 
 typedef math::vec2_t<float> rv2_t;
@@ -14,6 +14,15 @@ typedef math::vec4_t<float> rv4_t;
 typedef math::mat3_t<float> rm3_t;
 typedef math::mat4_t<float> rm4_t;
 typedef math::quaternion_t<float> rq_t;
+
+/*
+using rv2_t = qm::vec2_t;
+using rv3_t = qm::vec3_t;
+using rv4_t = qm::vec4_t;
+using rm3_t = qm::mat3_t;
+using rm4_t = qm::mat4_t;
+using rq_t = qm::quat_t;
+*/
 
 extern refimport_t ri;
 
@@ -50,12 +59,14 @@ Ghoul2 Insert End
 	SF_MAX = 0xffffffff			// ensures that sizeof( surfaceType_t ) == sizeof( int )
 } surfaceType_t;
 
+struct q3mesh;
 struct q3model;
 struct q3shader;
 struct q3skin;
 struct q3stage;
 struct q3texture;
 
+using q3mesh_ptr = std::shared_ptr<q3mesh>;
 using q3model_ptr = std::shared_ptr<q3model>;
 using q3shader_ptr = std::shared_ptr<q3shader>;
 using q3skin_ptr = std::shared_ptr<q3skin>;
@@ -98,12 +109,14 @@ struct q3mesh final {
 	q3mesh(q3mesh &&);
 	~q3mesh();
 	inline void bind() const { glBindVertexArray(vao); }
-	inline void draw() const { glDrawArrays(mode, 0, size); }
+	inline void draw() const { glDrawArrays(mode, 0, size); draw_count++; }
 	GLuint vao = 0;
 	GLuint vbo[3] {0};
 	q3shader_ptr shader;
 	size_t size = 0;
 	GLenum mode = GL_TRIANGLES;
+	
+	static size_t draw_count;
 };
 
 struct q3model final {
@@ -474,6 +487,7 @@ private:
 			int32_t fogIndex = 0;
 			std::vector<float> vert_data;
 			std::vector<float> uv_data;
+			q3mesh_ptr mesh;
 		};
 		
 		struct mapnode_t {
@@ -495,11 +509,11 @@ private:
 			std::variant<node_data, leaf_data> data;
 		};
 		
-		struct clustermodel_t {
-			q3model_ptr opque;
+		struct vis_t {
+			std::vector<byte> data;
+			int32_t num_clusters = 0;
+			int32_t cluster_bytes = 0;
 		};
-		
-		std::vector<clustermodel_t> render_clusters;
 		
 		char		name[MAX_QPATH];
 		char		baseName[MAX_QPATH];
@@ -508,12 +522,15 @@ private:
 		char const	*entityParsePoint;
 		
 		std::vector<dshader_t> shaders;
+		std::vector<cplane_t> planes;
 		std::vector<surface_t> surfaces;
 		std::vector<mapnode_t> nodes;
 		
-		bool vis = false;
+		std::unique_ptr<vis_t> vis;
 		
 		void load(char const * name);
+		q3model_ptr get_model(int32_t vis);
+		mapnode_t const * point_in_leaf(rv3_t const &);
 		
 	private:
 		
@@ -522,12 +539,21 @@ private:
 			dheader_t const * header;
 		};
 		
-		void load_entities();
+		int32_t num_clusters = 0;
+		
+		struct vis_cache {
+			q3model_ptr model;
+			int32_t cluster;
+		};
+		
+		std::vector<vis_cache> vis_cache_queue;
+		
 		void load_shaders();
+		void load_planes();
 		void load_surfaces(int index);
 		void load_nodesleafs();
-		
-		void generate_render_clusters();
+		void load_visibility();
+		void load_entities();
 	};
 	
 	std::unique_ptr<world_t> world;

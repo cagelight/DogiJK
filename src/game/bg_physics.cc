@@ -44,7 +44,7 @@ static std::vector<qm::vec3_t> calculate_brush_hull_points(cbrush_t const & brus
 	for (size_t k = 0; k < j; k++) {
 		if (i == j || j == k || i == k) continue;
 		qm::vec3_t intersect = plane_intersection(*brush.sides[i].plane, *brush.sides[j].plane, *brush.sides[k].plane);
-		if (!intersect.is_valid()) continue;
+		if (!intersect.is_real()) continue;
 		
 		bool legal = true;
 		for (size_t l = 0; l < brush.numsides; l++) {

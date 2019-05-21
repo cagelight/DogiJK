@@ -245,11 +245,30 @@ using drawvariant = std::variant<
 
 struct visitor_draw3d {
 	
-	float shader_time = 0.4f;
+	float shader_time = 0.0f;
 	rm4_t vp;
 	
-	void operator () (q3mesh const *) {
+	void operator () (q3mesh const * mesh) {
+		r->shader_set_mvp(vp);
+		mesh->bind();
 		
+		if (!mesh->shader || !mesh->shader->index) {
+			glDepthMask(GL_TRUE);
+			r->missingnoise_program->use();
+			glUniform1f(UNIFORM_TIME, shader_time);
+			mesh->draw();
+			r->q3program->use();
+			return;
+		}
+		
+		glDepthMask( mesh->shader->opaque ? GL_TRUE : GL_FALSE );
+		r->shader_presetup(*mesh->shader);
+		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, mesh->shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+		
+		for (size_t i = 0; i < mesh->shader->stages.size(); i++) {
+			r->shader_setup_stage(mesh->shader->stages[i], {}, shader_time);
+			mesh->draw();
+		}
 	}
 	
 	void operator () (objectdraw const & ref) {
@@ -276,6 +295,10 @@ struct visitor_draw3d {
 	}
 };
 
+#include <unordered_set>
+
+size_t q3mesh::draw_count = 0;
+
 void rend::draw(std::shared_ptr<frame_t> frame) {
 	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -284,46 +307,29 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 	glDepthFunc(GL_LEQUAL);
 	q3program->use();
 	
+	q3mesh::draw_count = 0;
+	
 	for (auto const & scene : frame->cmds3d) {
 		
+		rv3_t view_origin = {scene.def.vieworg[0], scene.def.vieworg[1], scene.def.vieworg[2]};
 		std::map<float, std::vector<drawvariant>> rmap;
 		
 		bool render_world = !(scene.def.rdflags & RDF_NOWORLDMODEL);
 		if (!world) render_world = false;
 		
-		/*
 		if (render_world) {
-			shader_set_mvp(scene.vp);
-			for (q3mesh const & worldmesh : world->render_clusters[1].opque->meshes) {
-				worldmesh.bind();
-				r->shader_presetup(*worldmesh.shader);
-				glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, worldmesh.shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
-				for (size_t i = 0; i < worldmesh.shader->stages.size(); i++) {
-					r->shader_setup_stage(worldmesh.shader->stages[i], {}, frame->shader_time);
-					worldmesh.draw();
-				}
-				worldmesh.draw();
+			int32_t cluster = std::get<world_t::mapnode_t::leaf_data>(world->point_in_leaf(view_origin)->data).cluster;
+			printf("%i\n", cluster);
+			for (auto const & mesh : world->get_model(cluster)->meshes) {
+				rmap[mesh.shader->sort].emplace_back(&mesh);
 			}
 		}
-		*/
-		
-		/*
-		visitor_3d v3d {
-			.shader_time = frame->shader_time,
-			.vp = scene.vp
-		};
-		*/
 		
 		visitor_draw3d v3d {
 			.shader_time = frame->shader_time,
 			.vp = scene.vp
 		};
 		
-		/*
-		for (cmd3d const & cmd : scene.cmds3d) {
-			std::visit(v3d, cmd);
-		}
-		*/
 		for (cmd3d const & cmd : scene.cmds3d) {
 			std::visit(lambda_visit{
 				[&](basic_mesh const & ref) {
@@ -362,6 +368,8 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 	for (cmd2d const & cmd : frame->cmds2d) {
 		std::visit(v2d, cmd);
 	}
+	
+	printf("Draw Count: %zu\n", q3mesh::draw_count);
 	
 	/*
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);

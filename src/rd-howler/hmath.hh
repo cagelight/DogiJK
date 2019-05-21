@@ -230,6 +230,8 @@ namespace math {
 		constexpr T & operator [] (size_t i) { return data[i]; }
 		constexpr T const & operator [] (size_t i) const { return data[i]; }
 		
+		constexpr operator T const * () const { return &data[0]; }
+		
 		constexpr vec3_t<T> operator - () const { return {-x(), -y(), -z()}; }
 		
 #if BRASSICA_PRINT_FUNCTIONS == 1
