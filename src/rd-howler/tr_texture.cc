@@ -4,7 +4,7 @@
 
 void rend::initialize_texture() {
 	R_ImageLoader_Init();
-	std::shared_ptr<q3texture> whiteimage = std::make_shared<q3texture>();
+	q3texture_ptr whiteimage = std::make_shared<q3texture>();
 	glCreateTextures(GL_TEXTURE_2D, 1, &whiteimage->id);
 	glTextureStorage2D(whiteimage->id, 1, GL_RGBA8, 1, 1);
 	glTextureSubImage2D(whiteimage->id, 0, 0, 0, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, "\xFF\xFF\xFF\xFF");
@@ -15,7 +15,7 @@ void rend::initialize_texture() {
 	texture_lookup["*invalid"] = std::make_shared<q3texture>();
 }
 
-std::shared_ptr<q3texture const> rend::texture_register(char const * name, bool mipmaps) {
+q3texture_ptr rend::texture_register(char const * name, bool mipmaps) {
 	char sname [MAX_QPATH];
 	//COM_StripExtension(name, sname, MAX_QPATH);
 	
@@ -32,7 +32,7 @@ std::shared_ptr<q3texture const> rend::texture_register(char const * name, bool 
 		return texture_lookup["*invalid"];
 	}
 	
-	std::shared_ptr<q3texture> tex = std::make_shared<q3texture>();
+	q3texture_ptr tex = std::make_shared<q3texture>();
 	
 	for (size_t x = 0; x < width; x++) for (size_t y = 0; y < height; y++) {
 		byte * pixel = idat + (y * width + x) * 4;

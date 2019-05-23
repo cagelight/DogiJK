@@ -9,12 +9,22 @@ R"GLSL(
 	
 layout(location = )GLSL" SS(LAYOUT_VERTCOORD) R"GLSL() in vec3 vert;
 layout(location = )GLSL" SS(LAYOUT_TEXCOORD) R"GLSL() in vec2 uv;
+layout(location = )GLSL" SS(LAYOUT_LIGHTMAPCOORD) R"GLSL() in vec2 lmuv[4];
+
 layout(location = )GLSL" SS(UNIFORM_VERTEX_MATRIX) R"GLSL() uniform mat4 vertex_matrix;
 layout(location = )GLSL" SS(UNIFORM_TEXCOORD_MATRIX) R"GLSL() uniform mat3 uv_matrix;
+
 out vec2 f_uv;
+out vec2 f_lmuv[4];
+
 void main() {
 	f_uv = (uv_matrix * vec3(uv, 1)).xy;
 	gl_Position = vertex_matrix * vec4(vert, 1);
+	
+	f_lmuv[0] = lmuv[0];
+	f_lmuv[1] = lmuv[1];
+	f_lmuv[2] = lmuv[2];
+	f_lmuv[3] = lmuv[3];
 }
 )GLSL";
 
@@ -23,11 +33,25 @@ R"GLSL(
 #version 450
 	
 in vec2 f_uv;
+in vec2 f_lmuv[4];
+
 out vec4 color;
+
 layout(location = )GLSL" SS(UNIFORM_COLOR) R"GLSL() uniform vec4 q3color;
+layout(location = )GLSL" SS(UNIFORM_ISLITBYLIGHTMAP) R"GLSL() uniform bool is_lightmap;
+
 layout(binding = 0) uniform sampler2D tex;
+layout(binding = 1) uniform sampler2D lm_atlas;
+
 void main() {
-	color = texture(tex, f_uv) * q3color;
+	if (is_lightmap) {
+		color = texture(lm_atlas, f_lmuv[0]);
+		color += color * texture(lm_atlas, f_lmuv[1]);
+		color += color * texture(lm_atlas, f_lmuv[2]);
+		color += color * texture(lm_atlas, f_lmuv[3]);
+	} else {
+		color = texture(tex, f_uv) * q3color;
+	}
 }
 )GLSL";
 
@@ -141,7 +165,7 @@ void rend::initialize_shader() {
 	q3shader_ptr & ds = shaders.emplace_back( std::make_shared<q3shader>() );
 	ds->name = "*default";
 	ds->index = 0;
-	shader_lookup[ds->name] = ds;
+	shader_lookup[{ds->name, false}] = ds;
 	
 	int num_shader_files;
 	char * * shfiles = ri.FS_ListFiles("shaders", ".shader", &num_shader_files);
@@ -200,14 +224,13 @@ void rend::initialize_shader() {
 	ri.FS_FreeFileList(shfiles);
 }
 
-static bool parse_shader(q3shader & shad, char const * src, bool mipmaps);
+static bool parse_shader(q3shader & shad, char const * src, bool mipmaps, bool lightmap);
 
-q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps) {
-	
+q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps, bool lightmap) {
 	char name [MAX_QPATH];
 	COM_StripExtension(pname, name, MAX_QPATH);
 	
-	auto m = shader_lookup.find(name);
+	auto m = shader_lookup.find({name, lightmap});
 	if (m != shader_lookup.end()) return m->second;
 	
 	qhandle_t handle = -1;
@@ -230,38 +253,49 @@ q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps) {
 	auto src = shader_source_lookup.find(name);
 	if (src == shader_source_lookup.end()) {
 		
-		std::shared_ptr<q3texture const> tex = r->texture_register(name);
+		q3texture_ptr tex = r->texture_register(name);
 		if (!tex->id) {
 			Com_Printf(S_COLOR_RED "ERROR: Could not find image for shader '%s'!\n", name);
 			shad.reset();
-			shader_lookup[name] = shaders[0];
+			shader_lookup[{name, lightmap}] = shaders[0];
 			return shaders[0];
 		}
 		
-		shad->stages.emplace_back();
-		shad->stages[0].diffuse = tex;
-		if (tex->has_transparency) {
-			shad->stages[0].blend_src = GL_SRC_ALPHA;
-			shad->stages[0].blend_dst = GL_ONE_MINUS_SRC_ALPHA;
-			shad->stages[0].blend = true;
-			shad->stages[0].opaque = false;
+		if (lightmap) {
+			shad->stages.emplace_back();
+			shad->stages[0].is_lightmap_stage = true;
+			shad->stages.emplace_back();
+			shad->stages[1].diffuse = tex;
+			shad->stages[1].blend_src = GL_DST_COLOR;
+			shad->stages[1].blend_dst = GL_ZERO;
+			shad->stages[1].blend = true;
 		} else {
-			shad->stages[0].blend = false;
-			shad->stages[0].opaque = true;
+			shad->stages.emplace_back();
+			shad->stages[0].diffuse = tex;
+			if (tex->has_transparency) {
+				shad->stages[0].blend_src = GL_SRC_ALPHA;
+				shad->stages[0].blend_dst = GL_ONE_MINUS_SRC_ALPHA;
+				shad->stages[0].blend = true;
+				shad->stages[0].opaque = false;
+			} else {
+				shad->stages[0].blend = false;
+				shad->stages[0].opaque = true;
+			}
+			shad->opaque = shad->stages[0].opaque;
 		}
-		shad->opaque = shad->stages[0].opaque;
-		shader_lookup[name] = shad;
+		
+		shader_lookup[{name, lightmap}] = shad;
 		return shaders[handle];
 	}
 	
-	if (!parse_shader(*shad, src->second.c_str(), mipmaps)) {
+	if (!parse_shader(*shad, src->second.c_str(), mipmaps, lightmap)) {
 		Com_Printf(S_COLOR_RED "ERROR: Could not parse shader '%s'!\n", name);
 		shad = {};
-		shader_lookup[name] = shaders[0];
+		shader_lookup[{name, lightmap}] = shaders[0];
 		return shaders[0];
 	}
 	
-	shader_lookup[name] = shad;
+	shader_lookup[{name, lightmap}] = shad;
 	return shaders[handle];
 }
 
@@ -296,7 +330,14 @@ void rend::shader_presetup(q3shader const & shad) {
 }
 
 void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float time) {
-	if (stage.diffuse) glBindTextureUnit(0, stage.diffuse->id);
+	if (stage.diffuse) glBindTextureUnit(BINDING_DIFFUSE, stage.diffuse->id);
+	
+	if (stage.is_lightmap_stage) {
+		glUniform1i(UNIFORM_ISLITBYLIGHTMAP, true);
+		glBindTextureUnit(BINDING_LIGHTMAP_ATLAS, world->lightmap_atlas->id);
+	} else {
+		glUniform1i(UNIFORM_ISLITBYLIGHTMAP, false);
+	}
 	
 	glBlendFunc(stage.blend_src, stage.blend_dst);
 	
@@ -305,6 +346,12 @@ void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float ti
 		case q3stage::gen_type::vertex:
 		case q3stage::gen_type::none:
 			q3color = color_2d;
+			break;
+		case q3stage::gen_type::identity_lighting: 
+			// TODO
+			break;
+		case q3stage::gen_type::identity:
+			// already {1, 1, 1, 1}
 			break;
 		case q3stage::gen_type::constant:
 			q3color = stage.color;
@@ -319,6 +366,12 @@ void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float ti
 		case q3stage::gen_type::vertex:
 		case q3stage::gen_type::none:
 			q3color[3] = color_2d[3];
+			break;
+		case q3stage::gen_type::identity_lighting: 
+			// TODO
+			break;
+		case q3stage::gen_type::identity:
+			// already {1, 1, 1, 1}
 			break;
 		case q3stage::gen_type::constant:
 			q3color[3] = stage.color[3];
@@ -582,10 +635,10 @@ static qboolean parse_vector ( const char **text, int count, float *v ) {
 	return qtrue;
 }
 
-static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool mipmaps) {
+static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool mipmaps, bool lightmap) {
 	
 	char const * token;
-	std::shared_ptr<q3texture const> map;
+	q3texture_ptr map;
 	
 	while(true) {
 		
@@ -600,11 +653,20 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 		
 		else if (!Q_stricmp("map", token)) {
 			token = COM_ParseExt(&p, qfalse);
-			map = r->texture_register(token, mipmaps);
-			stg.diffuse = map;
-			if (!stg.diffuse) {
-				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid map (\"%s\"), could not find this image.\n", name, token);
-				return false;
+			if (!Q_stricmp("$lightmap", token)) {
+				stg.is_lightmap_stage = true;
+				/*
+				stg.blend_src = GL_DST_COLOR;
+				stg.blend_dst = GL_ZERO;
+				stg.blend = true;
+				*/
+			} else {
+				map = r->texture_register(token, mipmaps);
+				stg.diffuse = map;
+				if (!stg.diffuse) {
+					Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid map (\"%s\"), could not find this image.\n", name, token);
+					return false;
+				}
 			}
 		}
 		
@@ -761,7 +823,7 @@ static inline float parse_sort(char const * token) {
 	return std::strtof(token, nullptr);
 }
 
-static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
+static bool parse_shader(q3shader & shad, char const * src, bool mipmaps, bool lightmap) {
 	char const * token, * p = src;
 	COM_BeginParseSession("shader");
 	
@@ -785,7 +847,7 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps) {
 		else if (token[0] == '}') break;
 		else if (token[0] == '{') {
 			q3stage & stg = shad.stages.emplace_back();
-			if (!parse_stage(shad.name.c_str(), stg, p, mipmaps)) {
+			if (!parse_stage(shad.name.c_str(), stg, p, mipmaps, lightmap)) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") failed to parse.\n", shad.name.c_str());
 				return false;
 			}

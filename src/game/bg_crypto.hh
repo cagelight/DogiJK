@@ -4,10 +4,21 @@
 
 namespace dogicrypt {
 	
-	template <size_t BITS>
-	struct sha3_t;
+	namespace meta {
 	
-	struct block;
+		template <size_t BITS>
+		struct sha3_t;
+		
+		template <size_t BITS>
+		struct block_t;
+		
+		template <size_t BITS>
+		struct blockchain_t;
+	
+	}
+	
+	using block_t = meta::block_t<256>;
+	using blockchain_t = meta::blockchain_t<256>;
 	
 	void crypto_test();
 	
@@ -25,12 +36,34 @@ namespace dogicrypt {
 	}
 };
 
-struct dogicrypt::block {
+template <size_t BITS>
+struct dogicrypt::meta::block_t {
 	
+	using hash_t = sha3_t<BITS>;
+	using digest_t = typename hash_t::array_t;
+	
+private:
+	
+	digest_t digest;
+	digest_t digest_parent;
+	
+	std::vector<uint8_t> data;
 };
 
 template <size_t BITS>
-struct dogicrypt::sha3_t {
+struct dogicrypt::meta::blockchain_t {
+	
+	using block_t = meta::block_t<BITS>;
+	
+	blockchain_t() = default;
+	
+private:
+	
+	std::vector<block_t> blocks;
+};
+
+template <size_t BITS>
+struct dogicrypt::meta::sha3_t {
 	
 	static constexpr uint16_t mdlen = BITS / 8;
 	static_assert(mdlen * 8 == BITS);

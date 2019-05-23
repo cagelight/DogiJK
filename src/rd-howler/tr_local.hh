@@ -3,26 +3,17 @@
 #include <queue>
 
 #include "glad.hh"
+#include "rd-common/tr_common.hh"
 #include "rd-common/tr_public.hh"
 #include "rd-common/tr_types.hh"
 #include "qcommon/q_math2.hh"
-#include "hmath.hh"
 
-typedef math::vec2_t<float> rv2_t;
-typedef math::vec3_t<float> rv3_t;
-typedef math::vec4_t<float> rv4_t;
-typedef math::mat3_t<float> rm3_t;
-typedef math::mat4_t<float> rm4_t;
-typedef math::quaternion_t<float> rq_t;
-
-/*
 using rv2_t = qm::vec2_t;
 using rv3_t = qm::vec3_t;
 using rv4_t = qm::vec4_t;
 using rm3_t = qm::mat3_t;
 using rm4_t = qm::mat4_t;
 using rq_t = qm::quat_t;
-*/
 
 extern refimport_t ri;
 
@@ -134,12 +125,16 @@ extern std::unique_ptr<modelbank> mbank;
 
 #define LAYOUT_VERTCOORD 0
 #define LAYOUT_TEXCOORD 1
-#define LAYOUT_NORMAL 2
+#define LAYOUT_LIGHTMAPCOORD 2
 
 #define UNIFORM_VERTEX_MATRIX 0
 #define UNIFORM_TEXCOORD_MATRIX 1
 #define UNIFORM_TIME 3
 #define UNIFORM_COLOR 4
+#define UNIFORM_ISLITBYLIGHTMAP 5
+
+#define BINDING_DIFFUSE 0
+#define BINDING_LIGHTMAP_ATLAS 1
 
 struct q3stage {
 	
@@ -203,12 +198,15 @@ struct q3stage {
 	
 	enum struct gen_type {
 		none,
+		identity,
+		identity_lighting,
 		constant,
 		vertex,
 		wave,
 	} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
 	
-	std::shared_ptr<q3texture const> diffuse;
+	q3texture_ptr diffuse;
+	bool is_lightmap_stage = false;
 	bool clamp = false;
 	GLenum blend_src = GL_ONE, blend_dst = GL_ZERO;
 	
@@ -347,7 +345,7 @@ struct rseq {
 		cmds3d.reserve(8192);
 	}
 	
-	rm4_t vp;
+	rm4_t vp = rm4_t::identity();
 	refdef_t def;
 	std::vector<cmd3d> cmds3d;
 };
@@ -451,11 +449,20 @@ struct rend final {
 	
 	rv4_t color_2d;
 	
+	using shader_lookup_t = std::pair<istring, bool>;
+	struct shader_lookup_t_hash {
+		size_t operator() (shader_lookup_t const & sl) const {
+			size_t h = std::hash<istring>{}(sl.first);
+			return sl.second ? ~h : h;
+		} 
+	};
+	
 	std::unordered_map<istring, std::string> shader_source_lookup;
-	std::unordered_map<istring, q3shader_ptr> shader_lookup;
+	std::unordered_map<shader_lookup_t, q3shader_ptr, shader_lookup_t_hash> shader_lookup;
 	std::vector<q3shader_ptr> shaders;
 	
-	q3shader_ptr & shader_register(char const * name, bool mipmaps = true);
+	q3shader_ptr & shader_register(char const * name, bool mipmaps = true, bool lightmap = false);
+	
 	inline q3shader_ptr & shader_get(qhandle_t h) { return (h < 0 || static_cast<size_t>(h) >= shaders.size()) ? shaders[0] : shaders[h]; }
 	void shader_set_mvp(rm4_t const & m);
 	void shader_presetup(q3shader const &);
@@ -469,7 +476,7 @@ struct rend final {
 	
 	std::unordered_map<istring, std::shared_ptr<q3texture>> texture_lookup;
 	
-	std::shared_ptr<q3texture const> texture_register(char const * name, bool mipmaps = true);
+	q3texture_ptr texture_register(char const * name, bool mipmaps = true);
 	
 // ================================
 // WORLD
@@ -478,16 +485,14 @@ struct rend final {
 	void load_world(char const * name);
 	qboolean get_entity_token(char *buffer, int size); // not entirely sure what this does
 	
-private:
-	
 	struct world_t {
 		
 		struct surface_t {
+			dsurface_t info;
 			q3shader_ptr shader {nullptr};
-			int32_t fogIndex = 0;
 			std::vector<float> vert_data;
 			std::vector<float> uv_data;
-			q3mesh_ptr mesh;
+			std::vector<float> lightmap_data;
 		};
 		
 		struct mapnode_t {
@@ -515,17 +520,35 @@ private:
 			int32_t cluster_bytes = 0;
 		};
 		
+		// COPIED FROM RD-VANILLA
 		char		name[MAX_QPATH];
 		char		baseName[MAX_QPATH];
 		vec3_t		lightGridSize;
 		istring		entityString;
 		char const	*entityParsePoint;
 		
+		// SHADERS
 		std::vector<dshader_t> shaders;
+		
+		// LIGHTMAP
+		static constexpr size_t lightmap_dim = 128;
+		static constexpr size_t lightmap_pixels = lightmap_dim * lightmap_dim;
+		static constexpr size_t lightmap_bytes = lightmap_pixels * 3;
+		
+		size_t lightmap_span;
+		q3texture_ptr lightmap_atlas;
+		
+		inline rv2_t uv_for_lightmap(int32_t idx, rv2_t uv_in) {
+			int32_t x = idx % lightmap_span;
+			int32_t y = idx / lightmap_span;
+			rv2_t uv_base {static_cast<float>(x), static_cast<float>(y)};
+			return (uv_base + uv_in) / lightmap_span;
+		}
+		
+		// REST OF GARBAGE
 		std::vector<cplane_t> planes;
 		std::vector<surface_t> surfaces;
 		std::vector<mapnode_t> nodes;
-		
 		std::unique_ptr<vis_t> vis;
 		
 		void load(char const * name);
@@ -549,6 +572,7 @@ private:
 		std::vector<vis_cache> vis_cache_queue;
 		
 		void load_shaders();
+		void load_lightmaps();
 		void load_planes();
 		void load_surfaces(int index);
 		void load_nodesleafs();
@@ -557,6 +581,8 @@ private:
 	};
 	
 	std::unique_ptr<world_t> world;
+	
+private:
 		
 	bool initialized = false;
 	window_t window;

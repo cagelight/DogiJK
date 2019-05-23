@@ -177,7 +177,7 @@ struct visitor_2d {
 struct visitor_3d {
 	
 	float shader_time = 0.4f;
-	rm4_t vp;
+	rm4_t vp = rm4_t::identity();
 	
 	void operator () (basic_mesh const & ref) {
 		
@@ -223,7 +223,7 @@ struct visitor_3d {
 			glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, mesh.shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 			
 			for (size_t i = 0; i < mesh.shader->stages.size(); i++) {
-				r->shader_setup_stage(mesh.shader->stages[i], {}, shader_time);
+				r->shader_setup_stage(mesh.shader->stages[i], rm3_t::identity(), shader_time);
 				mesh.draw();
 			}
 		}
@@ -235,7 +235,7 @@ struct visitor_3d {
 struct objectdraw {
 	objectdraw(q3mesh const * mesh, rm4_t const & m) : mesh(mesh), m(m) {}
 	q3mesh const * mesh;
-	rm4_t m;
+	rm4_t m = rm4_t::identity();
 };
 
 using drawvariant = std::variant<
@@ -246,7 +246,7 @@ using drawvariant = std::variant<
 struct visitor_draw3d {
 	
 	float shader_time = 0.0f;
-	rm4_t vp;
+	rm4_t vp = rm4_t::identity();
 	
 	void operator () (q3mesh const * mesh) {
 		r->shader_set_mvp(vp);
@@ -266,7 +266,7 @@ struct visitor_draw3d {
 		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, mesh->shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 		
 		for (size_t i = 0; i < mesh->shader->stages.size(); i++) {
-			r->shader_setup_stage(mesh->shader->stages[i], {}, shader_time);
+			r->shader_setup_stage(mesh->shader->stages[i], rm3_t::identity(), shader_time);
 			mesh->draw();
 		}
 	}
@@ -289,7 +289,7 @@ struct visitor_draw3d {
 		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, ref.mesh->shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 		
 		for (size_t i = 0; i < ref.mesh->shader->stages.size(); i++) {
-			r->shader_setup_stage(ref.mesh->shader->stages[i], {}, shader_time);
+			r->shader_setup_stage(ref.mesh->shader->stages[i], rm3_t::identity(), shader_time);
 			ref.mesh->draw();
 		}
 	}
@@ -319,7 +319,6 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 		
 		if (render_world) {
 			int32_t cluster = std::get<world_t::mapnode_t::leaf_data>(world->point_in_leaf(view_origin)->data).cluster;
-			printf("%i\n", cluster);
 			for (auto const & mesh : world->get_model(cluster)->meshes) {
 				rmap[mesh.shader->sort].emplace_back(&mesh);
 			}

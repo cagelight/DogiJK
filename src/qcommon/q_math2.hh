@@ -47,7 +47,33 @@ namespace qm {
 	static constexpr float pi = meta::pi<float>;
 	constexpr float deg2rad(float const & v) { return v * pi / 180.0f; }
 	constexpr float rad2deg(float const & v) { return v / pi * 180.0f; }
+	
+	template <typename T, typename std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4>* = nullptr>
+	constexpr T next_pow2(T i) {
+		if (i <= 0) return 0;
+		if (i == 1) return 1;
+		return 1 << (32 - __builtin_clz(i - 1));
+	}
+	
+	template <typename T, typename std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 8>* = nullptr>
+	constexpr T next_pow2(T i) {
+		if (i <= 0) return 0;
+		if (i == 1) return 1;
+		return 1 << (64 - __builtin_clzll(i - 1));
+	}
+	
+	template <typename T, typename std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4>* = nullptr>
+	constexpr T fast_log2(T i) {
+		if (i <= 0) return 0;
+		return 32 - __builtin_clz(i);
+	}
 
+	template <typename T, typename std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 8>* = nullptr>
+	constexpr T fast_log2(T i) {
+		if (i <= 0) return 0;
+		return 64 - __builtin_clzll(i);
+	}
+	
 	using vec2_t = meta::vec2_t<float>;
 	using ivec2_t = meta::vec2_t<int32_t>;
 	
@@ -464,6 +490,10 @@ struct qm::meta::quat_t {
 	constexpr quat_t(T const & x, T const & y, T const & z, T const & w) noexcept : data { x, y, z, w } {}
 	constexpr quat_t(T const * ptr) : data { ptr[0], ptr[1], ptr[2], ptr[3] } {}
 	
+	static constexpr quat_t identity() noexcept {
+		return { static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1) };
+	}
+	
 	// COMMON
 	
 	constexpr quat_t<T> conjugate() const {
@@ -590,35 +620,35 @@ struct qm::meta::mat3_t {
 	}
 	
 	static constexpr mat3_t<T> scale(T x, T y) {
-		mat3_t<T> w {};
+		mat3_t<T> w = identity();
 		w[0][0] = x;
 		w[1][1] = y;
 		return w;
 	}
 	
 	static constexpr mat3_t<T> scale(vec2_t<T> const & v) {
-		mat3_t<T> w {};
+		mat3_t<T> w = identity();
 		w[0][0] = v.data[0];
 		w[1][1] = v.data[1];
 		return w;
 	}
 	
 	static constexpr mat3_t<T> translate(T x, T y) {
-		mat3_t<T> w {};
+		mat3_t<T> w = identity();
 		w[2][0] = x;
 		w[2][1] = y;
 		return w;
 	}
 	
 	static constexpr mat3_t<T> translate(vec2_t<T> const & v) {
-		mat3_t<T> w {};
+		mat3_t<T> w = identity();
 		w[2][0] = v.data[0];
 		w[2][1] = v.data[1];
 		return w;
 	}
 	
 	static constexpr mat3_t<T> rotate(T v) {
-		mat3_t<T> m {};
+		mat3_t<T> m = identity();
 		m[0][0] = cos(v);
 		m[0][1] = -sin(v);
 		m[1][0] = sin(v);
@@ -627,7 +657,7 @@ struct qm::meta::mat3_t {
 	}
 	
 	static mat3_t<T> euler (vec3_t<T> const & v) {
-		mat3_t<T> w {};
+		mat3_t<T> w;
 		T rs = sin(-v.data[0]);
 		T ps = sin(v.data[1]);
 		T ys = sin(-v.data[2]);
@@ -646,7 +676,7 @@ struct qm::meta::mat3_t {
 	}
 	
 	static mat3_t<T> ortho(T t, T b, T l, T r) {
-		mat3_t<T> w {};
+		mat3_t<T> w = identity();
 		w[0][0] = static_cast<T>(2) / (r - l);
 		w[1][1] = static_cast<T>(2) / (t - b);
 		w[2][0] = - (r + l) / (r - l);
@@ -711,7 +741,7 @@ struct qm::meta::mat4_t {
 	constexpr T * ptr() { return &data[0][0]; }
 	constexpr T const * ptr() const { return &data[0][0]; }
 	
-	constexpr explicit mat4_t(quat_t<T> const & v) noexcept {
+	constexpr explicit mat4_t(quat_t<T> const & v) noexcept : mat4_t(identity()) {
 		T sqx = v.data[0] * v.data[0];
 		T sqy = v.data[1] * v.data[1];
 		T sqz = v.data[2] * v.data[2];
@@ -768,7 +798,7 @@ struct qm::meta::mat4_t {
 	// SPECIAL
 	
 	static mat4_t<T> perspective(T vfov, T width, T height, T near, T far) {
-		mat4_t<T> w {};
+		mat4_t<T> w = identity();
 		T t1 = 1 / std::tan(0.5 * vfov);
 		w[0][0] = t1 * (height / width);
 		w[1][1] = t1;
@@ -780,7 +810,7 @@ struct qm::meta::mat4_t {
 	}
 	
 	static constexpr mat4_t<T> ortho(T t, T b, T l, T r, T n, T f) {
-		mat4_t<T> w {};
+		mat4_t<T> w = identity();
 		w[0][0] = static_cast<T>(2) / (r - l);
 		w[1][1] = static_cast<T>(2) / (t - b);
 		w[2][2] = static_cast<T>(-2) / (f - n);
@@ -839,7 +869,7 @@ struct qm::meta::mat4_t {
 	}
 	
 	static constexpr mat4_t<T> scale(T x, T y, T z) {
-		mat4_t<T> w {};
+		mat4_t<T> w = identity();
 		w[0][0] = x;
 		w[1][1] = y;
 		w[2][2] = z;
@@ -847,7 +877,7 @@ struct qm::meta::mat4_t {
 	}
 	
 	static constexpr mat4_t<T> scale(vec3_t<T> const & v) {
-		mat4_t<T> w {};
+		mat4_t<T> w = identity();
 		w[0][0] = v.data[0];
 		w[1][1] = v.data[1];
 		w[2][2] = v.data[2];
@@ -855,7 +885,7 @@ struct qm::meta::mat4_t {
 	}
 	
 	static constexpr mat4_t<T> translate(T x, T y, T z) {
-		mat4_t<T> w {};
+		mat4_t<T> w = identity();
 		w[3][0] = x;
 		w[3][1] = y;
 		w[3][2] = z;
@@ -863,7 +893,7 @@ struct qm::meta::mat4_t {
 	}
 	
 	static constexpr mat4_t<T> translate(vec3_t<T> const & v) {
-		mat4_t<T> w {};
+		mat4_t<T> w = identity();
 		w[3][0] = v.data[0];
 		w[3][1] = v.data[1];
 		w[3][2] = v.data[2];

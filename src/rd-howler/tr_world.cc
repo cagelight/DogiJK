@@ -41,7 +41,7 @@ void rend::world_t::load(char const * name) {
 	COM_StripExtension( this->baseName, this->baseName, sizeof( this->baseName ) );
 	
 	load_shaders();
-	// TODO -- lightmaps
+	load_lightmaps();
 	load_planes();
 	// TODO -- fogs
 	load_surfaces(0);
@@ -70,6 +70,7 @@ q3model_ptr rend::world_t::get_model(int32_t visnum) {
 	struct protomodel {
 		std::vector<float> vert_data;
 		std::vector<float> uv_data;
+		std::vector<float> lightmap_data;
 	};
 	
 	std::unordered_set<surface_t const *> marked_surfaces;
@@ -127,6 +128,7 @@ q3model_ptr rend::world_t::get_model(int32_t visnum) {
 		auto & model = buckets[surf->shader];
 		model.vert_data.insert(model.vert_data.end(), surf->vert_data.begin(), surf->vert_data.end());
 		model.uv_data.insert(model.uv_data.end(), surf->uv_data.begin(), surf->uv_data.end());
+		model.lightmap_data.insert(model.lightmap_data.end(), surf->lightmap_data.begin(), surf->lightmap_data.end());
 	}
 	
 	for (auto const & [shader, proto] : buckets) {
@@ -135,7 +137,7 @@ q3model_ptr rend::world_t::get_model(int32_t visnum) {
 		mesh.shader = shader;
 		mesh.size = proto.vert_data.size() / 3;
 		glCreateVertexArrays(1, &mesh.vao);
-		glCreateBuffers(2, mesh.vbo);
+		glCreateBuffers(3, mesh.vbo);
 		glNamedBufferData(mesh.vbo[0], proto.vert_data.size() * 4, proto.vert_data.data(), GL_STATIC_DRAW);
 		glVertexArrayAttribBinding(mesh.vao, 0, 0);
 		glVertexArrayVertexBuffer(mesh.vao, 0, mesh.vbo[0], 0, 12);
@@ -146,6 +148,11 @@ q3model_ptr rend::world_t::get_model(int32_t visnum) {
 		glVertexArrayVertexBuffer(mesh.vao, 1, mesh.vbo[1], 0, 8);
 		glEnableVertexArrayAttrib(mesh.vao, 1);
 		glVertexArrayAttribFormat(mesh.vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
+		glNamedBufferData(mesh.vbo[2], proto.lightmap_data.size() * 4, proto.lightmap_data.data(), GL_STATIC_DRAW);
+		glVertexArrayAttribBinding(mesh.vao, 2, 2);
+		glVertexArrayVertexBuffer(mesh.vao, 2, mesh.vbo[2], 0, 32);
+		glEnableVertexArrayAttrib(mesh.vao, 2);
+		glVertexArrayAttribFormat(mesh.vao, 2, 8, GL_FLOAT, GL_FALSE, 0);
 	}
 	
 	return cache_model;
@@ -185,7 +192,57 @@ void rend::world_t::load_shaders() {
 // LOAD LIGHTMAPS
 //================================================================
 
-// TODO
+void rend::world_t::load_lightmaps() {
+	
+	lump_t const & l = header->lumps[LUMP_LIGHTMAPS];
+	byte const * buffer = base + l.fileofs;
+	int32_t buffer_len = l.filelen;
+	
+	int32_t num_lightmaps = buffer_len / lightmap_bytes;
+	
+	lightmap_span = qm::next_pow2(static_cast<int32_t>(std::ceil(std::sqrt(static_cast<float>(num_lightmaps)))));
+	size_t atlas_dim = lightmap_span * lightmap_dim;
+	
+	constexpr bool mipmaps = true;
+	lightmap_atlas = std::make_shared<q3texture>();
+	lightmap_atlas->has_transparency = false;
+	glCreateTextures(GL_TEXTURE_2D, 1, &lightmap_atlas->id);
+	glTextureStorage2D(lightmap_atlas->id, mipmaps ? floor(log2(atlas_dim)) : 1, GL_RGBA8, atlas_dim, atlas_dim);
+	
+	for (int32_t atlas_y = 0, lightmap_i = 0; lightmap_i < num_lightmaps; atlas_y++)
+		for (int32_t atlas_x = 0; atlas_x < lightmap_span && lightmap_i < num_lightmaps; atlas_x++, lightmap_i++, buffer += lightmap_bytes) {
+			
+			std::array<std::array<uint8_t, 4>, lightmap_pixels> image;
+			static_assert(sizeof(image) == lightmap_pixels * 4);
+			
+			for (size_t j = 0; j < lightmap_pixels; j++) {
+				image[j][0] = buffer[j * 3 + 0];
+				image[j][1] = buffer[j * 3 + 1];
+				image[j][2] = buffer[j * 3 + 2];
+				image[j][3] = 0xFF;
+			}
+			
+			glTextureSubImage2D(
+				lightmap_atlas->id,
+				0,
+				atlas_x * lightmap_dim, // x offset
+				atlas_y * lightmap_dim, // y offset
+				lightmap_dim,
+				lightmap_dim,
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				&image[0][0]
+			);
+	}
+	
+	if (mipmaps) glGenerateTextureMipmap(lightmap_atlas->id);
+	glBindTextureUnit(BINDING_LIGHTMAP_ATLAS, lightmap_atlas->id);
+	
+	std::vector<uint8_t> atlas_data;
+	atlas_data.resize(atlas_dim * atlas_dim * 3);
+	glGetTextureImage(lightmap_atlas->id, 0, GL_RGB, GL_UNSIGNED_BYTE, atlas_data.size(), atlas_data.data());
+	RE_SavePNG("atlas.png", atlas_data.data(), atlas_dim, atlas_dim, 3);
+}
 
 //================================================================
 // LOAD PLANES
@@ -228,6 +285,8 @@ void rend::world_t::load_planes() {
 // LOAD SURFACES
 //================================================================
 
+#include <iostream>
+
 void rend::world_t::load_surfaces(int index) {
 	
 	lump_t const & lsurf = header->lumps[LUMP_SURFACES];
@@ -246,7 +305,8 @@ void rend::world_t::load_surfaces(int index) {
 		dsurface_t const & surfi = msurf[i];
 		surface_t & surfo = surfaces[i];
 		
-		surfo.shader = r->shader_register(shaders[surfi.shaderNum].shader);
+		surfo.info = surfi;
+		surfo.shader = r->shader_register(shaders[surfi.shaderNum].shader, true, true);
 		
 		switch (surfi.surfaceType) {
 		case MST_PLANAR: {
@@ -258,6 +318,21 @@ void rend::world_t::load_surfaces(int index) {
 				surfo.vert_data.push_back(surf_verts[surf_indicies[i]].xyz[1]);
 				surfo.vert_data.push_back(-surf_verts[surf_indicies[i]].xyz[2]);
 				surfo.vert_data.push_back(surf_verts[surf_indicies[i]].xyz[0]);
+				
+				for (int32_t j = 0; j < 4; j++) {
+					rv2_t conv_uv;
+					if (surfi.lightmapNum[j] < 0)
+						conv_uv = {0, 0};
+					else {
+						conv_uv = uv_for_lightmap( surfi.lightmapNum[j], rv2_t {
+							surf_verts[surf_indicies[i]].lightmap[j][0],
+							surf_verts[surf_indicies[i]].lightmap[j][1]
+						});
+					}
+					surfo.lightmap_data.push_back(conv_uv[0]);
+					surfo.lightmap_data.push_back(conv_uv[1]);
+				}
+				
 				surfo.uv_data.push_back(surf_verts[surf_indicies[i]].st[0]);
 				surfo.uv_data.push_back(surf_verts[surf_indicies[i]].st[1]);
 			}
@@ -268,25 +343,6 @@ void rend::world_t::load_surfaces(int index) {
 		// TODO -- MST_FLARE
 		default: break;
 		}
-		
-		if (!surfo.vert_data.size()) continue;
-		
-		surfo.mesh = std::make_shared<q3mesh>();
-		surfo.mesh->shader = surfo.shader;
-		
-		surfo.mesh->size = surfo.vert_data.size() / 3;
-		glCreateVertexArrays(1, &surfo.mesh->vao);
-		glCreateBuffers(2, surfo.mesh->vbo);
-		glNamedBufferData(surfo.mesh->vbo[0], surfo.vert_data.size() * 4, surfo.vert_data.data(), GL_STATIC_DRAW);
-		glVertexArrayAttribBinding(surfo.mesh->vao, 0, 0);
-		glVertexArrayVertexBuffer(surfo.mesh->vao, 0, surfo.mesh->vbo[0], 0, 12);
-		glEnableVertexArrayAttrib(surfo.mesh->vao, 0);
-		glVertexArrayAttribFormat(surfo.mesh->vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-		glNamedBufferData(surfo.mesh->vbo[1], surfo.uv_data.size() * 4, surfo.uv_data.data(), GL_STATIC_DRAW);
-		glVertexArrayAttribBinding(surfo.mesh->vao, 1, 1);
-		glVertexArrayVertexBuffer(surfo.mesh->vao, 1, surfo.mesh->vbo[1], 0, 8);
-		glEnableVertexArrayAttrib(surfo.mesh->vao, 1);
-		glVertexArrayAttribFormat(surfo.mesh->vao, 1, 2, GL_FLOAT, GL_FALSE, 0);
 	}
 }
 

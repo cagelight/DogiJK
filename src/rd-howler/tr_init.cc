@@ -178,7 +178,7 @@ void RE_RenderScene (const refdef_t *fd) {
 
 	rm4_t v = rm4_t::translate(-fd->vieworg[1], fd->vieworg[2], -fd->vieworg[0]);
 	
-	rq_t roq;
+	rq_t roq = rq_t::identity();
 	roq *= rq_t { {1, 0, 0}, qm::deg2rad(fd->viewangles[PITCH]) };
 	roq *= rq_t { {0, 1, 0}, qm::deg2rad(-fd->viewangles[YAW]) };
 	roq *= rq_t { {0, 0, 1}, qm::deg2rad(fd->viewangles[ROLL]) + qm::pi };
