@@ -360,8 +360,8 @@ qboolean CL_OpenAVIForWriting( const char *fileName )
 
   afd.frameRate = cl_aviFrameRate->integer;
   afd.framePeriod = (int)( 1000000.0f / afd.frameRate );
-  afd.width = cls.glconfig.vidWidth;
-  afd.height = cls.glconfig.vidHeight;
+  afd.width = cls.vidconfig.vidWidth;
+  afd.height = cls.vidconfig.vidHeight;
 
   if( cl_aviMotionJpeg->integer )
     afd.motionJpeg = qtrue;

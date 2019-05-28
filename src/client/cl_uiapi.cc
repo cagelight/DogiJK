@@ -118,8 +118,8 @@ static void CL_GetClientState( uiClientState_t *state ) {
 	state->clientNum = cl.snap.ps.clientNum;
 }
 
-static void CL_GetGlconfig( glconfig_t *config ) {
-	*config = cls.glconfig;
+static void CL_GetGlconfig( vidconfig_t *config ) {
+	*config = cls.vidconfig;
 }
 
 static void GetClipboardData( char *buf, int buflen ) {

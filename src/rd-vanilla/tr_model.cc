@@ -1643,7 +1643,7 @@ static qboolean R_LoadObj (model_t *mod, char const * name) {
 /*
 ** RE_BeginRegistration
 */
-void RE_BeginRegistration( glconfig_t *glconfigOut ) {
+void RE_BeginRegistration( vidconfig_t *glconfigOut ) {
 
 	R_Init();
 

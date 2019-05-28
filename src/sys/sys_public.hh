@@ -157,16 +157,35 @@ void Sys_SetProcessorAffinity( void );
 typedef enum graphicsApi_e
 {
 	GRAPHICS_API_GENERIC,
-
-	// Only OpenGL needs special treatment..
 	GRAPHICS_API_OPENGL,
+	GRAPHICS_API_VULKAN,
 } graphicsApi_t;
+
+typedef enum platformApi_e
+{
+	PLATFORM_WIN32,
+	PLATFORM_X11,
+	PLATFORM_WAYLAND
+} platformApi_t;
 
 // Graphics API
 typedef struct window_s
 {
-	void *handle; // OS-dependent window handle
 	graphicsApi_t api;
+	platformApi_t platform;
+	
+	union {
+		void * win32; // windpows
+		struct {
+			void * dpy;
+			unsigned long win;
+		} x11;
+		struct {
+			void * dpy;
+			void * surf;
+			void * shell;
+		} wl;
+	};
 } window_t;
 
 typedef enum glProfile_e
@@ -186,21 +205,32 @@ typedef struct windowDesc_s
 	graphicsApi_t api;
 
 	// Only used if api == GRAPHICS_API_OPENGL
-	struct gl_
-	{
-		int majorVersion;
-		int minorVersion;
-		glProfile_t profile;
-		uint32_t contextFlags;
-	} gl;
+	union {
+		struct {
+			int majorVersion;
+			int minorVersion;
+			glProfile_t profile;
+			uint32_t contextFlags;
+		} gl;
+		
+		struct {
+			int majorVersion;
+			int minorVersion;
+		} vulkan;
+	};
 } windowDesc_t;
 
-typedef struct glconfig_s glconfig_t;
-window_t	WIN_Init( const windowDesc_t *desc, glconfig_t *glConfig );
+typedef struct vidconfig_s vidconfig_t;
+window_t	WIN_Init( const windowDesc_t *desc, vidconfig_t *glConfig );
 void		WIN_Present( window_t *window );
-void		WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
+void		WIN_SetGamma( vidconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
 void		WIN_Shutdown( void );
 void *		WIN_GL_GetProcAddress( const char *proc );
 qboolean	WIN_GL_ExtensionSupported( const char *extension );
+
+void * 		WIN_VK_GetVkInstanceProcAddr();
+qboolean 	WIN_VK_GetInstanceExtensions(std::vector<std::string> &);
+qboolean 	WIN_VK_CreateSurface(void * instance, void * surface);
+void 		WIN_VK_GetDrawableSize(int * w, int * h);
 
 uint8_t ConvertUTF32ToExpectedCharset( uint32_t utf32 );

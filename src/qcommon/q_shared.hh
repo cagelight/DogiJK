@@ -685,6 +685,7 @@ int FloatAsInt( float f );
 #define MAX_VA_BUFFERS 6
 char	* QDECL va(const char *format, ...);
 char	* QDECL va_next();
+std::string strf( char const * fmt, ... );
 
 #define TRUNCATE_LENGTH	64
 void Com_TruncateLongString( char *buffer, const char *s );

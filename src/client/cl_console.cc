@@ -278,7 +278,7 @@ void Con_CheckResize (void)
 	short	tbuf[CON_TEXTSIZE];
 
 //	width = (SCREEN_WIDTH / SMALLCHAR_WIDTH) - 2;
-	width = (cls.glconfig.vidWidth / SMALLCHAR_WIDTH) - 2;
+	width = (cls.vidconfig.vidWidth / SMALLCHAR_WIDTH) - 2;
 
 	if (width == con.linewidth)
 		return;
@@ -299,8 +299,8 @@ void Con_CheckResize (void)
 	else
 	{
 		// on wide screens, we will center the text
-		con.xadjust = 640.0f / cls.glconfig.vidWidth;
-		con.yadjust = 480.0f / cls.glconfig.vidHeight;
+		con.xadjust = 640.0f / cls.vidconfig.vidWidth;
+		con.yadjust = 480.0f / cls.vidconfig.vidHeight;
 
 		oldwidth = con.linewidth;
 		con.linewidth = width;
@@ -704,12 +704,12 @@ void Con_DrawSolidConsole( float frac ) {
 //	qhandle_t		conShader;
 	int				currentColor;
 
-	lines = (int) (cls.glconfig.vidHeight * frac);
+	lines = (int) (cls.vidconfig.vidHeight * frac);
 	if (lines <= 0)
 		return;
 
-	if (lines > cls.glconfig.vidHeight )
-		lines = cls.glconfig.vidHeight;
+	if (lines > cls.vidconfig.vidHeight )
+		lines = cls.vidconfig.vidHeight;
 
 	// draw the background
 	y = (int) (frac * SCREEN_HEIGHT - 2);
@@ -739,7 +739,7 @@ void Con_DrawSolidConsole( float frac ) {
 	i = strlen( JK_VERSION );
 
 	for (x=0 ; x<i ; x++) {
-		SCR_DrawSmallChar( cls.glconfig.vidWidth - ( i - x + 1 ) * SMALLCHAR_WIDTH,
+		SCR_DrawSmallChar( cls.vidconfig.vidWidth - ( i - x + 1 ) * SMALLCHAR_WIDTH,
 			(lines-(SMALLCHAR_HEIGHT+SMALLCHAR_HEIGHT/2)), JK_VERSION[x] );
 	}
 

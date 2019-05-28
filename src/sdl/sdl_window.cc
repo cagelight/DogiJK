@@ -21,6 +21,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <SDL.h>
 #include <SDL_syswm.h>
+#include <SDL_vulkan.h>
 #include "qcommon/qcommon.hh"
 #include "rd-common/tr_types.hh"
 #include "sys/sys_local.hh"
@@ -315,7 +316,7 @@ static bool GLimp_DetectAvailableModes(void)
 GLimp_SetMode
 ===============
 */
-static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDesc, const char *windowTitle, int mode, qboolean fullscreen, qboolean noborder)
+static rserr_t GLimp_SetMode(vidconfig_t *glConfig, const windowDesc_t *windowDesc, const char *windowTitle, int mode, qboolean fullscreen, qboolean noborder)
 {
 	int perChannelColorBits;
 	int colorBits, depthBits, stencilBits;
@@ -326,11 +327,6 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 	SDL_DisplayMode desktopMode;
 	int display = 0;
 	int x = SDL_WINDOWPOS_UNDEFINED, y = SDL_WINDOWPOS_UNDEFINED;
-
-	if ( windowDesc->api == GRAPHICS_API_OPENGL )
-	{
-		flags |= SDL_WINDOW_OPENGL;
-	}
 
 	Com_Printf( "Initializing display\n");
 
@@ -446,6 +442,8 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 
 	if ( windowDesc->api == GRAPHICS_API_OPENGL )
 	{
+		flags |= SDL_WINDOW_OPENGL;
+		
 		for (i = 0; i < 16; i++)
 		{
 			int testColorBits, testDepthBits, testStencilBits;
@@ -468,6 +466,7 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 							depthBits = 16;
 						else if (depthBits == 16)
 							depthBits = 8;
+						[[fallthrough]];
 					case 3 :
 						if (stencilBits == 24)
 							stencilBits = 16;
@@ -626,8 +625,22 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 			return RSERR_UNKNOWN;
 		}
 	}
-	else
-	{
+	else if (windowDesc->api == GRAPHICS_API_VULKAN) {
+		
+		flags |= SDL_WINDOW_VULKAN;
+		
+		if( ( screen = SDL_CreateWindow( windowTitle, x, y,
+				glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
+		{
+			Com_Error( ERR_FATAL, "SDL_CreateWindow failed: %s\n", SDL_GetError( ) );
+		}
+
+		SDL_SetWindowIcon( screen, icon );
+		
+		if (SDL_Vulkan_LoadLibrary(nullptr) == -1)
+			Com_Error( ERR_FATAL, "SDL_Vulkan_LoadLibrary failed: %s\n", SDL_GetError( ) );
+		
+	} else {
 		// Just create a regular window
 		if( ( screen = SDL_CreateWindow( windowTitle, x, y,
 				glConfig->vidWidth, glConfig->vidHeight, flags ) ) == NULL )
@@ -664,7 +677,7 @@ static rserr_t GLimp_SetMode(glconfig_t *glConfig, const windowDesc_t *windowDes
 GLimp_StartDriverAndSetMode
 ===============
 */
-static qboolean GLimp_StartDriverAndSetMode(glconfig_t *glConfig, const windowDesc_t *windowDesc, int mode, qboolean fullscreen, qboolean noborder)
+static qboolean GLimp_StartDriverAndSetMode(vidconfig_t *glConfig, const windowDesc_t *windowDesc, int mode, qboolean fullscreen, qboolean noborder)
 {
 	rserr_t err;
 
@@ -723,7 +736,7 @@ static qboolean GLimp_StartDriverAndSetMode(glconfig_t *glConfig, const windowDe
 	return qtrue;
 }
 
-window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
+window_t WIN_Init( const windowDesc_t *windowDesc, vidconfig_t *glConfig )
 {
 	Cmd_AddCommand("modelist", R_ModeList_f);
 	Cmd_AddCommand("minimize", GLimp_Minimize);
@@ -782,14 +795,28 @@ window_t WIN_Init( const windowDesc_t *windowDesc, glconfig_t *glConfig )
 	SDL_SysWMinfo info;
 	SDL_VERSION(&info.version);
 
-	if ( SDL_GetWindowWMInfo(screen, &info) )
-	{
-		switch(info.subsystem) {
-			case SDL_SYSWM_WINDOWS:
-				window.handle = info.info.win.window;
-				break;
+	if (SDL_GetWindowWMInfo(screen, &info)) {
+		assert(info.subsystem == SDL_SYSWM_WINDOWS);
+		window.platform = PLATFORM_WIN32;
+		window.win32 = info.info.win.window;
+	}
+#elif defined(__linux)
+	SDL_SysWMinfo info;
+	SDL_VERSION(&info.version);
 
-			default:
+	if ( SDL_GetWindowWMInfo(screen, &info) ) {
+		switch (info.subsystem) {
+			default: Com_Error(ERR_FATAL, "WIN_Init: unknown subsystem");
+			case SDL_SYSWM_X11:
+				window.platform = PLATFORM_X11;
+				window.x11.dpy = info.info.x11.display;
+				window.x11.win = info.info.x11.window;
+				break;
+			case SDL_SYSWM_WAYLAND:
+				window.platform = PLATFORM_WAYLAND;
+				window.wl.dpy = info.info.wl.display;
+				window.wl.surf = info.info.wl.surface;
+				window.wl.shell = info.info.wl.shell_surface;
 				break;
 		}
 	}
@@ -822,12 +849,12 @@ void GLimp_LogComment( char *comment )
 {
 }
 
-void WIN_SetGamma( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] )
+void WIN_SetGamma( vidconfig_t * config, byte red[256], byte green[256], byte blue[256] )
 {
 	Uint16 table[3][256];
 	int i, j;
 
-	if( !glConfig->deviceSupportsGamma || r_ignorehwgamma->integer > 0 )
+	if( !config->deviceSupportsGamma || r_ignorehwgamma->integer > 0 )
 		return;
 
 	for (i = 0; i < 256; i++)
@@ -884,4 +911,29 @@ void *WIN_GL_GetProcAddress( const char *proc )
 qboolean WIN_GL_ExtensionSupported( const char *extension )
 {
 	return SDL_GL_ExtensionSupported( extension ) == SDL_TRUE ? qtrue : qfalse;
+}
+
+void * WIN_VK_GetVkInstanceProcAddr() {
+	return SDL_Vulkan_GetVkGetInstanceProcAddr();
+}
+
+qboolean WIN_VK_GetInstanceExtensions(std::vector<std::string> & vec) {
+	unsigned int ecnt = 0;
+	if (SDL_Vulkan_GetInstanceExtensions(screen, &ecnt, nullptr) != SDL_TRUE) return qfalse;
+	std::vector<char const *> exts;
+	exts.resize(ecnt);
+	if (SDL_Vulkan_GetInstanceExtensions(screen, &ecnt, exts.data()) != SDL_TRUE) return qfalse;
+	vec.clear();
+	for (unsigned int i = 0; i < ecnt; i++) {
+		vec.push_back(exts[i]);
+	}
+	return qtrue;
+}
+
+qboolean WIN_VK_CreateSurface(void * instance, void * surface) {
+	return (SDL_Vulkan_CreateSurface(screen, (VkInstance)instance, (VkSurfaceKHR *)surface) == SDL_TRUE ? qtrue : qfalse);
+}
+
+void WIN_VK_GetDrawableSize(int * w, int * h) {
+	SDL_Vulkan_GetDrawableSize(screen, w, h);
 }

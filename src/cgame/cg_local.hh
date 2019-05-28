@@ -1531,7 +1531,7 @@ typedef struct cg_staticmodel_s {
 // all clients to begin playing instantly
 typedef struct cgs_s {
 	gameState_t		gameState;			// gamestate from server
-	glconfig_t		glconfig;			// rendering configuration
+	vidconfig_t		glconfig;			// rendering configuration
 	float			screenXScale;		// derived from glconfig
 	float			screenYScale;
 	float			screenXBias;

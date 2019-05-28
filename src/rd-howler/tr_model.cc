@@ -285,7 +285,7 @@ q3mesh::q3mesh(q3mesh && other) {
 }
 
 q3mesh::~q3mesh() {
-	if (vbo[0]) glDeleteBuffers(3, vbo);
+	if (vbo[0]) glDeleteBuffers(4, vbo);
 	if (vao) glDeleteVertexArrays(1, &vao);
 }
 

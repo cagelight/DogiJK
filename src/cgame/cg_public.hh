@@ -600,7 +600,7 @@ typedef struct cgameImport_s {
 	int				(*GetCurrentCmdNumber)					( void );
 	qboolean		(*GetDefaultState)						( int index, entityState_t *state );
 	void			(*GetGameState)							( gameState_t *gs );
-	void			(*GetGlconfig)							( glconfig_t *glconfig );
+	void			(*GetGlconfig)							( vidconfig_t * config );
 	qboolean		(*GetServerCommand)						( int serverCommandNumber );
 	qboolean		(*GetSnapshot)							( int snapshotNumber, snapshot_t *snapshot );
 	qboolean		(*GetUserCmd)							( int cmdNumber, usercmd_t *ucmd );

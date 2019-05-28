@@ -263,6 +263,27 @@ def build(bld):
 		
 		rdvan.env.cxxshlib_PATTERN = '%s_x86_64.so'
 		
+	# RD-EXECUTOR
+	if build_rdvan:
+	
+		howler_files = bld.path.ant_glob('src/rd-executor/*.cc')
+		howler_files += bld.path.ant_glob('src/rd-common/*.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/q_math.cc')
+		howler_files += bld.path.ant_glob('src/qcommon/q_string.cc')
+			
+		rdvan = bld (
+			features = 'cxx cxxshlib',
+			target = 'rd-executor',
+			includes = ['src', 'src/rd-executor'],
+			source = howler_files,
+			uselib = ['JPEG', 'PNG', 'PTHREAD'],
+			install_path = os.path.join(top, 'install')
+		)
+		
+		rdvan.env.cxxshlib_PATTERN = '%s_x86_64.so'
+		
 	# GHOUL2
 	if build_ghoul2:
 	

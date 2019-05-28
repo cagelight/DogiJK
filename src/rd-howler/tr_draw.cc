@@ -209,7 +209,7 @@ struct visitor_3d {
 			mesh.bind();
 			
 			if (!mesh.shader || !mesh.shader->index) {
-				glDepthMask(GL_TRUE);
+				gl::depth_mask(true);
 				r->missingnoise_program->use();
 				r->shader_set_mvp(m * vp);
 				glUniform1f(UNIFORM_TIME, shader_time);
@@ -218,7 +218,7 @@ struct visitor_3d {
 				continue;
 			}
 			
-			glDepthMask( mesh.shader->opaque ? GL_TRUE : GL_FALSE );
+			gl::depth_mask(mesh.shader->opaque);
 			r->shader_presetup(*mesh.shader);
 			glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, mesh.shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 			
@@ -253,7 +253,7 @@ struct visitor_draw3d {
 		mesh->bind();
 		
 		if (!mesh->shader || !mesh->shader->index) {
-			glDepthMask(GL_TRUE);
+			gl::depth_mask(true);
 			r->missingnoise_program->use();
 			glUniform1f(UNIFORM_TIME, shader_time);
 			mesh->draw();
@@ -261,7 +261,7 @@ struct visitor_draw3d {
 			return;
 		}
 		
-		glDepthMask( mesh->shader->opaque ? GL_TRUE : GL_FALSE );
+		gl::depth_mask(mesh->shader->opaque);
 		r->shader_presetup(*mesh->shader);
 		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, mesh->shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 		
@@ -276,7 +276,7 @@ struct visitor_draw3d {
 		ref.mesh->bind();
 		
 		if (!ref.mesh->shader || !ref.mesh->shader->index) {
-			glDepthMask(GL_TRUE);
+			gl::depth_mask(true);
 			r->missingnoise_program->use();
 			glUniform1f(UNIFORM_TIME, shader_time);
 			ref.mesh->draw();
@@ -284,7 +284,7 @@ struct visitor_draw3d {
 			return;
 		}
 		
-		glDepthMask( ref.mesh->shader->opaque ? GL_TRUE : GL_FALSE );
+		gl::depth_mask(ref.mesh->shader->opaque);
 		r->shader_presetup(*ref.mesh->shader);
 		glSamplerParameteri(r->q3sampler, GL_TEXTURE_MIN_FILTER, ref.mesh->shader->mipmaps ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 		
@@ -301,17 +301,29 @@ size_t q3mesh::draw_count = 0;
 
 void rend::draw(std::shared_ptr<frame_t> frame) {
 	
+	/*
+	if (r_fboratio->modified) framebuffer->resize(width * r_fboratio->value, height * r_fboratio->value);
+	framebuffer->bind();
+	*/
+	
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	glEnable(GL_DEPTH_TEST);
+	gl::depth_test(true);
 	glEnable(GL_BLEND);
 	glDepthFunc(GL_LEQUAL);
 	q3program->use();
+	
+	if (world) world->lightmap_atlas->bind(BINDING_LIGHTMAP_ATLAS);
 	
 	q3mesh::draw_count = 0;
 	
 	for (auto const & scene : frame->cmds3d) {
 		
+		if (!scene.active) continue;
+		
 		rv3_t view_origin = {scene.def.vieworg[0], scene.def.vieworg[1], scene.def.vieworg[2]};
+		
 		std::map<float, std::vector<drawvariant>> rmap;
 		
 		bool render_world = !(scene.def.rdflags & RDF_NOWORLDMODEL);
@@ -319,6 +331,7 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 		
 		if (render_world) {
 			int32_t cluster = std::get<world_t::mapnode_t::leaf_data>(world->point_in_leaf(view_origin)->data).cluster;
+			printf("cluster: %i\n", cluster);
 			for (auto const & mesh : world->get_model(cluster)->meshes) {
 				rmap[mesh.shader->sort].emplace_back(&mesh);
 			}
@@ -356,8 +369,8 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 		}
 	}
 	
-	glDepthMask(GL_FALSE);
-	glDisable(GL_DEPTH_TEST);
+	gl::depth_mask(false);
+	gl::depth_test(false);
 	glDisable(GL_CULL_FACE);
 	
 	visitor_2d v2d {
@@ -367,6 +380,26 @@ void rend::draw(std::shared_ptr<frame_t> frame) {
 	for (cmd2d const & cmd : frame->cmds2d) {
 		std::visit(v2d, cmd);
 	}
+	
+	/*
+	dynamicglow_program->use();
+	glBindImageTexture(0, framebuffer->get_attachment(q3framebuffer::attachment::color1)->get_id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
+	glBindImageTexture(1, scratch1->get_id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+	glDispatchCompute(width / 40, height / 20, 1);
+	glBindImageTexture(0, scratch1->get_id(), 0, GL_FALSE, 0, GL_READ_ONLY, GL_RGBA8);
+	glBindImageTexture(1, framebuffer->get_attachment(q3framebuffer::attachment::color1)->get_id(), 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA8);
+	glDispatchCompute(width / 40, height / 20, 1);
+	*/
+	
+	/*
+	framebuffer->unbind();
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	mainfbotransfer_program->use();
+	framebuffer->get_attachment(q3framebuffer::attachment::color0)->bind(FBOFINAL_COLOR);
+	framebuffer->get_attachment(q3framebuffer::attachment::color1)->bind(FBOFINAL_GLOW);
+	fullquad.bind();
+	fullquad.draw();
+	*/
 	
 	printf("Draw Count: %zu\n", q3mesh::draw_count);
 	

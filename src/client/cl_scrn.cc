@@ -506,7 +506,7 @@ void SCR_UpdateScreen( void ) {
 	if( cls.uiStarted || com_dedicated->integer )
 	{
 		// if running in stereo, we need to draw the frame twice
-		if ( cls.glconfig.stereoEnabled ) {
+		if ( cls.vidconfig.stereoEnabled ) {
 			SCR_DrawScreenField( STEREO_LEFT );
 			SCR_DrawScreenField( STEREO_RIGHT );
 		} else {

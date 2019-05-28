@@ -256,7 +256,7 @@ typedef struct uiImport_s {
 	void			(*GetClientState)						( uiClientState_t *state );
 	void			(*GetClipboardData)						( char *buf, int bufsize );
 	int				(*GetConfigString)						( int index, char *buff, int buffsize );
-	void			(*GetGlconfig)							( glconfig_t *glconfig );
+	void			(*GetGlconfig)							( vidconfig_t * config );
 	void			(*UpdateScreen)							( void );
 
 	void			(*Key_ClearStates)						( void );

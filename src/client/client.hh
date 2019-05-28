@@ -323,7 +323,7 @@ typedef struct clientStatic_s {
 	netadr_t	authorizeServer;
 
 	// rendering info
-	glconfig_t	glconfig;
+	vidconfig_t	vidconfig;
 	qhandle_t	charSetShader;
 	qhandle_t	whiteShader;
 	qhandle_t	consoleShader;

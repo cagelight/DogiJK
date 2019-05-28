@@ -1061,7 +1061,7 @@ typedef struct trGlobals_s {
 
 struct glconfigExt_t
 {
-	glconfig_t *glConfig;
+	vidconfig_t *glConfig;
 
 	qboolean doGammaCorrectionWithShaders;
 	const char *originalExtensionString;
@@ -1076,7 +1076,7 @@ void	 R_Images_DeleteImage(image_t *pImage);
 
 extern backEndState_t	backEnd;
 extern trGlobals_t	tr;
-extern glconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
+extern vidconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
 extern glconfigExt_t glConfigExt;
 extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
 extern window_t		window;
@@ -1322,7 +1322,7 @@ void	RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 void	RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty);
 
 void		RE_BeginFrame( stereoFrame_t stereoFrame );
-void		RE_BeginRegistration( glconfig_t *glconfig );
+void		RE_BeginRegistration( vidconfig_t *glconfig );
 void		R_ColorShiftLightingBytes( byte in[4], byte out[4] ); //rwwRMG - added
 void		RE_LoadWorldMap( const char *mapname );
 

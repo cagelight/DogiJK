@@ -17,10 +17,11 @@ using rq_t = qm::quat_t;
 
 extern refimport_t ri;
 
-extern glconfig_t glConfig;
+extern vidconfig_t glConfig;
 
 extern cvar_t * r_aspectCorrectFonts;
 extern cvar_t * r_showtris;
+extern cvar_t * r_fboratio;
 
 // fore tr_font
 void RE_SetColor ( const float *rgba );
@@ -56,6 +57,7 @@ struct q3shader;
 struct q3skin;
 struct q3stage;
 struct q3texture;
+struct q3framebuffer;
 
 using q3mesh_ptr = std::shared_ptr<q3mesh>;
 using q3model_ptr = std::shared_ptr<q3model>;
@@ -63,6 +65,44 @@ using q3shader_ptr = std::shared_ptr<q3shader>;
 using q3skin_ptr = std::shared_ptr<q3skin>;
 using q3stage_ptr = std::shared_ptr<q3stage>;
 using q3texture_ptr = std::shared_ptr<q3texture>;
+using q3framebuffer_ptr = std::shared_ptr<q3framebuffer>;
+
+using q3mesh_const_ptr = std::shared_ptr<q3mesh const>;
+using q3model_const_ptr = std::shared_ptr<q3model const>;
+using q3shader_const_ptr = std::shared_ptr<q3shader const>;
+using q3skin_const_ptr = std::shared_ptr<q3skin const>;
+using q3stage_const_ptr = std::shared_ptr<q3stage const>;
+using q3texture_const_ptr = std::shared_ptr<q3texture const>;
+using q3framebuffer_const_ptr = std::shared_ptr<q3framebuffer const>;
+
+template <typename ... Ts>
+static inline q3mesh_ptr make_q3mesh(Ts ... args) { return std::make_shared<q3mesh>(args ...); }
+template <typename ... Ts>
+static inline q3model_ptr make_q3model(Ts ... args) { return std::make_shared<q3model>(args ...); }
+template <typename ... Ts>
+static inline q3shader_ptr make_q3shader(Ts ... args) { return std::make_shared<q3shader>(args ...); }
+template <typename ... Ts>
+static inline q3skin_ptr make_q3skin(Ts ... args) { return std::make_shared<q3skin>(args ...); }
+template <typename ... Ts>
+static inline q3stage_ptr make_q3stage(Ts ... args) { return std::make_shared<q3stage>(args ...); }
+template <typename ... Ts>
+static inline q3texture_ptr make_q3texture(Ts ... args) { return std::make_shared<q3texture>(args ...); }
+template <typename ... Ts>
+static inline q3framebuffer_ptr make_q3framebuffer(Ts ... args) { return std::make_shared<q3framebuffer>(args ...); }
+
+// ================================================================
+// GL STATE TRACKING
+// ================================================================
+
+namespace gl {
+	void initialize_defaults();
+	
+	void blend(bool);
+	void blend_func(GLenum, GLenum);
+	
+	void depth_mask(bool);
+	void depth_test(bool);
+}
 
 // ================================================================
 // MODEL
@@ -102,7 +142,7 @@ struct q3mesh final {
 	inline void bind() const { glBindVertexArray(vao); }
 	inline void draw() const { glDrawArrays(mode, 0, size); draw_count++; }
 	GLuint vao = 0;
-	GLuint vbo[3] {0};
+	GLuint vbo[4] {0};
 	q3shader_ptr shader;
 	size_t size = 0;
 	GLenum mode = GL_TRIANGLES;
@@ -126,15 +166,20 @@ extern std::unique_ptr<modelbank> mbank;
 #define LAYOUT_VERTCOORD 0
 #define LAYOUT_TEXCOORD 1
 #define LAYOUT_LIGHTMAPCOORD 2
+#define LAYOUT_LIGHTMAPACTIVE 3
 
 #define UNIFORM_VERTEX_MATRIX 0
 #define UNIFORM_TEXCOORD_MATRIX 1
 #define UNIFORM_TIME 3
 #define UNIFORM_COLOR 4
 #define UNIFORM_ISLITBYLIGHTMAP 5
+#define UNIFORM_GLOW 6
 
 #define BINDING_DIFFUSE 0
 #define BINDING_LIGHTMAP_ATLAS 1
+
+#define FBOFINAL_COLOR 0
+#define FBOFINAL_GLOW 1
 
 struct q3stage {
 	
@@ -212,6 +257,7 @@ struct q3stage {
 	
 	bool opaque = true;
 	bool blend = false;
+	bool glow = false;
 	
 	rv4_t color {1, 1, 1, 1};
 	
@@ -253,7 +299,9 @@ struct q3shader {
 	istring name;
 	qhandle_t index = 0;
 	bool mipmaps = false;
+	bool polygonOffset = false;
 	
+	bool blend = false;
 	bool opaque = true;
 	float sort = q3sort_opaque;
 	
@@ -302,15 +350,90 @@ extern std::unique_ptr<skinbank> sbank;
 // ================================================================
 
 struct q3texture {
-	q3texture() = default;
+	
+	bool has_transparency = false;
+	
+	inline q3texture(GLsizei width, GLsizei height, bool mipmaps = true, GLenum type = GL_RGBA8) : mipmaps(mipmaps), width(width), height(height) {
+		glCreateTextures(GL_TEXTURE_2D, 1, &id);
+		glTextureStorage2D(id, mipmaps ? floor(log2(width > height ? height : width)) : 1, type, width, height);
+	}
+	
 	q3texture(q3texture const &) = delete;
-	inline q3texture(q3texture && other) = delete;
+	q3texture(q3texture && other) = delete;
 	inline ~q3texture() {
 		if (id) glDeleteTextures(1, &id);
 	}
 	
+	inline GLuint get_id() const { return id; }
+	inline GLsizei get_width() const { return width; }
+	inline GLsizei get_height() const { return height; }
+	
+	inline void upload(GLsizei width, GLsizei height, void const * data, GLenum format = GL_RGBA, GLenum data_type = GL_UNSIGNED_BYTE, GLint xoffs = 0, GLint yoffs = 0, GLint level = 0) {
+		glTextureSubImage2D(id, level, xoffs, yoffs, width, height, format, data_type, data);
+	}
+	
+	inline void generate_mipmaps() {
+		if (mipmaps) glGenerateTextureMipmap(id);
+	}
+	
+	inline void bind(GLuint binding) const {
+		glBindTextureUnit(binding, id);
+	}
+	
+	inline void save(char const * path) const {
+		std::vector<uint8_t> image_data;
+		image_data.resize(width * height * 3);
+		glGetTextureImage(id, 0, GL_RGB, GL_UNSIGNED_BYTE, image_data.size(), image_data.data());
+		RE_SavePNG(path, image_data.data(), width, height, 3);
+	}
+	
+private:
 	GLuint id = 0;
-	bool has_transparency = false;
+	bool mipmaps = false;
+	GLsizei width, height;
+};
+
+// ================================================================
+// FRAMEBUFFER
+// ================================================================
+
+struct q3framebuffer {
+	
+	enum struct attachment : GLenum {
+		color0 = GL_COLOR_ATTACHMENT0,
+		color1 = GL_COLOR_ATTACHMENT1,
+		color2 = GL_COLOR_ATTACHMENT2,
+		color3 = GL_COLOR_ATTACHMENT3,
+		color4 = GL_COLOR_ATTACHMENT4,
+		color5 = GL_COLOR_ATTACHMENT5,
+		color6 = GL_COLOR_ATTACHMENT6,
+		color7 = GL_COLOR_ATTACHMENT7,
+		
+		depth = GL_DEPTH_ATTACHMENT,
+		stencil = GL_STENCIL_ATTACHMENT,
+		depth_stencil = GL_DEPTH_STENCIL_ATTACHMENT,
+	};
+	
+	q3framebuffer(GLsizei w, GLsizei h);
+	q3framebuffer(q3framebuffer const &) = delete;
+	q3framebuffer(q3framebuffer &&) = delete;
+	~q3framebuffer();
+	
+	void resize(GLsizei w, GLsizei h);
+	void attach(attachment, GLenum type);
+	void attach_depth_stencil_renderbuffer();
+	q3texture_const_ptr get_attachment(attachment) const;
+	
+	void bind();
+	static void unbind();
+	bool validate() const;
+	
+private:
+	GLuint id, dsrb = 0;
+	GLsizei width, height;
+	
+	std::unordered_map<attachment, std::pair<q3texture_ptr, GLenum>> attachments;
+	std::vector<GLenum> color_attachments;
 };
 
 // ================================================================
@@ -345,6 +468,7 @@ struct rseq {
 		cmds3d.reserve(8192);
 	}
 	
+	bool active = false;
 	rm4_t vp = rm4_t::identity();
 	refdef_t def;
 	std::vector<cmd3d> cmds3d;
@@ -378,6 +502,12 @@ struct rend final {
 	
 	void draw(std::shared_ptr<frame_t>);
 	void swap();
+	
+	float cull = 6000;
+	size_t width, height;
+	
+	q3framebuffer_ptr framebuffer;
+	q3texture_ptr scratch1;
 	
 // ================================
 // MODEL
@@ -446,6 +576,8 @@ struct rend final {
 	std::unique_ptr<gl_program> q3program;
 	std::unique_ptr<gl_program> basic_color_program;
 	std::unique_ptr<gl_program> missingnoise_program;
+	std::unique_ptr<gl_program> dynamicglow_program;
+	std::unique_ptr<gl_program> mainfbotransfer_program;
 	
 	rv4_t color_2d;
 	
@@ -473,6 +605,7 @@ struct rend final {
 // ================================
 	
 	GLuint q3sampler = 0;
+	GLuint lightmap_sampler = 0;
 	
 	std::unordered_map<istring, std::shared_ptr<q3texture>> texture_lookup;
 	
@@ -493,6 +626,7 @@ struct rend final {
 			std::vector<float> vert_data;
 			std::vector<float> uv_data;
 			std::vector<float> lightmap_data;
+			std::vector<uint8_t> lightmap_active;
 		};
 		
 		struct mapnode_t {

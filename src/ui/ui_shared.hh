@@ -484,7 +484,7 @@ typedef struct displayContextDef_s {
 
 	cachedAssets_t	Assets;
 
-	glconfig_t		glconfig;
+	vidconfig_t		glconfig;
 	qhandle_t		whiteShader;
 	qhandle_t		gradientImage;
 	qhandle_t		cursor;

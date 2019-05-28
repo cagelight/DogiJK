@@ -926,8 +926,8 @@ void CL_RequestMotd( void ) {
 	Com_sprintf( cls.updateChallenge, sizeof( cls.updateChallenge ), "%i", ((rand() << 16) ^ rand()) ^ Com_Milliseconds());
 
 	Info_SetValueForKey( info, "challenge", cls.updateChallenge );
-	Info_SetValueForKey( info, "renderer", cls.glconfig.renderer_string );
-	Info_SetValueForKey( info, "rvendor", cls.glconfig.vendor_string );
+	Info_SetValueForKey( info, "renderer", cls.vidconfig.renderer_string );
+	Info_SetValueForKey( info, "rvendor", cls.vidconfig.vendor_string );
 	Info_SetValueForKey( info, "version", com_version->string );
 
 	//If raven starts filtering for this, add this code back in
@@ -937,7 +937,7 @@ void CL_RequestMotd( void ) {
 	Info_SetValueForKey( info, "memory", "4096" );
 #endif
 	Info_SetValueForKey( info, "joystick", Cvar_VariableString("in_joystick") );
-	Info_SetValueForKey( info, "colorbits", va("%d",cls.glconfig.colorBits) );
+	Info_SetValueForKey( info, "colorbits", va("%d",cls.vidconfig.colorBits) );
 
 	NET_OutOfBandPrint( NS_CLIENT, cls.updateServer, "getmotd \"%s\"\n", info );
 }
@@ -2291,14 +2291,14 @@ CL_InitRenderer
 */
 void CL_InitRenderer( void ) {
 	// this sets up the renderer and calls R_Init
-	re->BeginRegistration( &cls.glconfig );
+	re->BeginRegistration( &cls.vidconfig );
 
 	// load character sets
 	cls.charSetShader = re->RegisterShaderNoMip("gfx/2d/charsgrid_med");
 
 	cls.whiteShader = re->RegisterShader( "white" );
 	cls.consoleShader = re->RegisterShader( "console" );
-	g_console_field_width = cls.glconfig.vidWidth / SMALLCHAR_WIDTH - 2;
+	g_console_field_width = cls.vidconfig.vidWidth / SMALLCHAR_WIDTH - 2;
 	g_consoleField.widthInChars = g_console_field_width;
 }
 
@@ -2477,6 +2477,10 @@ void CL_InitRef( void ) {
     ri.WIN_Present = WIN_Present;
 	ri.GL_GetProcAddress = WIN_GL_GetProcAddress;
 	ri.GL_ExtensionSupported = WIN_GL_ExtensionSupported;
+	ri.VK_GetVkInstanceProcAddr = WIN_VK_GetVkInstanceProcAddr;
+	ri.VK_GetInstanceExtensions = WIN_VK_GetInstanceExtensions;
+	ri.VK_CreateSurface = WIN_VK_CreateSurface;
+	ri.VK_GetDrawableSize = WIN_VK_GetDrawableSize;
 
 	ri.CM_GetCachedMapDiskImage = CM_GetCachedMapDiskImage;
 	ri.CM_SetCachedMapDiskImage = CM_SetCachedMapDiskImage;

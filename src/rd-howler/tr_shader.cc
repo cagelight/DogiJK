@@ -3,6 +3,10 @@
 #define SS(v) _SS(v)
 #define _SS(v) #v
 
+//================================================================
+// Q3 MAIN SHADER
+//================================================================
+
 static char const * q3glsl_v = 
 R"GLSL(
 #version 450
@@ -10,12 +14,14 @@ R"GLSL(
 layout(location = )GLSL" SS(LAYOUT_VERTCOORD) R"GLSL() in vec3 vert;
 layout(location = )GLSL" SS(LAYOUT_TEXCOORD) R"GLSL() in vec2 uv;
 layout(location = )GLSL" SS(LAYOUT_LIGHTMAPCOORD) R"GLSL() in vec2 lmuv[4];
+layout(location = )GLSL" SS(LAYOUT_LIGHTMAPACTIVE) R"GLSL() in lowp float lmac;
 
 layout(location = )GLSL" SS(UNIFORM_VERTEX_MATRIX) R"GLSL() uniform mat4 vertex_matrix;
 layout(location = )GLSL" SS(UNIFORM_TEXCOORD_MATRIX) R"GLSL() uniform mat3 uv_matrix;
 
 out vec2 f_uv;
 out vec2 f_lmuv[4];
+out lowp float f_lmac;
 
 void main() {
 	f_uv = (uv_matrix * vec3(uv, 1)).xy;
@@ -25,6 +31,8 @@ void main() {
 	f_lmuv[1] = lmuv[1];
 	f_lmuv[2] = lmuv[2];
 	f_lmuv[3] = lmuv[3];
+	
+	f_lmac = lmac;
 }
 )GLSL";
 
@@ -34,26 +42,37 @@ R"GLSL(
 	
 in vec2 f_uv;
 in vec2 f_lmuv[4];
+in lowp float f_lmac;
 
-out vec4 color;
+// FBO ATTACHMENTS
+layout(location = 0) out vec4 color;
+layout(location = 1) out vec4 glow;
 
+// UNIFORMS
 layout(location = )GLSL" SS(UNIFORM_COLOR) R"GLSL() uniform vec4 q3color;
 layout(location = )GLSL" SS(UNIFORM_ISLITBYLIGHTMAP) R"GLSL() uniform bool is_lightmap;
+layout(location = )GLSL" SS(UNIFORM_GLOW) R"GLSL() uniform bool glow_write;
 
-layout(binding = 0) uniform sampler2D tex;
-layout(binding = 1) uniform sampler2D lm_atlas;
+// TEXTURE BINDINGS
+layout(binding = )GLSL" SS(BINDING_DIFFUSE) R"GLSL() uniform sampler2D tex;
+layout(binding = )GLSL" SS(BINDING_LIGHTMAP_ATLAS) R"GLSL() uniform sampler2D lm_atlas;
 
 void main() {
 	if (is_lightmap) {
 		color = texture(lm_atlas, f_lmuv[0]);
-		color += color * texture(lm_atlas, f_lmuv[1]);
-		color += color * texture(lm_atlas, f_lmuv[2]);
-		color += color * texture(lm_atlas, f_lmuv[3]);
+		if (f_lmac >= 2) color += color * texture(lm_atlas, f_lmuv[1]);
+		if (f_lmac >= 3) color += color * texture(lm_atlas, f_lmuv[2]);
+		if (f_lmac >= 4) color += color * texture(lm_atlas, f_lmuv[3]);
 	} else {
 		color = texture(tex, f_uv) * q3color;
 	}
+	if (glow_write) glow = color;
 }
 )GLSL";
+
+//================================================================
+// BASIC COLOR
+//================================================================
 
 static char const * basic_color_vsrc = 
 R"GLSL(
@@ -76,6 +95,10 @@ void main() {
 	color = q3color;
 }
 )GLSL";
+
+//================================================================
+// MISSING TEXTURE NOISE
+//================================================================
 
 static char const * missingnoise_vsrc = 
 R"GLSL(
@@ -106,6 +129,96 @@ void main() {
 }
 )GLSL";
 
+//================================================================
+// DYNAMIC GLOW
+//================================================================
+
+static std::string generate_dynamicglow_source(uint16_t kernel_radius, float sigma = 1.0) {
+	
+	std::vector<float> weights;
+	weights.resize(kernel_radius * 2 + 1);
+	
+	float r, sum = 0, s = 2 * sigma * sigma;
+	
+	for (int16_t c = -kernel_radius, i = 0; c <= kernel_radius; c++, i++) {
+		r = std::sqrt( c * c );
+		weights[i] = exp(-(r * r) / s) / (qm::pi * s);
+		sum += weights[i];
+	}
+	
+	for (float & w : weights) w /= sum;
+	
+	std::stringstream ss;
+	for (size_t i = 0; i < weights.size(); i++) {
+		if (i != 0) ss << ',';
+		ss << weights[i];
+	}
+	
+	static constexpr char const * base =
+		R"GLSL(
+			#version 450
+				
+			layout(local_size_x = 40, local_size_y = 20, local_size_z = 1) in;
+				
+			layout(rgba8, binding = 0) uniform image2D src;
+			layout(rgba8, binding = 1) uniform image2D dst;
+			
+			const int kernel_radius = %hi;
+			const float weights [%zu] = {%s};
+			
+			void main() {
+				
+				vec4 color = vec4(0, 0, 0, 1);
+				
+				for (int c = -kernel_radius, i = 0; c <= kernel_radius; c++, i++) {
+					ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+					coord.x += c * 20;
+					color.xyz += imageLoad(src, coord).xyz * weights[i];
+				}
+				
+				imageStore(dst, ivec2(gl_GlobalInvocationID.xy), color);
+			}
+		)GLSL";
+		
+	return strf(base, kernel_radius, weights.size(), ss.str().c_str());
+}
+
+//================================================================
+// MAIN FBO ASSEMBLER
+//================================================================
+
+static constexpr char const * mainfbotransfer_vsrc = 
+R"GLSL(
+#version 450
+	
+layout(location = )GLSL" SS(LAYOUT_VERTCOORD) R"GLSL() in vec3 vert_in;
+layout(location = )GLSL" SS(LAYOUT_TEXCOORD) R"GLSL() in vec2 uv_in;
+	
+out vec2 uv;
+
+void main() {
+	gl_Position = vec4(vert_in, 1);
+	uv = uv_in;
+}
+)GLSL";
+
+static constexpr char const * mainfbotransfer_fsrc = 
+R"GLSL(
+#version 450
+	
+layout(binding = )GLSL" SS(FBOFINAL_COLOR) R"GLSL() uniform sampler2D tex_color;
+layout(binding = )GLSL" SS(FBOFINAL_GLOW) R"GLSL() uniform sampler2D tex_glow;
+	
+in vec2 uv;
+out vec4 color;
+
+void main() {
+	color = texture(tex_color, uv);
+	//color += texture(tex_glow, uv);
+}
+)GLSL";
+
+
 void rend::initialize_shader() {
 	
 	std::string error;
@@ -122,7 +235,7 @@ void rend::initialize_shader() {
 		q3program = std::make_unique<gl_program>();
 		q3program->attach(q3vertshad);
 		q3program->attach(q3fragshad);
-		if (!q3program->link(error)) Com_Error(ERR_FATAL, "FATAL: q3 shader program failed to link:\n%s", error.c_str());
+		if (!q3program->link(error)) Com_Error(ERR_FATAL, "FATAL: shader program failed to link:\n%s", error.c_str());
 	}
 	
 	{
@@ -137,7 +250,7 @@ void rend::initialize_shader() {
 		basic_color_program = std::make_unique<gl_program>();
 		basic_color_program->attach(basicolorvert);
 		basic_color_program->attach(basicolorfrag);
-		if (!basic_color_program->link(error)) Com_Error(ERR_FATAL, "FATAL: q3 shader program failed to link:\n%s", error.c_str());
+		if (!basic_color_program->link(error)) Com_Error(ERR_FATAL, "FATAL: shader program failed to link:\n%s", error.c_str());
 	}
 	
 	{
@@ -152,15 +265,50 @@ void rend::initialize_shader() {
 		missingnoise_program = std::make_unique<gl_program>();
 		missingnoise_program->attach(missingnoisevert);
 		missingnoise_program->attach(missingnoisefrag);
-		if (!missingnoise_program->link(error)) Com_Error(ERR_FATAL, "FATAL: q3 shader program failed to link:\n%s", error.c_str());
+		if (!missingnoise_program->link(error)) Com_Error(ERR_FATAL, "FATAL: shader program failed to link:\n%s", error.c_str());
+	}
+	
+	{
+		std::string src = generate_dynamicglow_source(5, 1);
+		gl_shader comp {GL_COMPUTE_SHADER};
+		comp.source(src.c_str());
+		if (!comp.compile(error)) Com_Error(ERR_FATAL, "FATAL: dynamic glow compute shader failed to compile:\n%s", error.c_str());
+		
+		dynamicglow_program = std::make_unique<gl_program>();
+		dynamicglow_program->attach(comp);
+		if (!dynamicglow_program->link(error)) Com_Error(ERR_FATAL, "FATAL: dynamic glow program failed to link:\n%s", error.c_str());
+	}
+	
+	{
+		gl_shader vert {GL_VERTEX_SHADER};
+		vert.source(mainfbotransfer_vsrc);
+		if (!vert.compile(error)) Com_Error(ERR_FATAL, "FATAL: vertex shader failed to compile:\n%s", error.c_str());
+		
+		gl_shader frag {GL_FRAGMENT_SHADER};
+		frag.source(mainfbotransfer_fsrc);
+		if (!frag.compile(error)) Com_Error(ERR_FATAL, "FATAL: fragment shader failed to compile:\n%s", error.c_str());
+		
+		mainfbotransfer_program = std::make_unique<gl_program>();
+		mainfbotransfer_program->attach(vert);
+		mainfbotransfer_program->attach(frag);
+		if (!mainfbotransfer_program->link(error)) Com_Error(ERR_FATAL, "FATAL: shader program failed to link:\n%s", error.c_str());
 	}
 	
 	q3program->use();
 	
+	// FIXME FIXME -- objectify samplers
 	glCreateSamplers(1, &q3sampler);
-	glBindSampler(0, q3sampler);
+	glBindSampler(BINDING_DIFFUSE, q3sampler);
 	glSamplerParameteri(q3sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glSamplerParameteri(q3sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
+	glCreateSamplers(1, &lightmap_sampler);
+	glBindSampler(BINDING_LIGHTMAP_ATLAS, lightmap_sampler);
+	glSamplerParameteri(lightmap_sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glSamplerParameteri(lightmap_sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glSamplerParameteri(lightmap_sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(lightmap_sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	// FIXME FIXME
 	
 	q3shader_ptr & ds = shaders.emplace_back( std::make_shared<q3shader>() );
 	ds->name = "*default";
@@ -254,7 +402,7 @@ q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps, bool ligh
 	if (src == shader_source_lookup.end()) {
 		
 		q3texture_ptr tex = r->texture_register(name);
-		if (!tex->id) {
+		if (!tex) {
 			Com_Printf(S_COLOR_RED "ERROR: Could not find image for shader '%s'!\n", name);
 			shad.reset();
 			shader_lookup[{name, lightmap}] = shaders[0];
@@ -269,6 +417,7 @@ q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps, bool ligh
 			shad->stages[1].blend_src = GL_DST_COLOR;
 			shad->stages[1].blend_dst = GL_ZERO;
 			shad->stages[1].blend = true;
+			shad->blend = true;
 		} else {
 			shad->stages.emplace_back();
 			shad->stages[0].diffuse = tex;
@@ -281,6 +430,7 @@ q3shader_ptr & rend::shader_register(char const * pname, bool mipmaps, bool ligh
 				shad->stages[0].blend = false;
 				shad->stages[0].opaque = true;
 			}
+			shad->blend = shad->stages[0].blend;
 			shad->opaque = shad->stages[0].opaque;
 		}
 		
@@ -310,10 +460,20 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 }
 
 void rend::shader_set_mvp(rm4_t const & mvp) {
+	
 	glUniformMatrix4fv(UNIFORM_VERTEX_MATRIX, 1, GL_FALSE, mvp);
 }
 
 void rend::shader_presetup(q3shader const & shad) {
+	if (shad.polygonOffset) {
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glPolygonOffset(-1, -2);
+	} else {
+		glDisable(GL_POLYGON_OFFSET_FILL);
+	}
+	
+	gl::blend(shad.blend);
+	
 	switch (shad.cull) {
 		case q3shader::cull_type::front:
 			glEnable(GL_CULL_FACE);
@@ -330,16 +490,16 @@ void rend::shader_presetup(q3shader const & shad) {
 }
 
 void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float time) {
-	if (stage.diffuse) glBindTextureUnit(BINDING_DIFFUSE, stage.diffuse->id);
+	if (stage.diffuse) stage.diffuse->bind(BINDING_DIFFUSE);
 	
 	if (stage.is_lightmap_stage) {
 		glUniform1i(UNIFORM_ISLITBYLIGHTMAP, true);
-		glBindTextureUnit(BINDING_LIGHTMAP_ATLAS, world->lightmap_atlas->id);
 	} else {
 		glUniform1i(UNIFORM_ISLITBYLIGHTMAP, false);
 	}
 	
-	glBlendFunc(stage.blend_src, stage.blend_dst);
+	glUniform1i(UNIFORM_GLOW, stage.glow);
+	gl::blend_func(stage.blend_src, stage.blend_dst);
 	
 	rv4_t q3color {1, 1, 1, 1};
 	switch (stage.gen_rgb) {
@@ -415,8 +575,8 @@ void rend::shader_setup_stage(q3stage const & stage, rm3_t const & uvm, float ti
 	glUniformMatrix3fv(UNIFORM_TEXCOORD_MATRIX, 1, GL_FALSE, uvm2);
 	
 	if (stage.clamp) {
-		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	} else {
 		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glSamplerParameteri(q3sampler, GL_TEXTURE_WRAP_T, GL_REPEAT);
@@ -773,6 +933,7 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 			parse_texmod(name, stg, buffer);
 			
 		} else if (!Q_stricmp(token, "glow")) {
+			stg.glow = true;
 			//TODO
 		} else {
 			
@@ -782,9 +943,16 @@ static bool parse_stage(char const * name, q3stage & stg, char const * & p, bool
 		}
 	}
 	
-	if (stg.blend) {
+	if (stg.gen_alpha != q3stage::gen_type::none && stg.color[3] < 1) stg.opaque = false;
+	else if (stg.blend) {
 		if (stg.blend_dst == GL_ONE_MINUS_SRC_ALPHA && map && map->has_transparency) stg.opaque = false;
 		else if (stg.blend_dst != GL_ZERO) stg.opaque = false;
+		else if (
+			stg.blend_src == GL_DST_ALPHA ||
+			stg.blend_src == GL_DST_COLOR ||
+			stg.blend_src == GL_ONE_MINUS_DST_ALPHA ||
+			stg.blend_src == GL_ONE_MINUS_DST_COLOR
+		) stg.opaque = false;
 		else stg.opaque = true;
 	} else {
 		stg.opaque = true;
@@ -813,8 +981,20 @@ static inline q3shader::cull_type parse_cull(char const * name, char const * tok
 }
 
 static std::unordered_map<istring, float> const named_sorts {
+	{"portal", 1.0f},
+	{"portal", 2.0f},
 	{"opaque", q3sort_opaque},
-	{"additive", q3sort_basetrans + 1}
+	{"decal", 4.0f},
+	{"seeThrough", 5.0f},
+	{"banner", 6.0f},
+	{"inside", 7.0f},
+	{"mid_inside", 8.0f},
+	{"middle", 9.0f},
+	{"mid_outside", 10.0f},
+	{"outside", 11.0f},
+	{"underwater", 13.0f},
+	{"additive", q3sort_basetrans + 1},
+	{"nearest", 15.0f},
 };
 
 static inline float parse_sort(char const * token) {
@@ -852,6 +1032,7 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps, bool l
 				return false;
 			}
 			if (stg.opaque) shad.opaque = true;
+			if (stg.blend) shad.blend = true;
 		} else if (!Q_stricmp(token, "nopicmip")) {
 			SkipRestOfLine(&p);
 			// TODO
@@ -862,6 +1043,8 @@ static bool parse_shader(q3shader & shad, char const * src, bool mipmaps, bool l
 			token = COM_ParseExt(&p, qtrue);
 			shad.cull = parse_cull(shad.name.c_str(), token);
 			SkipRestOfLine(&p);
+		} else if ( !Q_stricmp(token, "polygonOffset" )) {
+			shad.polygonOffset = true;
 		} else if (!Q_stricmp(token, "sort")) {
 			token = COM_ParseExt(&p, qtrue);
 			shad.sort = parse_sort(token);

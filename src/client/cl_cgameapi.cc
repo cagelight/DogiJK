@@ -225,8 +225,8 @@ static void CL_CM_LoadMap( const char *mapname, qboolean subBSP ) {
 	else			CM_LoadMap( mapname, qtrue, NULL );
 }
 
-static void CL_GetGlconfig( glconfig_t *glconfig ) {
-	*glconfig = cls.glconfig;
+static void CL_GetGlconfig( vidconfig_t * config ) {
+	*config = cls.vidconfig;
 }
 
 static void CL_GetGameState( gameState_t *gs ) {

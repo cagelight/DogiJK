@@ -339,7 +339,7 @@ typedef enum { // r_ext_preferred_tc_method
 	TC_S3TC_DXT
 } textureCompression_t;
 
-typedef struct glconfig_s {
+typedef struct vidconfig_s {
 	const char				*renderer_string;
 	const char				*vendor_string;
 	const char				*version_string;
@@ -365,4 +365,5 @@ typedef struct glconfig_s {
 	// used CDS.
 	qboolean				isFullscreen;
 	qboolean				stereoEnabled;
-} glconfig_t;
+	
+} vidconfig_t;

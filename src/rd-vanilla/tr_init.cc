@@ -31,7 +31,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/MiniHeap.hh"
 #include "ghoul2/g2_public.hh"
 
-glconfig_t	glConfig;
+vidconfig_t	glConfig;
 glconfigExt_t glConfigExt;
 glstate_t	glState;
 window_t	window;

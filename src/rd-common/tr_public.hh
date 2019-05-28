@@ -51,7 +51,7 @@ struct refexport_t{
 	// and returns the current gl configuration, including screen width
 	// and height, which can be used by the client to intelligently
 	// size display elements
-	void				(*BeginRegistration)					( glconfig_t *config );
+	void				(*BeginRegistration)					( vidconfig_t *config );
 	qhandle_t			(*RegisterModel)						( const char *name );
 	qhandle_t			(*RegisterServerModel)					( const char *name );
 	qhandle_t			(*RegisterSkin)							( const char *name );
@@ -233,14 +233,20 @@ typedef struct refimport_s {
 	int				(*CGVM_RagCallback)					( int callType );
 
 	// window handling
-	window_t		(*WIN_Init)                         ( const windowDesc_t *desc, glconfig_t *glConfig );
-	void			(*WIN_SetGamma)						( glconfig_t *glConfig, byte red[256], byte green[256], byte blue[256] );
+	window_t		(*WIN_Init)                         ( const windowDesc_t *desc, vidconfig_t * config );
+	void			(*WIN_SetGamma)						( vidconfig_t * config, byte red[256], byte green[256], byte blue[256] );
 	void			(*WIN_Present)						( window_t *window );
 	void            (*WIN_Shutdown)                     ( void );
 
 	// OpenGL-specific
 	void *			(*GL_GetProcAddress)				( const char *name );
 	qboolean		(*GL_ExtensionSupported)			( const char *extension );
+	
+	// Vulkan-specific
+	void *			(*VK_GetVkInstanceProcAddr)			( void );
+	qboolean		(*VK_GetInstanceExtensions)			( std::vector<std::string> & );
+	qboolean		(*VK_CreateSurface)					( void * instance, void * surface );
+	void			(*VK_GetDrawableSize)				( int * w, int * h );
 
 	// gpvCachedMapDiskImage
 	void *			(*CM_GetCachedMapDiskImage)			( void );
