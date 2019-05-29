@@ -29,8 +29,8 @@
 namespace qm::meta {
 	
 	template <typename T> static T constexpr const pi = static_cast<T>(3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117067982148086513282306647093844609550582231725359408128481117450284102701938521105559644622948954930381964428810975665933446128475648233786783165271201909145649L);
-	template <typename T> inline constexpr T deg2rad(T const & v) { return v * pi<T> / static_cast<T>(180); }
-	template <typename T> inline constexpr T rad2deg(T const & v) { return v / pi<T> * static_cast<T>(180); }
+	template <typename T> constexpr T deg2rad(T const & v) { return v * pi<T> / static_cast<T>(180); }
+	template <typename T> constexpr T rad2deg(T const & v) { return v / pi<T> * static_cast<T>(180); }
 	
 	template <typename T> struct vec2_t;
 	template <typename T> struct vec3_t;
@@ -47,6 +47,12 @@ namespace qm {
 	static constexpr float pi = meta::pi<float>;
 	constexpr float deg2rad(float const & v) { return v * pi / 180.0f; }
 	constexpr float rad2deg(float const & v) { return v / pi * 180.0f; }
+	
+	template <typename T> constexpr T clamp(T const & value, T const & min, T const & max) {
+		if (value < min) return min;
+		if (value > max) return max;
+		return value;
+	}
 	
 	template <typename T, typename std::enable_if_t<std::is_integral<T>::value && sizeof(T) == 4>* = nullptr>
 	constexpr T next_pow2(T i) {

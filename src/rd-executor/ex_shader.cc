@@ -13,6 +13,7 @@ q3shader_ptr instance::shader_registry::reg(istring const & name, bool mipmaps) 
 	shad->index = shaders.size() - 1;
 	shad->name = name;
 	
+	lookup[name] = shad;
 	return shad;
 }
 

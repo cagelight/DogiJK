@@ -1,15 +1,8 @@
 #pragma once
 
-#include "qcommon/q_shared.hh"
-#include "rd-common/tr_public.hh"
-#include "sys/sys_public.hh"
-
 #include "tr_local.hh"
-#include "vk_local.hh"
 
-namespace executor {
-	
-	// FUNDAMENTALS PROTO
+namespace howler {
 	
 	#define FUNDAMENTAL(name)\
 	struct name;\
@@ -22,36 +15,6 @@ namespace executor {
 	FUNDAMENTAL(q3skin);
 	
 	#undef FUNDAMENTAL
-	
-	// FUNDAMENTALS
-	struct q3model {
-		std::vector<char> buffer;
-		model_t mod {};
-		
-		void load();
-	private:
-		void load_mdxa();
-		void load_mdxm(bool server = false);
-		void load_md3(int32_t lod = 0);
-	};
-	
-	struct q3shader {
-		qhandle_t index;
-		istring name;
-	};
-	
-	struct q3skinsurf {
-		//!!! REQUIRED !!!
-		char name[MAX_QPATH];
-		//!!! REQUIRED !!!
-		// TODO -- shader
-	};
-	
-	struct q3skin {
-		qhandle_t index;
-		skin_t skin;
-		std::vector<q3skinsurf> surfs;
-	};
 	
 	// INSTANCE
 	struct instance {
@@ -93,8 +56,6 @@ namespace executor {
 		
 		refimport_t const * ri;
 		window_t window;
-		
-		vk::instance_ptr vk_inst;
 		
 	};
 }

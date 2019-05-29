@@ -1,6 +1,8 @@
 #include "rd-common/tr_font.hh"
 #include "tr_local.hh"
 
+#include "hw_local.hh"
+
 refimport_t ri;
 vidconfig_t glConfig;
 
@@ -14,6 +16,8 @@ std::unique_ptr<skinbank> sbank;
 std::unique_ptr<rend> r;
 
 std::shared_ptr<frame_t> r_frame;
+
+static howler::instance * instance = nullptr;
 
 rend::~rend() {
 	R_ShutdownFonts();

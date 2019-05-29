@@ -9,6 +9,9 @@ vidconfig_t glConfig;
 cvar_t * se_language;
 cvar_t * r_aspectCorrectFonts;
 
+#define XCVAR_DECL
+#include "tr_xcvar.inl"
+
 static executor::instance * instance = nullptr;
 
 void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
@@ -22,6 +25,9 @@ void RE_BeginRegistration (vidconfig_t *config) {
 	
 	se_language = ri.Cvar_Get("se_language", "english", CVAR_ARCHIVE | CVAR_NORESTART, "");
 	r_aspectCorrectFonts = ri.Cvar_Get("r_aspectCorrectFonts", "0", CVAR_ARCHIVE, "");
+	
+	#define XCVAR_REGISTER
+	#include "tr_xcvar.inl"
 	
 	glConfig = *config;
 	instance->initialize_renderer();

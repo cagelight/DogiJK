@@ -46,6 +46,7 @@ q3model_ptr instance::model_registry::reg(char const * name, bool server) {
 		return lookup[name] = mod;
 	}
 	
+	lookup[name] = mod;
 	return mod;
 }
 

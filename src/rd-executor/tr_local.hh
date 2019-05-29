@@ -1,5 +1,7 @@
 #pragma once
 
+#include "qcommon/q_math2.hh"
+
 #include "rd-common/tr_common.hh"
 #include "rd-common/tr_public.hh"
 #include "rd-common/tr_types.hh"
@@ -7,6 +9,9 @@
 extern refimport_t ri;
 extern vidconfig_t glConfig;
 extern cvar_t * r_aspectCorrectFonts;
+
+#define XCVAR_PROTO
+#include "tr_xcvar.inl"
 
 // fore tr_font
 void RE_SetColor ( const float *rgba );
