@@ -1089,11 +1089,11 @@ void CG_G2MarkEvent(entityState_t *es)
 		//OR base this on the size of the thing you hit?
 		if ( g_vehWeaponInfo[es->otherEntityNum2].fG2MarkSize )
 		{
-			size = flrand( 0.6f, 1.4f )*g_vehWeaponInfo[es->otherEntityNum2].fG2MarkSize;
+			size = Q_flrand( 0.6f, 1.4f )*g_vehWeaponInfo[es->otherEntityNum2].fG2MarkSize;
 		}
 		else
 		{
-			size = flrand( 32.0f, 72.0f );
+			size = Q_flrand( 32.0f, 72.0f );
 		}
 		//specify mark shader in vehWeapon file
 		if ( g_vehWeaponInfo[es->otherEntityNum2].iG2MarkShaderHandle )

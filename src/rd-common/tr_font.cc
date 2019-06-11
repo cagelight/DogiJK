@@ -858,7 +858,7 @@ CFontInfo::CFontInfo(const char *_fontName)
 	// remove any special hack name insertions...
 	//
 	char fontName[MAX_QPATH];
-	sprintf(fontName,"fonts/%s.fontdat",COM_SkipPath(const_cast<char*>(_fontName)));	// COM_SkipPath should take a const char *, but it's just possible people use it as a char * I guess, so I have to hack around like this <groan>
+	sprintf(fontName,"fonts/%s.fontdat",COM_SkipPath(const_cast<char*>(_fontName)));
 
 	// clear some general things...
 	//

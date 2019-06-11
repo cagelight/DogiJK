@@ -90,9 +90,10 @@ void R_ImageLoader_Init()
 	Com_Memset (imageLoaders, 0, sizeof (imageLoaders));
 	numImageLoaders = 0;
 
-	R_ImageLoader_Add ("jpg", LoadJPG);
-	R_ImageLoader_Add ("png", LoadPNG);
-	R_ImageLoader_Add ("tga", LoadTGA);
+	R_ImageLoader_Add ("webp", LoadWEBP);
+	R_ImageLoader_Add ("png",  LoadPNG);
+	R_ImageLoader_Add ("jpg",  LoadJPG);
+	R_ImageLoader_Add ("tga",  LoadTGA);
 }
 
 /*

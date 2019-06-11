@@ -268,8 +268,8 @@ static void turret_aim( gentity_t *self )
 
 	if ( self->painDebounceTime > level.time )
 	{
-		desiredAngles[YAW] = top->r.currentAngles[YAW]+flrand(-45,45);
-		desiredAngles[PITCH] = top->r.currentAngles[PITCH]+flrand(-10,10);
+		desiredAngles[YAW] = top->r.currentAngles[YAW]+Q_flrand(-45,45);
+		desiredAngles[PITCH] = top->r.currentAngles[PITCH]+Q_flrand(-10,10);
 
 		if (desiredAngles[PITCH] < -pitchCap)
 		{
@@ -282,7 +282,7 @@ static void turret_aim( gentity_t *self )
 
 		diffYaw = AngleSubtract( desiredAngles[YAW], top->r.currentAngles[YAW] );
 		diffPitch = AngleSubtract( desiredAngles[PITCH], top->r.currentAngles[PITCH] );
-		turnSpeed = flrand( -5, 5 );
+		turnSpeed = Q_flrand( -5, 5 );
 	}
 	else if ( self->enemy )
 	{

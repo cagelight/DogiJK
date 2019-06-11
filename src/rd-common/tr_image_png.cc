@@ -48,6 +48,8 @@ int RE_SavePNG( const char *filename, byte *buf, size_t width, size_t height, in
 	see where it it is documented in the libpng manual.
 	*/
 	int depth = 8;
+	
+	assert(byteDepth == 3 || byteDepth == 4);
 
 	fp = ri.FS_FOpenFileWrite( filename, qtrue );
 	if ( !fp ) {
@@ -77,7 +79,7 @@ int RE_SavePNG( const char *filename, byte *buf, size_t width, size_t height, in
 		width,
 		height,
 		depth,
-		PNG_COLOR_TYPE_RGB,
+		byteDepth == 3 ? PNG_COLOR_TYPE_RGB : PNG_COLOR_TYPE_RGBA,
 		PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT,
 		PNG_FILTER_TYPE_DEFAULT);
@@ -89,10 +91,12 @@ int RE_SavePNG( const char *filename, byte *buf, size_t width, size_t height, in
 		png_byte *row = (png_byte *)png_malloc (png_ptr, sizeof (uint8_t) * width * byteDepth);
 		row_pointers[height-y-1] = row;
 		for (x = 0; x < width; ++x) {
-			byte *px = buf + (width * y + x)*3;
+			byte *px = buf + (width * y + x)*byteDepth;
 			*row++ = px[0];
 			*row++ = px[1];
 			*row++ = px[2];
+			if (byteDepth == 4)
+				*row++ = px[3];
 		}
 	}
 

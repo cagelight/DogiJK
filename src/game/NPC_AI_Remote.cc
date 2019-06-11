@@ -333,7 +333,7 @@ void Remote_Attack( void )
 	// Rate our distance to the target, and our visibilty
 	distance	= (int) DistanceHorizontalSquared( NPCS.NPC->r.currentOrigin, NPCS.NPC->enemy->r.currentOrigin );
 	visible		= NPC_ClearLOS4( NPCS.NPC->enemy );
-	idealDist	= MIN_DISTANCE_SQR+(MIN_DISTANCE_SQR*flrand( 0, 1 ));
+	idealDist	= MIN_DISTANCE_SQR+(MIN_DISTANCE_SQR*Q_flrand( 0, 1 ));
 	advance		= (qboolean)(distance > idealDist*1.25);
 	retreat		= (qboolean)(distance < idealDist*0.75);
 

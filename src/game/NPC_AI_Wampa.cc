@@ -235,8 +235,8 @@ void Wampa_Slash( int boltIndex, qboolean backhand )
 				vec3_t pushDir;
 				vec3_t angs;
 				VectorCopy( NPCS.NPC->client->ps.viewangles, angs );
-				angs[YAW] += flrand( 25, 50 );
-				angs[PITCH] = flrand( -25, -15 );
+				angs[YAW] += Q_flrand( 25, 50 );
+				angs[PITCH] = Q_flrand( -25, -15 );
 				AngleVectors( angs, pushDir, NULL, NULL );
 				if ( radiusEnt->client->NPC_class != CLASS_WAMPA
 					&& radiusEnt->client->NPC_class != CLASS_RANCOR
@@ -274,8 +274,8 @@ void Wampa_Slash( int boltIndex, qboolean backhand )
 				vec3_t pushDir;
 				vec3_t angs;
 				VectorCopy( NPCS.NPC->client->ps.viewangles, angs );
-				angs[YAW] += flrand( 25, 50 );
-				angs[PITCH] = flrand( -25, -15 );
+				angs[YAW] += Q_flrand( 25, 50 );
+				angs[PITCH] = Q_flrand( -25, -15 );
 				AngleVectors( angs, pushDir, NULL, NULL );
 				G_Knockdown( radiusEnt );
 			}

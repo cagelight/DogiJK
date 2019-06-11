@@ -222,13 +222,13 @@ static void R_SurfaceSpriteFrameUpdate(void)
 			gustLeft -= (float)(backEnd.refdef.time - lastSSUpdateTime)*WIND_GUST_DECAY;
 			if (gustLeft <= 0)
 			{
-				nextGustTime = backEnd.refdef.time + (curWindGust*1000)*flrand(1.0f,4.0f);
+				nextGustTime = backEnd.refdef.time + (curWindGust*1000)*Q_flrand(1.0f,4.0f);
 			}
 		}
 		else if (backEnd.refdef.time >= nextGustTime)
 		{	// See if there is another right now
 			// Gust next time, mano
-			gustLeft = flrand(0.75f,1.5f);
+			gustLeft = Q_flrand(0.75f,1.5f);
 		}
 	}
 

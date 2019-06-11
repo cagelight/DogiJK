@@ -24,6 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #ifndef TR_COMMON_H
 #define TR_COMMON_H
 
+#include "qcommon/q_math2.hh"
 #include "../rd-common/tr_public.hh"
 #include "../rd-common/tr_font.hh"
 
@@ -60,15 +61,17 @@ qboolean R_ImageLoader_Add( const char *extension, ImageLoaderFn imageLoader );
 // Load an image from file.
 void R_LoadImage( const char *shortname, byte **pic, int *width, int *height );
 
-// Load raw image data from TGA image.
-void LoadTGA( const char *name, byte **pic, int *width, int *height );
-
-// Load raw image data from JPEG image.
-void LoadJPG( const char *filename, byte **pic, int *width, int *height );
+// Load raw image data from WEBP image.
+void LoadWEBP( const char *filename, byte **data, int *width, int *height );
 
 // Load raw image data from PNG image.
 void LoadPNG( const char *filename, byte **data, int *width, int *height );
 
+// Load raw image data from JPEG image.
+void LoadJPG( const char *filename, byte **pic, int *width, int *height );
+
+// Load raw image data from TGA image.
+void LoadTGA( const char *name, byte **pic, int *width, int *height );
 
 /*
 ================================================================================
@@ -83,5 +86,31 @@ void RE_SaveJPG( const char * filename, int quality, int image_width, int image_
 
 // Save raw image data as PNG image file.
 int RE_SavePNG( const char *filename, byte *buf, size_t width, size_t height, int byteDepth );
+
+// Save raw image data as WEBP image file. (quality: lossy (0 - 100), lossless (-1))
+bool RE_SaveWEBP( const char *filename, byte *buf, size_t width, size_t height, int quality );
+
+/*
+================================================================================
+ Miscellaneous
+================================================================================
+*/
+struct FS_Reader {
+	FS_Reader(char const * filename) {
+		len = ri.FS_ReadFile ( ( char * ) filename, &buffer);
+	}
+	FS_Reader(FS_Reader const &) = delete;
+	FS_Reader(FS_Reader &&) = delete;
+	~FS_Reader() {
+		if (buffer) ri.FS_FreeFile(buffer);
+	}
+	inline bool valid() const { return buffer && len >= 0; }
+	template <typename T = uint8_t>
+	inline T const * data() const { return reinterpret_cast<T const *>(buffer); }
+	inline int32_t size() const { return len; }
+private:
+	void * buffer = nullptr;
+	int32_t len;
+};
 
 #endif

@@ -654,7 +654,7 @@ static QINLINE qboolean G_CheckLookTarget( gentity_t *ent, vec3_t	lookAngles, fl
 	{ //an NPC bolted to a vehicle should just look around randomly
 		if ( TIMER_Done( ent, "lookAround" ) )
 		{
-			ent->NPC->shootAngles[YAW] = flrand(0,360);
+			ent->NPC->shootAngles[YAW] = Q_flrand(0,360);
 			TIMER_Set( ent, "lookAround", Q_irand( 500, 3000 ) );
 		}
 		VectorSet( lookAngles, 0, ent->NPC->shootAngles[YAW], 0 );
@@ -7654,7 +7654,7 @@ void G_KickSomeMofos(gentity_t *ent)
 	float remainingTime = (animLength-elapsedTime);
 	float kickDist = (ent->r.maxs[0]*1.5f)+STAFF_KICK_RANGE+8.0f;//fudge factor of 8
 	int	  kickDamage = Q_irand( weap_kickDamMin.integer, weap_kickDamMax.integer );//Q_irand( 3, 8 ); //since it can only hit a guy once now
-	int	  kickPush = flrand( weap_kickDistMin.value, weap_kickDistMax.value );
+	int	  kickPush = Q_flrand( weap_kickDistMin.value, weap_kickDistMax.value );
 	qboolean doKick = qfalse;
 	renderInfo_t *ri = &ent->client->renderInfo;
 

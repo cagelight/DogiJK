@@ -768,8 +768,8 @@ void Do_Strike(gentity_t *ent)
 	VectorSet(fxAng, 90.0f, 0.0f, 0.0f);
 
 	//choose a random point to strike within the bounds of the trigger
-	strikePoint[0] = flrand(ent->r.absmin[0], ent->r.absmax[0]);
-	strikePoint[1] = flrand(ent->r.absmin[1], ent->r.absmax[1]);
+	strikePoint[0] = Q_flrand(ent->r.absmin[0], ent->r.absmax[0]);
+	strikePoint[1] = Q_flrand(ent->r.absmin[1], ent->r.absmax[1]);
 
 	//consider the bottom mins the ground level
 	strikePoint[2] = ent->r.absmin[2];
@@ -1895,7 +1895,7 @@ void asteroid_field_think(gentity_t *self)
 		if ( newAsteroid )
 		{
 			vec3_t startSpot, endSpot, startAngles;
-			float dist, speed = flrand( self->speed * 0.25f, self->speed * 2.0f );
+			float dist, speed = Q_flrand( self->speed * 0.25f, self->speed * 2.0f );
 			int	capAxis, axis, time = 0;
 			gentity_t *copyAsteroid = asteroid_pick_random_asteroid( self );
 			if ( copyAsteroid )
@@ -1944,8 +1944,8 @@ void asteroid_field_think(gentity_t *self)
 					}
 					else
 					{
-						startSpot[axis] = self->r.mins[axis]+(flrand(0,1.0f)*(self->r.maxs[axis]-self->r.mins[axis]));
-						endSpot[axis] = self->r.mins[axis]+(flrand(0,1.0f)*(self->r.maxs[axis]-self->r.mins[axis]));
+						startSpot[axis] = self->r.mins[axis]+(Q_flrand(0,1.0f)*(self->r.maxs[axis]-self->r.mins[axis]));
+						endSpot[axis] = self->r.mins[axis]+(Q_flrand(0,1.0f)*(self->r.maxs[axis]-self->r.mins[axis]));
 					}
 				}
 				//FIXME: maybe trace from start to end to make sure nothing is in the way?  How big of a trace?
@@ -1956,13 +1956,13 @@ void asteroid_field_think(gentity_t *self)
 				Q3_Lerp2Origin( -1, newAsteroid->s.number, endSpot, time );
 
 				//spin it
-				startAngles[0] = flrand( -360, 360 );
-				startAngles[1] = flrand( -360, 360 );
-				startAngles[2] = flrand( -360, 360 );
+				startAngles[0] = Q_flrand( -360, 360 );
+				startAngles[1] = Q_flrand( -360, 360 );
+				startAngles[2] = Q_flrand( -360, 360 );
 				G_SetAngles( newAsteroid, startAngles );
-				newAsteroid->s.apos.trDelta[0] = flrand( -100, 100 );
-				newAsteroid->s.apos.trDelta[1] = flrand( -100, 100 );
-				newAsteroid->s.apos.trDelta[2] = flrand( -100, 100 );
+				newAsteroid->s.apos.trDelta[0] = Q_flrand( -100, 100 );
+				newAsteroid->s.apos.trDelta[1] = Q_flrand( -100, 100 );
+				newAsteroid->s.apos.trDelta[2] = Q_flrand( -100, 100 );
 				newAsteroid->s.apos.trTime = level.time;
 				newAsteroid->s.apos.trType = TR_LINEAR;
 

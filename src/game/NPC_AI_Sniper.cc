@@ -564,22 +564,22 @@ void Sniper_FaceEnemy( void )
 							aimError = qtrue;
 							if ( !Q_irand( 0, 1 ) )
 							{
-								VectorMA( target, NPCS.NPC->enemy->r.maxs[2]*flrand(1.5, 4), right, target );
+								VectorMA( target, NPCS.NPC->enemy->r.maxs[2]*Q_flrand(1.5, 4), right, target );
 							}
 							else
 							{
-								VectorMA( target, NPCS.NPC->enemy->r.mins[2]*flrand(1.5, 4), right, target );
+								VectorMA( target, NPCS.NPC->enemy->r.mins[2]*Q_flrand(1.5, 4), right, target );
 							}
 						}
 						if ( !aimError || !Q_irand( 0, 1 ) )
 						{
 							if ( !Q_irand( 0, 1 ) )
 							{
-								VectorMA( target, NPCS.NPC->enemy->r.maxs[2]*flrand(1.5, 4), up, target );
+								VectorMA( target, NPCS.NPC->enemy->r.maxs[2]*Q_flrand(1.5, 4), up, target );
 							}
 							else
 							{
-								VectorMA( target, NPCS.NPC->enemy->r.mins[2]*flrand(1.5, 4), up, target );
+								VectorMA( target, NPCS.NPC->enemy->r.mins[2]*Q_flrand(1.5, 4), up, target );
 							}
 						}
 						trap->Trace( &trace, muzzle, vec3_origin, vec3_origin, target, NPCS.NPC->s.number, MASK_SHOT, qfalse, 0, 0 );
@@ -614,7 +614,7 @@ void Sniper_FaceEnemy( void )
 		}
 		else
 		{
-			target[2] += flrand( 0, NPCS.NPC->enemy->r.maxs[2] );
+			target[2] += Q_flrand( 0, NPCS.NPC->enemy->r.maxs[2] );
 			//CalcEntitySpot( NPC->enemy, SPOT_HEAD_LEAN, target );
 			GetAnglesForDirection( muzzle, target, angles );
 		}
@@ -636,7 +636,7 @@ void Sniper_UpdateEnemyPos( void )
 		if ( !index )
 		{
 			CalcEntitySpot( NPCS.NPC->enemy, SPOT_HEAD_LEAN, NPCS.NPCInfo->enemyLaggedPos[index] );
-			NPCS.NPCInfo->enemyLaggedPos[index][2] -= flrand( 2, 16 );
+			NPCS.NPCInfo->enemyLaggedPos[index][2] -= Q_flrand( 2, 16 );
 		}
 		else
 		{

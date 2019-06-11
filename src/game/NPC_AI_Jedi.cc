@@ -3408,7 +3408,7 @@ static void Jedi_EvasionSaber( vec3_t enemy_movedir, float enemy_dist, vec3_t en
 			facingAmt = DotProduct( enemy_movedir, dirEnemy2Me );
 		}
 
-		if ( flrand( 0.25, 1 ) < facingAmt )
+		if ( Q_flrand( 0.25, 1 ) < facingAmt )
 		{//coming at/facing me!
 			int whichDefense = 0;
 			if ( NPCS.NPC->client->ps.weaponTime || NPCS.NPC->client->ps.saberInFlight || NPCS.NPC->client->NPC_class == CLASS_BOBAFETT )
@@ -3780,7 +3780,7 @@ static void Jedi_FaceEnemy( qboolean doPitch )
 			{
 				float eDist = Distance( eyes, enemy_eyes );
 				eDist /= missileSpeed;//How many seconds it will take to get to the enemy
-				VectorMA( enemy_eyes, eDist*flrand(0.95f,1.25f), NPCS.NPC->enemy->client->ps.velocity, enemy_eyes );
+				VectorMA( enemy_eyes, eDist*Q_flrand(0.95f,1.25f), NPCS.NPC->enemy->client->ps.velocity, enemy_eyes );
 			}
 		}
 	}
@@ -5873,7 +5873,7 @@ static void Jedi_Attack( void )
 		//	{
 		//		ucmd.buttons |= BUTTON_ATTACK;
 		//	}
-			if ( flrand( -4.0f, chance ) >= 0.0f )
+			if ( Q_flrand( -4.0f, chance ) >= 0.0f )
 			{
 				NPCS.ucmd.buttons |= BUTTON_ATTACK;
 			}

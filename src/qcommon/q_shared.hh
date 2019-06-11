@@ -591,7 +591,7 @@ typedef struct wpobject_s
 
 //=============================================
 
-char	*COM_SkipPath( char *pathname );
+char const * COM_SkipPath (char const * pathname);
 const char	*COM_GetExtension( const char *name );
 void	COM_StripExtension( const char *in, char *out, int destsize );
 qboolean COM_CompareExtension(const char *in, const char *ext);
@@ -1444,9 +1444,9 @@ typedef enum
 
 // usercmd_t is sent to the server each client frame
 typedef struct usercmd_s {
-	int				serverTime;
-	int				angles[3];
-	int 			buttons;
+	int32_t			serverTime;
+	int32_t			angles[3];
+	int32_t 		buttons;
 	byte			weapon;           // weapon
 	byte			forcesel;
 	byte			invensel;

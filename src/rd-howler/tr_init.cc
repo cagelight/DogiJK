@@ -8,106 +8,22 @@ vidconfig_t glConfig;
 
 cvar_t * se_language;
 cvar_t * r_aspectCorrectFonts;
-cvar_t * r_showtris;
-cvar_t * r_fboratio;
 
-std::unique_ptr<modelbank> mbank;
-std::unique_ptr<skinbank> sbank;
-std::unique_ptr<rend> r;
+#define XCVAR_DECL
+#include "tr_xcvar.inl"
 
-std::shared_ptr<frame_t> r_frame;
-
-static howler::instance * instance = nullptr;
-
-rend::~rend() {
-	R_ShutdownFonts();
-}
-
-void rend::initialize() {
-	if (initialized) return;
-	
-	windowDesc_t windowDesc = { GRAPHICS_API_OPENGL };
-
-	window = ri.WIN_Init(&windowDesc, &glConfig);
-	gladLoadGLLoader(ri.GL_GetProcAddress);
-
-	// get our config strings
-	glConfig.vendor_string = (const char *)glGetString (GL_VENDOR);
-	glConfig.renderer_string = (const char *)glGetString (GL_RENDERER);
-	glConfig.version_string = (const char *)glGetString (GL_VERSION);
-	glConfig.extensions_string = (const char *)glGetString (GL_EXTENSIONS);
-	glConfig.isFullscreen = qfalse;
-	glConfig.stereoEnabled = qfalse;
-	glConfig.clampToEdgeAvailable = qtrue;
-	glConfig.maxActiveTextures = 4096;
-
-	glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
-	glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
-	
-	if (GLAD_GL_EXT_texture_filter_anisotropic)
-		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &glConfig.maxTextureFilterAnisotropy);
-	else glConfig.maxTextureFilterAnisotropy = 0;
-	
-	Com_Printf("Vendor: %s\nRenderer: %s\nVersion: %s\n", glConfig.vendor_string, glConfig.renderer_string, glConfig.version_string);
-	
-	gl::initialize_defaults();
-	
-	width = glConfig.vidWidth;
-	height = glConfig.vidHeight;
-	
-	glViewport(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	glScissor(0, 0, glConfig.vidWidth, glConfig.vidHeight);
-	
-	gl::blend(true);
-	glEnable(GL_SCISSOR_TEST);
-	gl::depth_test(true);
-	
-	glClearColor(0, 0, 0, 1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	
-	framebuffer = make_q3framebuffer(width * r_fboratio->value, height * r_fboratio->value);
-	framebuffer->attach(q3framebuffer::attachment::color0, GL_RGBA8);
-	framebuffer->attach(q3framebuffer::attachment::color1, GL_RGBA8);
-	
-	framebuffer->attach_depth_stencil_renderbuffer();
-	//framebuffer->attach(q3framebuffer::attachment::depth, GL_DEPTH_COMPONENT32);
-	
-	if (!framebuffer->validate()) {
-		Com_Error(ERR_FATAL, "rend::initialize: failed to initialize framebuffer");
-	}
-	
-	scratch1 = make_q3texture(width, height, false);
-	
-	this->initialize_texture();
-	this->initialize_shader();
-	this->initialize_model();
-	
-	R_InitFonts();
-	
-	initialized = true;
-}
-
-void rend::swap() {
-	ri.WIN_Present(&window);
-}
+std::unique_ptr<howler::instance> hw_inst = nullptr;
 
 void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
+	hw_inst.reset( new howler::instance {} );
 	if ( destroyWindow ) {
 		ri.WIN_Shutdown();
 	}
-	r.reset();
-	mbank = std::make_unique<modelbank>();
-	sbank = std::make_unique<skinbank>();
 }
 
 // ================================
 // COMMANDS
 // ================================
-
-static void CMD_lightmap_atlas() {
-	if (!r || !r->world) return;
-	r->world->lightmap_atlas->save(va("atlas/%s.png", r->world->baseName));
-}
 
 // stolen from rd-vanilla
 static void R_ScreenshotFilename( char *buf, int bufSize, const char *ext ) {
@@ -123,7 +39,7 @@ static void R_ScreenshotFilename( char *buf, int bufSize, const char *ext ) {
 static void CMD_screenshot() {
 	char path[MAX_OSPATH];
 	R_ScreenshotFilename(path, sizeof(path), ".png");
-	r->framebuffer->get_attachment(q3framebuffer::attachment::color0)->save(path);
+	hw_inst->screenshot(path);
 }
 
 struct console_command_t {
@@ -132,7 +48,7 @@ struct console_command_t {
 };
 
 static constexpr console_command_t commands [] = {
-	{ "lightmap_atlas",			CMD_lightmap_atlas },
+	{ "lightmap_atlas",			[](){hw_inst->save_lightmap_atlas();} },
 	{ "screenshot",				CMD_screenshot }
 };
 static constexpr size_t commands_num = ARRAY_LEN ( commands );
@@ -145,12 +61,12 @@ void RE_BeginRegistration (vidconfig_t *config) {
 	
 	se_language = ri.Cvar_Get("se_language", "english", CVAR_ARCHIVE | CVAR_NORESTART, "");
 	r_aspectCorrectFonts = ri.Cvar_Get("r_aspectCorrectFonts", "0", CVAR_ARCHIVE, "");
-	r_showtris = ri.Cvar_Get("r_showtris", "0", CVAR_ARCHIVE, "");
-	r_fboratio = ri.Cvar_Get("r_fboratio", "1.0", CVAR_ARCHIVE, "");
+	
+	#define XCVAR_REGISTER
+	#include "tr_xcvar.inl"
 	
 	glConfig = *config;
-	r = std::make_unique<rend>();
-	r->initialize();
+	hw_inst->initialize_renderer();
 	*config = glConfig;
 	
 	for ( size_t i = 0; i < commands_num; i++ )
@@ -158,41 +74,36 @@ void RE_BeginRegistration (vidconfig_t *config) {
 }
 
 static inline qhandle_t RE_RegisterModel (const char *name) {
-	return mbank->register_model(name, false);
+	return hw_inst->models.reg(name, false)->base.index;
 }
 
 static inline qhandle_t RE_RegisterServerModel(char const * name) {
-	return mbank->register_model(name, true);
+	return hw_inst->models.reg(name, true)->base.index;
 }
 
 static qhandle_t scam = 0;
 qhandle_t RE_RegisterSkin (const char *name) {
-	return sbank->register_skin(name, false);
+	return hw_inst->skins.reg(name, false)->index;
 }
 
 qhandle_t RE_RegisterServerSkin (const char *name) {
-	return sbank->register_skin(name, true);
+	return hw_inst->skins.reg(name, true)->index;
 }
 
 qhandle_t RE_RegisterShader (const char *name) {
-	q3shader_ptr & shad = r->shader_register(name, true);
-	if (!shad) return 0;
-	return shad->index;
+	return hw_inst->shaders.reg(name, true)->index;
 }
 
 qhandle_t RE_RegisterShaderNoMip (const char *name) {
-	q3shader_ptr & shad = r->shader_register(name, false);
-	if (!shad) return 0;
-	return shad->index;
+	return hw_inst->shaders.reg(name, false)->index;
 }
 
 const char * RE_ShaderNameFromIndex (int index) {
-	if (!r->shaders[index]) return "";
-	return r->shaders[index]->name.c_str();
+	return hw_inst->shaders.get(index)->name.c_str();
 }
 
 void RE_LoadWorldMap (const char *name) {
-	r->load_world(name);
+	hw_inst->load_world(name);
 }
 
 void RE_EndRegistration (void) {
@@ -201,7 +112,7 @@ void RE_EndRegistration (void) {
 
 void RE_ClearScene (void) {
 	// TODO
-	//RE_SetColor(nullptr);
+	RE_SetColor(nullptr);
 }
 
 void RE_ClearDecals (void) {
@@ -209,12 +120,22 @@ void RE_ClearDecals (void) {
 }
 
 void RE_AddRefEntityToScene (const refEntity_t *re) {
+	
 	if (!re || re->reType == RT_ENT_CHAIN) return;
-	basic_mesh m;
-	m.model = r->model_get(re->hModel);
-	m.origin = {re->origin[0], re->origin[1], re->origin[2]};
-	memcpy(m.pre, re->axis, sizeof(matrix3_t));
-	r_frame->cmds3d.back().cmds3d.emplace_back(std::move(m));
+	
+	auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::basic_object>();
+	obj.basemodel = hw_inst->models.get(re->hModel);
+	qm::vec3_t origin = {re->origin[1], -re->origin[2], re->origin[0]};
+	
+	qm::mat4_t origin_m = qm::mat4_t::translate(origin);
+	qm::mat4_t axis_conv = {
+		re->axis[1][1], -re->axis[1][2], re->axis[1][0], 0,
+		re->axis[2][1], -re->axis[2][2], re->axis[2][0], 0,
+		re->axis[0][1], -re->axis[0][2], re->axis[0][0], 0,
+		0, 0, 0, 1
+	};
+	
+	obj.model_matrix = axis_conv * origin_m;
 }
 
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
@@ -242,33 +163,19 @@ void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, flo
 }
 
 void RE_RenderScene (const refdef_t *fd) {
-	rm4_t p = rm4_t::perspective(qm::deg2rad(fd->fov_y), fd->width, fd->height, 4, r->cull * 2);
-
-	rm4_t v = rm4_t::translate(-fd->vieworg[1], fd->vieworg[2], -fd->vieworg[0]);
-	
-	rq_t roq = rq_t::identity();
-	roq *= rq_t { {1, 0, 0}, qm::deg2rad(fd->viewangles[PITCH]) };
-	roq *= rq_t { {0, 1, 0}, qm::deg2rad(-fd->viewangles[YAW]) };
-	roq *= rq_t { {0, 0, 1}, qm::deg2rad(fd->viewangles[ROLL]) + qm::pi };
-	
-	v *= rm4_t {roq};
-	
-	r_frame->cmds3d.back().vp = v * p;
-	r_frame->cmds3d.back().def = *fd;
-	r_frame->cmds3d.back().active = true;
-	r_frame->cmds3d.emplace_back();
-	// HACK ???
-	// nothing is actually drawn until EndFrame
+	hw_inst->frame().scene().ref = *fd;
+	hw_inst->frame().new_scene();
 }
 
+static qm::vec4_t ui_color {1, 1, 1, 1};
 void RE_SetColor (const float *rgba) {
-	if (rgba) r_frame->cmds2d.emplace_back(rv4_t {rgba[0], rgba[1], rgba[2], rgba[3]});
-	else r_frame->cmds2d.emplace_back(rv4_t {1, 1, 1, 1});
+	if (rgba) ui_color = { rgba[0], rgba[1], rgba[2], rgba[3] };
+	else ui_color = {1, 1, 1, 1};
 }
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
 	if (!hShader) return;
-	r_frame->cmds2d.emplace_back( stretch_pic { x, y, w, h, s1 ,t1, s2, t2, r->shader_get(hShader) });
+	hw_inst->frame().c2ds.emplace_back( howler::cmd2d::stretchpic { x, y, w, h, s1 ,t1, s2, t2, hw_inst->shaders.get(hShader), ui_color });
 }
 
 void RE_RotatePic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, float a1, qhandle_t hShader) {
@@ -288,16 +195,12 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 }
 
 void RE_BeginFrame (stereoFrame_t stereoFrame) {
-	gl::depth_mask(true);
-	r_frame = std::make_shared<frame_t>();
-	RE_SetColor(nullptr);
+	hw_inst->begin_frame();
 }
 
 void RE_EndFrame (int *frontEndMsec, int *backEndMsec) {
-	r_frame->shader_time = (ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f;
-	r->draw(r_frame);
-	
-	r->swap();
+	ui_color = {1, 1, 1, 1};
+	hw_inst->end_frame((ri.Milliseconds() * ri.Cvar_VariableValue("timescale")) / 1000.0f);
 }
 
 int R_MarkFragments (int numPoints, const vec3_t *points, const vec3_t projection, int maxPoints, vec3_t pointBuffer, int maxFragments, markFragment_t *fragmentBuffer) {
@@ -329,9 +232,9 @@ int R_LerpTag (orientation_t *tag, qhandle_t handle, int startFrame, int endFram
 	float		frontLerp, backLerp;
 	model_t		*model;
 
-	basemodel_ptr bmod = mbank->get_model( handle );
+	howler::q3basemodel_ptr bmod = hw_inst->models.get(handle);
 	if (!bmod) return 0;
-	model = &bmod->mod;
+	model = &bmod->base;
 	if ( !model->md3[0] ) {
 		AxisClear( tag->axis );
 		VectorClear( tag->origin );
@@ -370,9 +273,8 @@ void R_ModelBounds (qhandle_t handle, vec3_t mins, vec3_t maxs) {
 	model = R_GetModelByHandle( handle );
 
 	if ( model->bmodel ) {
-		// TODO
-		//VectorCopy( model->bmodel->bounds[0], mins );
-		//VectorCopy( model->bmodel->bounds[1], maxs );
+		VectorCopy( model->bmodel->bounds[0], mins );
+		VectorCopy( model->bmodel->bounds[1], maxs );
 		return;
 	}
 
@@ -395,7 +297,7 @@ void R_RemapShader (const char *oldShader, const char *newShader, const char *of
 }
 
 qboolean R_GetEntityToken (char *buffer, int size) {
-	return r->get_entity_token(buffer, size);
+	return hw_inst->world_get_entity_token(buffer, size);
 }
 
 qboolean R_inPVS (const vec3_t p1, const vec3_t p2, byte *mask) {
@@ -469,17 +371,15 @@ qboolean RE_RegisterModels_LevelLoadEnd (qboolean bDeleteEverythingNotUsedThisLe
 }
 
 model_t * R_GetModelByHandle (qhandle_t index) {
-	basemodel_ptr bmod = mbank->get_model( index );
-	if (!bmod) return nullptr;
-	return &bmod->mod;
+	return &hw_inst->models.get(index)->base;
 }
 
 skin_t * R_GetSkinByHandle (qhandle_t hSkin) {
-	return &sbank->get_skin(hSkin)->skin;
+	return &hw_inst->skins.get(hSkin)->skin;
 }
 
 qboolean ShaderHashTableExists (void) {
-	return r != nullptr;
+	return hw_inst != nullptr;
 }
 
 void RE_TakeVideoFrame (int h, int w, byte* captureBuffer, byte *encodeBuffer, qboolean motionJpeg) {
@@ -503,7 +403,7 @@ void RE_HunkClearCrap (void) {
 }
 
 qboolean G2_HackadelicOnClient (void) {
-	return r != nullptr;
+	return hw_inst != nullptr;
 }
 
 extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *rimp ) {
@@ -605,8 +505,7 @@ extern "C" Q_EXPORT refexport_t* QDECL GetRefAPI( int apiVersion, refimport_t *r
 
 	re.ext.Font_StrLenPixels				= RE_Font_StrLenPixelsNew;
 
-	mbank = std::make_unique<modelbank>();
-	sbank = std::make_unique<skinbank>();
+	hw_inst.reset( new howler::instance {} );
 	
 	return &re;
 }

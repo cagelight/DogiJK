@@ -366,8 +366,8 @@ static void turretG2_fire ( gentity_t *ent, vec3_t start, vec3_t dir )
 	if ( ent->random )
 	{
 		vectoangles( dir, ang );
-		ang[PITCH] += flrand( -ent->random, ent->random );
-		ang[YAW] += flrand( -ent->random, ent->random );
+		ang[PITCH] += Q_flrand( -ent->random, ent->random );
+		ang[YAW] += Q_flrand( -ent->random, ent->random );
 		AngleVectors( ang, dir, NULL, NULL );
 	}
 

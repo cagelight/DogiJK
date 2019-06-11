@@ -3882,7 +3882,7 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 							dVel[2] = 0;
 
 							//Factor in a random velocity
-							VectorSet(rVel, flrand(-0.1f, 0.1f), flrand(-0.1f, 0.1f), flrand(0.1f, 0.5));
+							VectorSet(rVel, Q_flrand(-0.1f, 0.1f), Q_flrand(-0.1f, 0.1f), Q_flrand(0.1f, 0.5));
 							VectorScale(rVel, 8.0f, rVel);
 
 							VectorAdd(dVel, rVel, dVel);
@@ -4142,9 +4142,9 @@ qboolean CG_G2PlayerHeadAnims( centity_t *cent )
 	{
 		if (!ci->facial_blink)
 		{	// set the timers
-			ci->facial_blink = cg.time + flrand(4000.0, 8000.0);
-			ci->facial_frown = cg.time + flrand(6000.0, 10000.0);
-			ci->facial_aux = cg.time + flrand(6000.0, 10000.0);
+			ci->facial_blink = cg.time + Q_flrand(4000.0, 8000.0);
+			ci->facial_frown = cg.time + Q_flrand(6000.0, 10000.0);
+			ci->facial_aux = cg.time + Q_flrand(6000.0, 10000.0);
 		}
 
 		//are we blinking?
@@ -4152,7 +4152,7 @@ qboolean CG_G2PlayerHeadAnims( centity_t *cent )
 		{	// yes, check if we are we done blinking ?
 			if (-(ci->facial_blink) < cg.time)
 			{	// yes, so reset blink timer
-				ci->facial_blink = cg.time + flrand(4000.0, 8000.0);
+				ci->facial_blink = cg.time + Q_flrand(4000.0, 8000.0);
 				CG_G2SetHeadBlink( cent, qfalse );	//stop the blink
 			}
 		}
@@ -4184,7 +4184,7 @@ qboolean CG_G2PlayerHeadAnims( centity_t *cent )
 			{	//yes
 				if (-(ci->facial_aux) < cg.time)// are we done auxing ?
 				{	// yes, reset aux timer
-					ci->facial_aux = cg.time + flrand(7000.0, 10000.0);
+					ci->facial_aux = cg.time + Q_flrand(7000.0, 10000.0);
 				}
 				else
 				{	// not yet, so choose aux
@@ -4207,7 +4207,7 @@ qboolean CG_G2PlayerHeadAnims( centity_t *cent )
 				{	// yes,
 					if (-(ci->facial_frown) < cg.time)//are we done frowning ?
 					{	// yes, reset frown timer
-						ci->facial_frown = cg.time + flrand(7000.0, 10000.0);
+						ci->facial_frown = cg.time + Q_flrand(7000.0, 10000.0);
 					}
 					else
 					{	// not yet, so choose frown
@@ -5749,7 +5749,7 @@ void CG_AddGhoul2Mark(int shader, float size, vec3_t start, vec3_t end, int entn
 	goreSkin.entNum      = entnum;
 	goreSkin.SSize		 = size;
 	goreSkin.TSize		 = size;
-	goreSkin.theta		 = flrand(0.0f,6.28f);
+	goreSkin.theta		 = Q_flrand(0.0f,6.28f);
 	goreSkin.shader		 = shader;
 
 	if (!scale[0] && !scale[1] && !scale[2])
@@ -5872,14 +5872,14 @@ void CG_SaberCompWork(vec3_t start, vec3_t end, centity_t *owner, int saberNum, 
 										}
 									}
 								}
-								CG_AddGhoul2Mark(markShader, flrand(3.0f, 4.0f),
+								CG_AddGhoul2Mark(markShader, Q_flrand(3.0f, 4.0f),
 									trace.endpos, ePos, trace.entityNum, trEnt->lerpOrigin, trEnt->lerpAngles[YAW],
 									trEnt->ghoul2, trEnt->modelScale, Q_irand(5000, 10000));
 								if ( weaponMarkShader )
 								{
 									vec3_t splashBackDir;
 									VectorScale( ePos, -1 , splashBackDir );
-									CG_AddGhoul2Mark(weaponMarkShader, flrand(0.5f, 2.0f),
+									CG_AddGhoul2Mark(weaponMarkShader, Q_flrand(0.5f, 2.0f),
 										trace.endpos, splashBackDir, owner->currentState.clientNum, owner->lerpOrigin, owner->lerpAngles[YAW],
 										owner->ghoul2, owner->modelScale, Q_irand(5000, 10000));
 								}

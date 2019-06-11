@@ -1475,8 +1475,8 @@ static int G2_Set_Bone_Angles_Rag(
 					int k;
 					for (k=0;k<3;k++)
 					{
-						float scalar=flrand(-1.0f,1.0f);
-						scalar*=flrand(-1.0f,1.0f)*flrand(-1.0f,1.0f);
+						float scalar=Q_flrand(-1.0f,1.0f);
+						scalar*=Q_flrand(-1.0f,1.0f)*Q_flrand(-1.0f,1.0f);
 						// this is a heavily central distribution
 						// center it on .5 (and make it small)
 						scalar*=0.5f;
@@ -2131,9 +2131,9 @@ void G2_SetRagDollBullet(CGhoul2Info &ghoul2,const vec3_t rayStart,const vec3_t 
 					lenr=1.0f/len;
 					float effect=lenr;
 					effect*=magicFactor13*effect; // this is cubed, one of them is absorbed by the next calc
-					bone.velocityEffector[0]=shotDir[0]*(effect+flrand(0.0f,0.05f));
-					bone.velocityEffector[1]=shotDir[1]*(effect+flrand(0.0f,0.05f));
-					bone.velocityEffector[2]=fabs(shotDir[2])*(effect+flrand(0.0f,0.05f));
+					bone.velocityEffector[0]=shotDir[0]*(effect+Q_flrand(0.0f,0.05f));
+					bone.velocityEffector[1]=shotDir[1]*(effect+Q_flrand(0.0f,0.05f));
+					bone.velocityEffector[2]=fabs(shotDir[2])*(effect+Q_flrand(0.0f,0.05f));
 //					bone.velocityEffector[0]=shotDir[0]*(effect+flrand(0.0f,0.05f))*flrand(-0.1f,3.0f);
 //					bone.velocityEffector[1]=shotDir[1]*(effect+flrand(0.0f,0.05f))*flrand(-0.1f,3.0f);
 //					bone.velocityEffector[2]=fabs(shotDir[2])*(effect+flrand(0.0f,0.05f))*flrand(-0.1f,3.0f);
@@ -4046,7 +4046,7 @@ static bool G2_RagDollSettlePositionNumeroTrois(CGhoul2Info_v &ghoul2V, const ve
 			}
 
 			e.desiredDirection[k] += (velocityMultiplier * bone.velocityEffector[k]);
-			e.desiredDirection[k] += (flrand(-0.75f, 0.75f) * flrand(-0.75f, 0.75f));
+			e.desiredDirection[k] += (Q_flrand(-0.75f, 0.75f) * Q_flrand(-0.75f, 0.75f));
 
 			bone.velocityEffector[k] *= velocityDampening;
 		}
@@ -4407,7 +4407,7 @@ static void G2_IKReposition(const vec3_t currentOrg,CRagDollUpdateParams *params
 		{
 			e.desiredDirection[k]=bone.ikPosition[k]-e.currentOrigin[k];
 			e.desiredDirection[k]+=magicFactor16*bone.velocityEffector[k];
-			e.desiredDirection[k]+=flrand(-0.75f,0.75f)*flrand(-0.75f,0.75f);
+			e.desiredDirection[k]+=Q_flrand(-0.75f,0.75f)*Q_flrand(-0.75f,0.75f);
 			bone.velocityEffector[k]*=magicFactor12;
 		}
 		VectorCopy(e.currentOrigin,bone.lastPosition); // last arg is dest

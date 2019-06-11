@@ -1878,23 +1878,23 @@ void CG_FireWeapon( centity_t *cent, qboolean altFire ) {
 			{
 				if (!cg.renderingThirdPerson )//gives an advantage to being in 3rd person, but would look silly otherwise
 				{//kick the view back
-					cg.kick_angles[PITCH] = flrand( -10, -15 );
+					cg.kick_angles[PITCH] = Q_flrand( -10, -15 );
 					cg.kick_time = cg.time;
 				}
 			}
 			else if (ent->weapon == WP_ROCKET_LAUNCHER)
 			{
-				CGCam_Shake(flrand(2, 3), 350);
+				CGCam_Shake(Q_flrand(2, 3), 350);
 			}
 			else if (ent->weapon == WP_REPEATER)
 			{
-				CGCam_Shake(flrand(2, 3), 350);
+				CGCam_Shake(Q_flrand(2, 3), 350);
 			}
 			else if (ent->weapon == WP_FLECHETTE)
 			{
 				if (altFire)
 				{
-					CGCam_Shake(flrand(2, 3), 350);
+					CGCam_Shake(Q_flrand(2, 3), 350);
 				}
 				else
 				{

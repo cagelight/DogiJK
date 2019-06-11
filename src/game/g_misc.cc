@@ -2984,8 +2984,8 @@ void misc_faller_create( gentity_t *ent, gentity_t *other, gentity_t *activator 
 
 	faller->touch = faller_touch;
 
-	faller->epVelocity[0] = flrand(-256.0f, 256.0f);
-	faller->epVelocity[1] = flrand(-256.0f, 256.0f);
+	faller->epVelocity[0] = Q_flrand(-256.0f, 256.0f);
+	faller->epVelocity[1] = Q_flrand(-256.0f, 256.0f);
 
 	trap->LinkEntity((sharedEntity_t *)faller);
 }

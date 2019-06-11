@@ -104,7 +104,7 @@ localEntity_t *CG_SmokePuff( const vec3_t p, const vec3_t vel,
 				   int fadeInTime,
 				   int leFlags,
 				   qhandle_t hShader ) {
-	static int	seed = 0x92;
+	static int32_t seed = 0x92;
 	localEntity_t	*le;
 	refEntity_t		*re;
 //	int fadeInTime = startTime + duration / 2;
@@ -114,7 +114,7 @@ localEntity_t *CG_SmokePuff( const vec3_t p, const vec3_t vel,
 	le->radius = radius;
 
 	re = &le->refEntity;
-	re->rotation = Q_random( &seed ) * 360;
+	re->rotation = Q_random( seed ) * 360;
 	re->radius = radius;
 	re->shaderTime = startTime / 1000.0f;
 
@@ -380,7 +380,7 @@ static void CG_CalcBiLerp( vec3_t verts[4], vec3_t subVerts[4], vec2_t uv[4] )
 	VectorMA( temp,			uv[3][1],			subVerts[3], subVerts[3] );
 }
 // bilinear
-//f(p',q') = (1 - y) × {[(1 - x) × f(p,q)] + [x × f(p,q+1)]} + y × {[(1 - x) × f(p+1,q)] + [x × f(p+1,q+1)]}.
+//f(p',q') = (1 - y)   {[(1 - x)   f(p,q)] + [x   f(p,q+1)]} + y   {[(1 - x)   f(p+1,q)] + [x   f(p+1,q+1)]}.
 
 
 static void CG_CalcHeightWidth( vec3_t verts[4], float *height, float *width )
@@ -959,7 +959,7 @@ void CG_Chunks( int owner, vec3_t origin, const vec3_t normal, const vec3_t mins
 			// Move out from center of thing, otherwise you can end up things moving across the brush in an undesirable direction.  Visually looks wrong
 			VectorSubtract( re->origin, origin, dir );
 			VectorNormalize( dir );
-			VectorScale( dir, flrand( speed * 0.5f, speed * 1.25f ) * speedMod, le->pos.trDelta );
+			VectorScale( dir, Q_flrand( speed * 0.5f, speed * 1.25f ) * speedMod, le->pos.trDelta );
 
 			// Angular Velocity
 			VectorSet( le->angles.trBase, Q_flrand(0.0f, 1.0f) * 360, Q_flrand(0.0f, 1.0f) * 360, Q_flrand(0.0f, 1.0f) * 360 );
@@ -979,7 +979,7 @@ void CG_Chunks( int owner, vec3_t origin, const vec3_t normal, const vec3_t mins
 			le->leBounceSoundType = bounce;
 
 			// Make sure that we have the desired start size set
-			le->radius = flrand( baseScale * 0.75f, baseScale * 1.25f );
+			le->radius = Q_flrand( baseScale * 0.75f, baseScale * 1.25f );
 			re->nonNormalizedAxes = qtrue;
 			AxisCopy( axisDefault, re->axis ); // could do an angles to axis, but this is cheaper and works ok
 			for( k = 0; k < 3; k++ )

@@ -84,7 +84,7 @@ public:
 
 	void	AddHandle( int item )	{ mMediaList.push_back( item );	}
 	int		GetHandle()				{ if (mMediaList.size()==0) {return 0;}
-										else {return mMediaList[irand(0,(int)mMediaList.size()-1)];} }
+										else {return mMediaList[Q_irand(0,(int)mMediaList.size()-1)];} }
 
 	CMediaHandles &operator=(const CMediaHandles &that );
 };
@@ -115,10 +115,10 @@ public:
 	inline float	GetMax(void) const				{ return mMax; }
 	inline float	GetMin(void) const				{ return mMin; }
 	inline float	GetVal(float fraction) const	{ if(mMin != mMax) { return mMin + fraction * (mMax - mMin); } else { return mMin; } }
-	inline float	GetVal(void) const	 			{ if(mMin != mMax) { return flrand(mMin,mMax); } else { return mMin; } }
+	inline float	GetVal(void) const	 			{ if(mMin != mMax) { return Q_flrand(mMin,mMax); } else { return mMin; } }
 
 	inline int		GetRoundedVal() const			{if(mMin == mMax){return (int)mMin;}
-														return (int)(flrand(mMin, mMax) + 0.5f);}
+														return (int)(Q_flrand(mMin, mMax) + 0.5f);}
 
 	bool operator==(const CFxRange &rhs) const		{ return ((mMin == rhs.mMin) &&	(mMax == rhs.mMax)); }
 };

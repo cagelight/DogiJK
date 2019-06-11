@@ -79,9 +79,9 @@ const char *GetStringForID( stringID_table_t *table, int id )
 COM_SkipPath
 ============
 */
-char *COM_SkipPath (char *pathname)
+char const * COM_SkipPath (char const * pathname)
 {
-	char	*last;
+	char const* last;
 
 	last = pathname;
 	while (*pathname)

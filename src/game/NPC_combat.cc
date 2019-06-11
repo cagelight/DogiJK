@@ -2184,7 +2184,7 @@ qboolean NPC_CheckAttack (float scale)
 	if(!scale)
 		scale = 1.0;
 
-	if(((float)NPCS.NPCInfo->stats.aggression) * scale < flrand(0, 4))
+	if(((float)NPCS.NPCInfo->stats.aggression) * scale < Q_flrand(0, 4))
 	{
 		return qfalse;
 	}

@@ -395,7 +395,7 @@ qboolean NPC_UpdateAngles ( qboolean doPitch, qboolean doYaw )
 					//Snap to
 					if(fabs(error) > 10)
 					{
-						if(Q_flrand(0.0f, 1.0f) > 0.6)
+						if(Q_Q_flrand(0.0f, 1.0f) > 0.6)
 						{
 							doSound = qtrue;
 						}
@@ -469,7 +469,7 @@ qboolean NPC_UpdateAngles ( qboolean doPitch, qboolean doYaw )
 					//Snap to
 					if(fabs(error) > 10)
 					{
-						if(Q_flrand(0.0f, 1.0f) > 0.6)
+						if(Q_Q_flrand(0.0f, 1.0f) > 0.6)
 						{
 							doSound = qtrue;
 						}
@@ -544,11 +544,11 @@ void NPC_AimWiggle( vec3_t enemy_org )
 	//NOTE: yes, I know this looks weird, but it works
 	if ( NPCS.NPCInfo->aimErrorDebounceTime < level.time )
 	{
-		NPCS.NPCInfo->aimOfs[0] = 0.3*flrand(NPCS.NPC->enemy->r.mins[0], NPCS.NPC->enemy->r.maxs[0]);
-		NPCS.NPCInfo->aimOfs[1] = 0.3*flrand(NPCS.NPC->enemy->r.mins[1], NPCS.NPC->enemy->r.maxs[1]);
+		NPCS.NPCInfo->aimOfs[0] = 0.3*Q_flrand(NPCS.NPC->enemy->r.mins[0], NPCS.NPC->enemy->r.maxs[0]);
+		NPCS.NPCInfo->aimOfs[1] = 0.3*Q_flrand(NPCS.NPC->enemy->r.mins[1], NPCS.NPC->enemy->r.maxs[1]);
 		if ( NPCS.NPC->enemy->r.maxs[2] > 0 )
 		{
-			NPCS.NPCInfo->aimOfs[2] = NPCS.NPC->enemy->r.maxs[2]*flrand(0.0f, -1.0f);
+			NPCS.NPCInfo->aimOfs[2] = NPCS.NPC->enemy->r.maxs[2]*Q_flrand(0.0f, -1.0f);
 		}
 	}
 	VectorAdd( enemy_org, NPCS.NPCInfo->aimOfs, enemy_org );
@@ -595,7 +595,7 @@ qboolean NPC_UpdateFiringAngles ( qboolean doPitch, qboolean doYaw )
 	if( doYaw )
 	{
 		// add yaw error based on NPCInfo->aim value
-		error = ((float)(6 - NPCInfo->stats.aim)) * flrand(-1, 1);
+		error = ((float)(6 - NPCInfo->stats.aim)) * Q_flrand(-1, 1);
 
 		if(Q_irand(0, 1))
 			error *= -1;
@@ -611,7 +611,7 @@ qboolean NPC_UpdateFiringAngles ( qboolean doPitch, qboolean doYaw )
 	if( doPitch )
 	{
 		// add pitch error based on NPCInfo->aim value
-		error = ((float)(6 - NPCInfo->stats.aim)) * flrand(-1, 1);
+		error = ((float)(6 - NPCInfo->stats.aim)) * Q_flrand(-1, 1);
 
 		diff = AngleDelta ( NPC->client->ps.viewangles[PITCH], targetPitch );
 
@@ -659,11 +659,11 @@ qboolean NPC_UpdateFiringAngles ( qboolean doPitch, qboolean doYaw )
 	{
 		if ( Q_irand(0, 1 ) )
 		{
-			NPCS.NPCInfo->lastAimErrorYaw = ((float)(6 - NPCS.NPCInfo->stats.aim)) * flrand(-1, 1);
+			NPCS.NPCInfo->lastAimErrorYaw = ((float)(6 - NPCS.NPCInfo->stats.aim)) * Q_flrand(-1, 1);
 		}
 		if ( Q_irand(0, 1 ) )
 		{
-			NPCS.NPCInfo->lastAimErrorPitch = ((float)(6 - NPCS.NPCInfo->stats.aim)) * flrand(-1, 1);
+			NPCS.NPCInfo->lastAimErrorPitch = ((float)(6 - NPCS.NPCInfo->stats.aim)) * Q_flrand(-1, 1);
 		}
 		NPCS.NPCInfo->aimErrorDebounceTime = level.time + Q_irand(250, 2000);
 	}
@@ -1534,8 +1534,8 @@ qboolean NPC_FacePosition( vec3_t position, qboolean doPitch )
 	if ( NPCS.NPC->enemy && NPCS.NPC->enemy->client && NPCS.NPC->enemy->client->NPC_class == CLASS_ATST )
 	{
 		// FIXME: this is kind of dumb, but it was the easiest way to get it to look sort of ok
-		NPCS.NPCInfo->desiredYaw	+= flrand( -5, 5 ) + sin( level.time * 0.004f ) * 7;
-		NPCS.NPCInfo->desiredPitch += flrand( -2, 2 );
+		NPCS.NPCInfo->desiredYaw	+= Q_flrand( -5, 5 ) + sin( level.time * 0.004f ) * 7;
+		NPCS.NPCInfo->desiredPitch += Q_flrand( -2, 2 );
 	}
 	//Face that yaw
 	NPC_UpdateAngles( qtrue, qtrue );

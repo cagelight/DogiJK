@@ -85,7 +85,7 @@ void Seeker_MaintainHeight( void )
 			TIMER_Set( NPCS.NPC,"heightChange",Q_irand( 1000, 3000 ));
 
 			// Find the height difference
-			dif = (NPCS.NPC->enemy->r.currentOrigin[2] +  flrand( NPCS.NPC->enemy->r.maxs[2]/2, NPCS.NPC->enemy->r.maxs[2]+8 )) - NPCS.NPC->r.currentOrigin[2];
+			dif = (NPCS.NPC->enemy->r.currentOrigin[2] +  Q_flrand( NPCS.NPC->enemy->r.maxs[2]/2, NPCS.NPC->enemy->r.maxs[2]+8 )) - NPCS.NPC->r.currentOrigin[2];
 
 			difFactor = 1.0f;
 			if ( NPCS.NPC->client->NPC_class == CLASS_BOBAFETT )
@@ -108,7 +108,7 @@ void Seeker_MaintainHeight( void )
 			}
 			if ( NPCS.NPC->client->NPC_class == CLASS_BOBAFETT )
 			{
-				NPCS.NPC->client->ps.velocity[2] *= flrand( 0.85f, 3.0f );
+				NPCS.NPC->client->ps.velocity[2] *= Q_flrand( 0.85f, 3.0f );
 			}
 		}
 	}

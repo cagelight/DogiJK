@@ -46,6 +46,7 @@ def configure(ctx):
 	if ctx.env.BUILD_CLIENT:
 		ctx.check(features='c cprogram', lib='jpeg', uselib_store='JPEG')
 		ctx.check(features='c cprogram', lib='png', uselib_store='PNG')
+		ctx.check(features='c cprogram', lib='webp', uselib_store='WEBP')
 		ctx.check_cfg(path='sdl2-config', args='--cflags --libs', package='', uselib_store='SDL')
 	
 	ctx.check_cfg(path='pkg-config', args='--cflags --libs', package='bullet', uselib_store='BULLET')
@@ -236,7 +237,7 @@ def build(bld):
 			target = 'rd-vanilla',
 			includes = ['src', 'src/rd-vanilla'],
 			source = rdvan_files,
-			uselib = ['JPEG', 'PNG', 'PTHREAD'],
+			uselib = ['JPEG', 'PNG', 'WEBP', 'PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)
 		
@@ -245,7 +246,7 @@ def build(bld):
 	# RD-HOWLER
 	if build_rdvan:
 	
-		howler_files = bld.path.ant_glob('src/rd-howler/*.cc')
+		howler_files = bld.path.ant_glob('src/rd-howler/**/*.cc')
 		howler_files += bld.path.ant_glob('src/rd-common/*.cc')
 		howler_files += bld.path.ant_glob('src/qcommon/matcomp.cc')
 		howler_files += bld.path.ant_glob('src/qcommon/q_shared.cc')
@@ -257,7 +258,7 @@ def build(bld):
 			target = 'rd-howler',
 			includes = ['src', 'src/rd-howler'],
 			source = howler_files,
-			uselib = ['JPEG', 'PNG', 'PTHREAD'],
+			uselib = ['JPEG', 'PNG', 'WEBP', 'PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)
 		
@@ -278,7 +279,7 @@ def build(bld):
 			target = 'rd-executor',
 			includes = ['src', 'src/rd-executor'],
 			source = howler_files,
-			uselib = ['JPEG', 'PNG', 'PTHREAD'],
+			uselib = ['JPEG', 'PNG', 'WEBP', 'PTHREAD'],
 			install_path = os.path.join(top, 'install')
 		)
 		

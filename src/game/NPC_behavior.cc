@@ -1080,7 +1080,7 @@ void NPC_BSSearch (void)
 						trap->Nav_GetNodePosition( nextWp, branchPos );
 
 						VectorSubtract( branchPos, NPCS.NPCInfo->tempGoal->r.currentOrigin, lookDir );
-						NPCS.NPCInfo->desiredYaw = AngleNormalize360( vectoyaw( lookDir ) + flrand( -45, 45 ) );
+						NPCS.NPCInfo->desiredYaw = AngleNormalize360( vectoyaw( lookDir ) + Q_flrand( -45, 45 ) );
 					}
 
 					//pick an angle +-45 degrees off of the dir of a random branch
@@ -1091,7 +1091,7 @@ void NPC_BSSearch (void)
 
 					//VectorSubtract( waypoints[nextWp].origin, NPCInfo->tempGoal->r.currentOrigin, lookDir );
 					//Look in that direction +- 45 degrees
-					//NPCInfo->desiredYaw = AngleNormalize360( vectoyaw( lookDir ) + Q_flrand( -45, 45 ) );
+					//NPCInfo->desiredYaw = AngleNormalize360( vectoyaw( lookDir ) + Q_Q_flrand( -45, 45 ) );
 				}
 			}
 			//Com_Printf(".");
@@ -1274,7 +1274,7 @@ void NPC_BSWander (void)
 						trap->Nav_GetNodePosition( nextWp, branchPos );
 
 						VectorSubtract( branchPos, NPCS.NPCInfo->tempGoal->r.currentOrigin, lookDir );
-						NPCS.NPCInfo->desiredYaw = AngleNormalize360( vectoyaw( lookDir ) + flrand( -45, 45 ) );
+						NPCS.NPCInfo->desiredYaw = AngleNormalize360( vectoyaw( lookDir ) + Q_flrand( -45, 45 ) );
 					}
 				}
 			}
@@ -1523,7 +1523,7 @@ void NPC_BSFlee( void )
 
 					VectorSubtract( branchPos, NPCS.NPC->r.currentOrigin, runDir );
 					VectorNormalize( runDir );
-					if ( DotProduct( runDir, dangerDir ) > flrand( 0, 0.5 ) )
+					if ( DotProduct( runDir, dangerDir ) > Q_flrand( 0, 0.5 ) )
 					{//don't run toward danger
 						continue;
 					}

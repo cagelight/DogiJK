@@ -308,8 +308,8 @@ void Rancor_Swing( qboolean tryGrab )
 				VectorNormalize( pushDir );
 				*/
 				VectorCopy( NPCS.NPC->client->ps.viewangles, angs );
-				angs[YAW] += flrand( 25, 50 );
-				angs[PITCH] = flrand( -25, -15 );
+				angs[YAW] += Q_flrand( 25, 50 );
+				angs[PITCH] = Q_flrand( -25, -15 );
 				AngleVectors( angs, pushDir, NULL, NULL );
 				if ( radiusEnt->client->NPC_class != CLASS_RANCOR
 					&& radiusEnt->client->NPC_class != CLASS_ATST )

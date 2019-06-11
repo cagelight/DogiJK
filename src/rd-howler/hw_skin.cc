@@ -1,5 +1,5 @@
-#include "ex_local.hh"
-using namespace executor;
+#include "hw_local.hh"
+using namespace howler;
 
 static char const * CommaParse( char **data_p ) {
 	int c = 0, len;
@@ -149,10 +149,8 @@ static bool setup_skin( q3skin & q3s, char const * path, bool server )
 
 		Q_strncpyz( surf.name, surfName, sizeof( surf.name ) );
 
-		/* FIXME FIXME FIXME
-		if (!server) surf.shader = r->shader_register(token, true)->index;
-		else surf.shader = 0;
-		*/
+		if (!server) surf.shader = hw_inst->shaders.reg(token, true);
+		else surf.shader = nullptr;
 		
 		q3s.skin.numSurfaces++;
 	}
