@@ -68,6 +68,12 @@ q3basemodel_ptr instance::model_registry::reg(char const * name, bool server) {
 	return mod;
 }
 
+void instance::model_registry::reg(q3basemodel_ptr ptr) {
+	ptr->base.index = models.size();
+	models.push_back(ptr);
+	lookup[ptr->base.name] = ptr;
+}
+
 q3basemodel_ptr instance::model_registry::get(qhandle_t h) {
 	if (h < 0 || h >= static_cast<int32_t>(models.size())) return nullptr;
 	return models[h];

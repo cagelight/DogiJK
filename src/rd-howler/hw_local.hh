@@ -28,8 +28,10 @@ namespace howler {
 	
 	static constexpr GLint LAYOUT_VERTEX = 0;
 	static constexpr GLint LAYOUT_UV = 1;
-	static constexpr GLint LAYOUT_LIGHTMAP_UV = 2;
-	static constexpr GLint LAYOUT_LIGHTMAP_STYLE = 3;
+	static constexpr GLint LAYOUT_VERTEX_COLOR = 2;
+	static constexpr GLint LAYOUT_LIGHTMAP_DATA = 3;
+	static constexpr GLint LAYOUT_LIGHTMAP_STYLE = 4;
+	static constexpr GLint LAYOUT_LIGHTMAP_MODE = 5;
 	
 	static constexpr GLint BINDING_DIFFUSE = 0;
 	static constexpr GLint BINDING_LIGHTMAP = 1;
@@ -39,8 +41,16 @@ namespace howler {
 	static constexpr uint_fast32_t LIGHTMAP_PIXELS = LIGHTMAP_DIM * LIGHTMAP_DIM;
 	static constexpr uint_fast32_t LIGHTMAP_BYTES = LIGHTMAP_PIXELS * 3;
 	
-	using lightmap_uvs_t = std::array<qm::vec2_t, LIGHTMAP_NUM>;
+	static constexpr uint8_t LIGHTMAP_MODE_NONE = 0;
+	static constexpr uint8_t LIGHTMAP_MODE_MAP = 1;
+	static constexpr uint8_t LIGHTMAP_MODE_VERTEX = 2;
+	static constexpr uint8_t LIGHTMAP_MODE_WHITEIMAGE = 3;
+	
+	using vertex_colors_t = qm::vec3_t;
+	
+	using lightmap_data_t = std::array<qm::vec3_t, LIGHTMAP_NUM>; /* UVs or color */
 	using lightmap_styles_t = std::array<uint8_t, LIGHTMAP_NUM>;
+	using lightmap_modes_t = std::array<uint8_t, LIGHTMAP_NUM>;
 	
 //================================================================
 // MODELS & MESHES
@@ -82,13 +92,21 @@ namespace howler {
 		inline void upload_uvs(qm::vec2_t const * ptr, size_t num) { upload_uvs(reinterpret_cast<float const *>(ptr), num * 2); }
 		template <typename T> inline void upload_uvs(T const & v) { upload_uvs(v.data(), v.size()); }
 		
-		void upload_lightmap_uvs(float const *, size_t);
-		inline void upload_lightmap_uvs(lightmap_uvs_t const * ptr, size_t num) { upload_lightmap_uvs(reinterpret_cast<float const *>(ptr), num * 8); }
-		template <typename T> inline void upload_lightmap_uvs(T const & v) { upload_lightmap_uvs(v.data(), v.size()); }
+		void upload_vertex_colors(float const *, size_t);
+		inline void upload_vertex_colors(vertex_colors_t const * ptr, size_t num) { upload_vertex_colors(reinterpret_cast<float const *>(ptr), num * 3); }
+		template <typename T> inline void upload_vertex_colors(T const & v) { upload_vertex_colors(v.data(), v.size()); }
 		
-		void upload_lightmap_styles(uint8_t const *, size_t);
-		inline void upload_lightmap_styles(lightmap_styles_t const * ptr, size_t num) { upload_lightmap_styles(reinterpret_cast<uint8_t const *>(ptr), num * 4); }
+		void upload_lightmap_data(float const *, size_t);
+		inline void upload_lightmap_data(lightmap_data_t const * ptr, size_t num) { upload_lightmap_data(reinterpret_cast<float const *>(ptr), num * 12); }
+		template <typename T> inline void upload_lightmap_data(T const & v) { upload_lightmap_data(v.data(), v.size()); }
+		
+		void upload_lightmap_styles(float const *, size_t);
+		inline void upload_lightmap_styles(lightmap_styles_t const * ptr, size_t num) { upload_lightmap_styles(reinterpret_cast<float const *>(ptr), num * 4); }
 		template <typename T> inline void upload_lightmap_styles(T const & v) { upload_lightmap_styles(v.data(), v.size()); }
+		
+		void upload_lightmap_modes(float const *, size_t);
+		inline void upload_lightmap_modes(lightmap_modes_t const * ptr, size_t num) { upload_lightmap_modes(reinterpret_cast<float const *>(ptr), num * 4); }
+		template <typename T> inline void upload_lightmap_modes(T const & v) { upload_lightmap_modes(v.data(), v.size()); }
 		
 		void bind();
 		void draw();
@@ -98,7 +116,7 @@ namespace howler {
 		static q3mesh_ptr generate_unitquad();
 	private:
 		static GLuint bound_handle;
-		static constexpr size_t num_vbos = 4;
+		static constexpr size_t num_vbos = 6;
 		
 		GLuint m_handle = 0;
 		GLuint m_vbos[num_vbos] {};
@@ -264,10 +282,11 @@ namespace howler {
 		enum struct gen_type {
 			none,
 			identity,
-			identity_lighting,
 			constant,
 			vertex,
+			vertex_exact,
 			wave,
+			diffuse_lighting,
 		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
 		
 		struct {
@@ -386,12 +405,15 @@ namespace howler {
 		bool modified;
 	};
 	
+	inline void upload_bool(GLint location, bool const & value) { glUniform1i(location, value); }
+	using uniform_bool = uniform<bool, upload_bool>;
+	inline void upload_float(GLint location, float const & value) { glUniform1f(location, value); }
+	using uniform_float = uniform<float, upload_float>;
 	inline void upload_vec4(GLint location, qm::vec4_t const & value) { glUniform4fv(location, 1, value); }
 	using uniform_vec4 = uniform<qm::vec4_t, upload_vec4>;
 	inline void upload_mat3(GLint location, qm::mat3_t const & value) { glUniformMatrix3fv(location, 1, GL_FALSE, value); }
 	using uniform_mat3 = uniform<qm::mat3_t, upload_mat3>;
 	inline void upload_mat4(GLint location, qm::mat4_t const & value) { glUniformMatrix4fv(location, 1, GL_FALSE, value); }
-	
 	using uniform_mat4 = uniform<qm::mat4_t, upload_mat4>;
 	
 	namespace programs {
@@ -399,20 +421,42 @@ namespace howler {
 			q3main();
 			~q3main() = default;
 			
+			void time(float const &);
 			void mvp(qm::mat4_t const &);
 			void uvm(qm::mat3_t const &);
 			void color(qm::vec4_t const &);
+			void use_vertex_colors(bool const &);
+			void turb(bool const &);
+			void turb_data(q3stage::tx_turb const &);
 		protected:
 			virtual void on_bind() override;
 		private:
+			uniform_float m_time = 0;
 			uniform_mat4 m_mvp = qm::mat4_t::identity();
 			uniform_mat3 m_uv = qm::mat3_t::identity();
 			uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
+			uniform_bool m_use_vertex_colors = false;
+			
+			uniform_bool m_turb = false;
+			uniform_vec4 m_turb_data = qm::vec4_t {0, 0, 0, 0};
 		};
 		
 		struct q3lightmap : public q3program {
 			q3lightmap();
 			~q3lightmap() = default;
+			
+			void mvp(qm::mat4_t const &);
+			void color(qm::vec4_t const &);
+		protected:
+			virtual void on_bind() override;
+		private:
+			uniform_mat4 m_mvp = qm::mat4_t::identity();
+			uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
+		};
+		
+		struct q3vertexlit : public q3program {
+			q3vertexlit();
+			~q3vertexlit() = default;
 			
 			void mvp(qm::mat4_t const &);
 			void color(qm::vec4_t const &);
@@ -498,7 +542,7 @@ namespace howler {
 	};
 	
 //================================================================
-// INSTANCE
+// WORLD
 //================================================================
 	
 	struct q3world {
@@ -528,25 +572,74 @@ namespace howler {
 		};
 		template <typename T> T const * base(size_t offs) const { return reinterpret_cast<T const *>(m_base + offs); }
 		
+		//================================
+		// PROTO
+		//================================
+		
 		struct q3protosurface {
 			std::vector<qm::vec3_t> verticies;
 			std::vector<qm::vec2_t> uvs;
-			std::vector<lightmap_uvs_t> lightmap_uvs;
+			std::vector<vertex_colors_t> vertex_colors;
+			std::vector<lightmap_data_t> lightmap_data;
 			std::vector<lightmap_styles_t> lightmap_styles;
+			std::vector<lightmap_modes_t> lightmap_modes; 
 			
 			inline void append(q3protosurface const & other) {
 				verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end());
 				uvs.insert(uvs.end(), other.uvs.begin(), other.uvs.end());
-				lightmap_uvs.insert(lightmap_uvs.end(), other.lightmap_uvs.begin(), other.lightmap_uvs.end());
+				vertex_colors.insert(vertex_colors.end(), other.vertex_colors.begin(), other.vertex_colors.end());
+				lightmap_data.insert(lightmap_data.end(), other.lightmap_data.begin(), other.lightmap_data.end());
 				lightmap_styles.insert(lightmap_styles.end(), other.lightmap_styles.begin(), other.lightmap_styles.end());
+				lightmap_modes.insert(lightmap_modes.end(), other.lightmap_modes.begin(), other.lightmap_modes.end());
+			}
+			
+			inline void upload(q3mesh & mesh) const {
+				mesh.upload_verts(verticies);
+				mesh.upload_uvs(uvs);
+				mesh.upload_vertex_colors(vertex_colors);
+				mesh.upload_lightmap_data(lightmap_data);
+				mesh.upload_lightmap_styles(lightmap_styles);
+				mesh.upload_lightmap_modes(lightmap_modes);
 			}
 		};
+		
+		//================================
+		// PATCH
+		//================================
+		
+		using patch_int_t = int_fast16_t;
+		static constexpr patch_int_t MAX_GRID_SIZE = 65;
+		
+		struct q3patchvert {
+			qm::vec3_t xyz;
+			qm::vec2_t uv;
+			qm::vec3_t normal;
+			qm::vec2_t lm_uvs[4];
+			qm::vec4_t lm_colors[4];
+		};
+		
+		struct q3patchsurface {
+			uint_fast16_t width, height;
+			std::vector<q3patchvert> verts;
+			
+			bool vertex_lit;
+			lightmap_styles_t styles;
+			lightmap_modes_t modes;
+			
+			q3protosurface process();
+		};
+		
+		struct q3patchsubdivider;
+		
+		//================================
 		
 		struct q3worldsurface {
 			dsurface_t const * info;
 			q3shader_ptr shader;
 			q3protosurface proto;
 		};
+		
+		//================================
 		
 		struct q3worldnode {
 			
@@ -567,11 +660,15 @@ namespace howler {
 			std::variant<node_data, leaf_data> data;
 		};
 		
+		//================================
+		
 		struct q3vis {
 			int32_t m_clusters = 0;
 			int32_t m_cluster_bytes = 0;
 			std::vector<byte> m_cluster_data;
 		};
+		
+		//================================
 		
 		// MAP DATA POINTERS
 		dshader_t const * m_shaders;
@@ -589,7 +686,8 @@ namespace howler {
 		std::unique_ptr<q3vis> m_vis = nullptr;
 		//----------------
 		
-		std::unordered_map<int32_t, q3model_ptr> m_vis_cache;
+		//std::unordered_map<int32_t, q3model_ptr> m_vis_cache;
+		std::vector<std::pair<int32_t, q3model_ptr>> m_vis_cache;
 		
 		int32_t m_lockpvs_cluster = -1;
 		q3worldnode const * find_leaf(qm::vec3_t const & coords);
@@ -629,6 +727,8 @@ namespace howler {
 			
 			q3basemodel_ptr reg(char const * name, bool server = false);
 			q3basemodel_ptr get(qhandle_t);
+			
+			void reg(q3basemodel_ptr); // direct register for q3world
 		private:
 			std::unordered_map<istring, q3basemodel_ptr> lookup;
 			std::vector<q3basemodel_ptr> models;
@@ -704,6 +804,8 @@ namespace howler {
 		std::unique_ptr<programs::q3lightmap> q3lmprog = nullptr;
 		
 		q3sampler_ptr main_sampler = nullptr;
+		
+		bool m_ui_draw = false;
 		qm::vec4_t m_shader_color {1, 1, 1, 1};
 		
 		q3mesh_ptr fullquad, unitquad;

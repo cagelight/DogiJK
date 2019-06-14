@@ -144,7 +144,7 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 // STATIC HELPERS
 //================================================================
 
-static std::unordered_map<std::string, GLenum> blendfunc_map = {
+static std::unordered_map<istring, GLenum> blendfunc_map = {
 	{"GL_ONE",						GL_ONE},
 	{"GL_ZERO",						GL_ZERO},
 	{"GL_SRC_COLOR",				GL_SRC_COLOR},
@@ -157,6 +157,12 @@ static std::unordered_map<std::string, GLenum> blendfunc_map = {
 	{"GL_ONE_MINUS_DST_ALPHA",		GL_ONE_MINUS_DST_ALPHA},
 };
 
+static std::unordered_map<istring, std::pair<GLenum, GLenum>> named_blendfunc_map = {
+	{"add",			{GL_ONE, GL_ONE}},
+	{"filter",		{GL_DST_COLOR, GL_ZERO}},
+	{"blend",		{GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA}},
+};
+
 static GLenum blendfunc_str2enum(char const * str) {
 	if (!str) return GL_ONE;
 	auto const & i = blendfunc_map.find(str);
@@ -167,7 +173,7 @@ static GLenum blendfunc_str2enum(char const * str) {
 	else return i->second;
 }
 
-static std::unordered_map<std::string, q3stage::gen_func> genfunc_map = {
+static std::unordered_map<istring, q3stage::gen_func> genfunc_map = {
 	{"sin",					q3stage::gen_func::sine},
 	{"square",				q3stage::gen_func::square},
 	{"triangle",			q3stage::gen_func::triangle},
@@ -237,7 +243,7 @@ static inline q3shader::cull_type parse_cull(char const * name, char const * tok
 
 static std::unordered_map<istring, float> const named_sorts {
 	{"portal", 1.0f},
-	{"portal", 2.0f},
+	{"sky", 2.0f},
 	{"opaque", q3shader::q3sort_opaque},
 	{"decal", 4.0f},
 	{"seeThrough", q3shader::q3sort_seethrough},
@@ -255,7 +261,9 @@ static std::unordered_map<istring, float> const named_sorts {
 static inline float parse_sort(char const * token) {
 	auto s = named_sorts.find(token);
 	if (s != named_sorts.end()) return s->second;
-	return std::strtof(token, nullptr);
+	float v = std::strtof(token, nullptr);
+	if (!v) v = q3shader::q3sort_opaque;
+	return v;
 }
 
 //================================================================
@@ -307,6 +315,10 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 			sort = parse_sort(token);
 			manual_sort = true;
 			SkipRestOfLine(&p);
+		} else if (!Q_stricmp(token, "notc")) {
+			// IGNORED
+		} else if (!Q_stricmp(token, "detail")) {
+			// TODO ???
 		} else if (!Q_stricmpn(token, "qer_", 4) || !Q_stricmpn(token, "q3map_", 6)) {
 			SkipRestOfLine(&p);
 		} else {
@@ -390,10 +402,17 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 		}
 		
 		else if (!Q_stricmp("blendFunc", token)) {
+			
 			token = COM_ParseExt(&sptr, qfalse);
-			stg.blend_src = blendfunc_str2enum(token);
-			token = COM_ParseExt(&sptr, qfalse);
-			stg.blend_dst = blendfunc_str2enum(token);
+			auto iter = named_blendfunc_map.find(token);
+			if (iter != named_blendfunc_map.end()) {
+				stg.blend_src = iter->second.first;
+				stg.blend_dst = iter->second.second;
+			} else {
+				stg.blend_src = blendfunc_str2enum(token);
+				token = COM_ParseExt(&sptr, qfalse);
+				stg.blend_dst = blendfunc_str2enum(token);
+			}
 			stg.blend = true;
 		}
 		
@@ -413,6 +432,8 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				stg.const_color[2] = 1;
 			} else if (!Q_stricmp("vertex", token)) {
 				stg.gen_rgb = q3stage::gen_type::vertex;
+			} else if (!Q_stricmp("exactvertex", token)) {
+				stg.gen_alpha = q3stage::gen_type::vertex_exact;
 			} else if (!Q_stricmp("wave", token)) {
 				stg.gen_rgb = q3stage::gen_type::wave;
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
@@ -445,6 +466,8 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 					continue;
 				}
 				stg.wave.rgb.frequency = strtof(token, nullptr);
+			} else if (!Q_stricmp("lightingDiffuse", token)) {
+				stg.gen_rgb = q3stage::gen_type::diffuse_lighting;
 			} else {
 				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid rgbGen (\"%s\").\n", name.c_str(), token);
 				SkipRestOfLine(&sptr);
@@ -463,6 +486,8 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				stg.const_color[3] = 1;
 			} else if (!Q_stricmp("vertex", token)) {
 				stg.gen_alpha = q3stage::gen_type::vertex;
+			} else if (!Q_stricmp("exactvertex", token)) {
+				stg.gen_alpha = q3stage::gen_type::vertex_exact;
 			} else {
 				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid alphaGen (\"%s\").\n", name.c_str(), token);
 				SkipRestOfLine(&sptr);
@@ -683,12 +708,26 @@ void q3shader::setup_draw() const {
 	}
 }
 
+static inline float Q_fractional(float v) {
+	return v - static_cast<uint_fast64_t>(v);
+}
+
 static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
 	switch (func) {
-		default: 
-			break;
 		case q3stage::gen_func::sine:
-			return base + sin((in + phase) * frequency * qm::pi * 2) * amplitude;
+			return base + std::sin((in + phase) * frequency * qm::pi * 2) * amplitude;
+		case q3stage::gen_func::square:
+			return base + (Q_fractional((in + phase) * frequency) > 0.5f ? 1.0f : -1.0f) * amplitude;
+		case q3stage::gen_func::triangle:
+			return 0; // TODO
+		case q3stage::gen_func::sawtooth:
+			return base + Q_fractional((in + phase) * frequency) * amplitude;
+		case q3stage::gen_func::inverse_sawtooth:
+			return base + (1.0f - Q_fractional((in + phase) * frequency)) * amplitude;
+		case q3stage::gen_func::noise:
+			return 0; // TODO
+		case q3stage::gen_func::random:
+			return base + Q_flrand(0.0f, 1.0f) * amplitude;
 	}
 	return 0;
 }
@@ -702,14 +741,19 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 	
 	hw_inst->main_sampler->wrap(clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	
+	float mult;
+	bool use_vertex_colors = false;
+	
 	qm::vec4_t q3color {1, 1, 1, 1};
 	switch (gen_rgb) {
+		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
+			if (!hw_inst->m_ui_draw) {
+				use_vertex_colors = true;
+				break;
+			} else [[fallthrough]];
 		case q3stage::gen_type::none:
 			q3color = hw_inst->m_shader_color;
-			break;
-		case q3stage::gen_type::identity_lighting: 
-			// TODO
 			break;
 		case q3stage::gen_type::identity:
 			break;
@@ -717,18 +761,21 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			q3color = const_color;
 			break;
 		case q3stage::gen_type::wave:
-			float mult = gen_func_do(wave.rgb.func, time, wave.rgb.base, wave.rgb.amplitude, wave.rgb.phase, wave.rgb.frequency);
+			mult = gen_func_do(wave.rgb.func, time, wave.rgb.base, wave.rgb.amplitude, wave.rgb.phase, wave.rgb.frequency);
 			q3color = const_color * mult;
+			break;
+		case q3stage::gen_type::diffuse_lighting:
+			q3color = {1, 0, 1, 1};
+			// TODO
 			break;
 	}
 	
 	switch (gen_alpha) {
+		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
+			// TODO -- too niche for now
 		case q3stage::gen_type::none:
 			q3color[3] = hw_inst->m_shader_color[3];
-			break;
-		case q3stage::gen_type::identity_lighting: 
-			// TODO
 			break;
 		case q3stage::gen_type::identity:
 			break;
@@ -736,16 +783,23 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			q3color[3] = const_color[3];
 			break;
 		case q3stage::gen_type::wave:
-			float mult = gen_func_do(wave.rgb.func, time, wave.rgb.base, wave.rgb.amplitude, wave.rgb.phase, wave.rgb.frequency);
+			mult = gen_func_do(wave.rgb.func, time, wave.rgb.base, wave.rgb.amplitude, wave.rgb.phase, wave.rgb.frequency);
 			q3color[3] = const_color[3] * mult;
 			break;
+		case q3stage::gen_type::diffuse_lighting: 
+			// TODO
+			break;
 	}
+	
+	bool turb = false;
+	q3stage::tx_turb const * turb_data = nullptr;
 	
 	qm::mat3_t uvm2 = uvm;
 	for (texmod const & tx : texmods) {
 		std::visit(lambda_visit{
 			[&](tx_turb const & value){
-				// TODO
+				turb = true;
+				turb_data = &value;
 			},
 			[&](tx_scale const & value){
 				uvm2 *= qm::mat3_t::scale(value.value[0], value.value[1]);
@@ -754,7 +808,11 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 				uvm2 *= qm::mat3_t::translate(value.value[0] * time, value.value[1] * time);
 			},
 			[&](tx_stretch const & value){
-				// TODO
+				float p = 1.0f / gen_func_do(value.gfunc, time, value.base, value.amplitude, value.phase, value.frequency);
+				qm::mat3_t mat = qm::mat3_t::identity();
+				mat[0][0] = mat[1][1] = p;
+				mat[2][0] = mat[2][1] = 0.5f - 0.5f * p;
+				uvm2 *= mat;
 			},
 			[&](tx_transform const & value){
 				uvm2 *= value.matrix;
@@ -770,9 +828,15 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 	switch (mode) {
 		case shading_mode::main:
 			hw_inst->q3mainprog->bind();
+			hw_inst->q3mainprog->time(time);
 			hw_inst->q3mainprog->mvp(mvp);
 			hw_inst->q3mainprog->uvm(uvm2);
 			hw_inst->q3mainprog->color(q3color);
+			hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
+			hw_inst->q3mainprog->turb(turb);
+			if (turb) {
+				hw_inst->q3mainprog->turb_data(*turb_data);
+			}
 			break;
 		case shading_mode::lightmap:
 			hw_inst->q3lmprog->bind();

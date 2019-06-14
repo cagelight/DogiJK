@@ -69,6 +69,7 @@ void instance::end_frame(float time) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
 	
+	m_ui_draw = false;
 	m_shader_color = {1, 1, 1, 1};
 	
 	for (q3scene const & scene : drawframe->scenes) {
@@ -83,17 +84,18 @@ void instance::end_frame(float time) {
 		qm::mat4_t v = qm::mat4_t::translate(-scene.ref.vieworg[1], scene.ref.vieworg[2], -scene.ref.vieworg[0]);
 		qm::quat_t r = qm::quat_t::identity();
 		r *= qm::quat_t { {1, 0, 0}, qm::deg2rad(scene.ref.viewangles[PITCH]) };
-		r *= qm::quat_t { {0, 1, 0}, qm::deg2rad(-scene.ref.viewangles[YAW]) };
 		r *= qm::quat_t { {0, 0, 1}, qm::deg2rad(scene.ref.viewangles[ROLL]) + qm::pi };
+		r *= qm::quat_t { {0, 1, 0}, qm::deg2rad(scene.ref.viewangles[YAW]) };
 		v *= qm::mat4_t { r };
 		qm::mat4_t vp = v * p;
 		
 		std::unordered_map<q3shader_ptr, std::vector<q3drawmesh>> draw_map;
 		
 		if (!(scene.ref.rdflags & RDF_NOWORLDMODEL) && m_world) {
+			qm::mat4_t m = qm::mat4_t::scale(1, -1, 1);
 			// int32_t cluster = std::get<world_t::mapnode_t::leaf_data>(world->point_in_leaf(view_origin)->data).cluster;
 			for (auto const & dmesh : m_world->get_vis_model(scene.ref.vieworg)->meshes) {
-				draw_map[dmesh.first].emplace_back(dmesh.second, vp);
+				draw_map[dmesh.first].emplace_back(dmesh.second, m * vp);
 			}
 		}
 		
@@ -141,6 +143,9 @@ void instance::end_frame(float time) {
 	gl::cull(false);
 	
 	main_sampler->bind(BINDING_DIFFUSE);
+	
+	m_ui_draw = true;
+	m_shader_color = {1, 1, 1, 1};
 	
 	for (auto & c2d : drawframe->c2ds) {
 		std::visit(lambda_visit{

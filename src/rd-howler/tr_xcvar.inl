@@ -38,5 +38,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 XCVAR_DEF( r_lockpvs,					"0",				0,												"" )
 XCVAR_DEF( r_vis,						"1",				0,												"" )
+XCVAR_DEF( r_viscachesize,				"20",				CVAR_ARCHIVE,									"" )
 
 #undef XCVAR_DEF

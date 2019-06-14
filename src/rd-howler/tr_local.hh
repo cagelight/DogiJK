@@ -45,9 +45,11 @@ Ghoul2 Insert End
 
 typedef struct bmodel_s {
 	vec3_t		bounds[2];		// for culling
-	//msurface_t	*firstSurface;
-	//int			numSurfaces;
+	int32_t 	surf_idx;
+	int32_t 	surf_num;
 } bmodel_t;
+
+static_assert(std::is_pod<bmodel_t>());
 
 // for tr_font
 void RE_SetColor ( const float *rgba );

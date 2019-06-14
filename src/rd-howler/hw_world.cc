@@ -57,14 +57,14 @@ q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
 	else
 		m_lockpvs_cluster = cluster;
 	
-	auto cached_model = m_vis_cache.find(cluster);
-	if (cached_model != m_vis_cache.end())
-		return cached_model->second;
+	auto iter = std::find_if(m_vis_cache.begin(), m_vis_cache.end(), [&](auto const & i){return i.first == cluster;});
+	if (iter != m_vis_cache.end()) return iter->second;
 	
-	q3model_ptr & model = m_vis_cache[cluster] = make_q3model();
+	q3model_ptr & model = m_vis_cache.emplace(m_vis_cache.begin(), cluster, make_q3model())->second;
+	
+	if (r_viscachesize->integer > 0 && m_vis_cache.size() > static_cast<unsigned>(r_viscachesize->integer)) m_vis_cache.resize(r_viscachesize->integer);
 	
 	std::unordered_map<q3shader_ptr, q3protosurface> buckets;
-	
 	std::unordered_set<q3worldsurface const *> marked_surfaces;
 	
 	if (cluster >= 0) {
@@ -98,10 +98,7 @@ q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
 	
 	for (auto & [shader, proto] : buckets) {
 		q3mesh_ptr mesh = model->meshes.emplace_back(shader, make_q3mesh()).second;
-		mesh->upload_verts(proto.verticies);
-		mesh->upload_uvs(proto.uvs);
-		mesh->upload_lightmap_uvs(proto.lightmap_uvs);
-		mesh->upload_lightmap_styles(proto.lightmap_styles);
+		proto.upload(*mesh);
 	}
 	
 	return model;
@@ -213,6 +210,38 @@ void q3world::load_fogs() {
 // SURFACES
 //================================================================
 
+static constexpr qm::vec3_t conv_color(byte const * arr) {
+	return qm::vec3_t {
+		static_cast<float>(arr[0]) / 255.0f,
+		static_cast<float>(arr[1]) / 255.0f,
+		static_cast<float>(arr[2]) / 255.0f,
+	};
+}
+
+static constexpr qm::vec4_t conv_color4(byte const * arr) {
+	return qm::vec4_t {
+		static_cast<float>(arr[0]) / 255.0f,
+		static_cast<float>(arr[1]) / 255.0f,
+		static_cast<float>(arr[2]) / 255.0f,
+		static_cast<float>(arr[3]) / 255.0f,
+	};
+}
+
+// IMPORTED FROM RD-VANILLA
+#define LIGHTMAP_2D			-4		// shader is for 2D rendering
+#define LIGHTMAP_BY_VERTEX	-3		// pre-lit triangle models
+#define LIGHTMAP_WHITEIMAGE	-2
+#define	LIGHTMAP_NONE		-1
+// ----
+
+static constexpr uint8_t conv_lm_mode(int32_t lm_idx) {
+	return 1;
+	if (lm_idx >= 0) return LIGHTMAP_MODE_MAP;
+	if (lm_idx == LIGHTMAP_BY_VERTEX) return LIGHTMAP_MODE_VERTEX;
+	if (lm_idx == LIGHTMAP_WHITEIMAGE) return LIGHTMAP_MODE_WHITEIMAGE;
+	else return LIGHTMAP_MODE_NONE;
+}
+
 qm::vec2_t q3world::uv_for_lightmap(int32_t idx, qm::vec2_t uv_in) {
 	int32_t x = idx % m_lightmap_span;
 	int32_t y = idx / m_lightmap_span;
@@ -239,19 +268,35 @@ void q3world::load_surfaces(int32_t idx) {
 		q3worldsurface & surfo = m_surfaces[i];
 		
 		surfo.info = &surfi;
+		
+		lightmap_styles_t lm_styles;
+		memcpy(lm_styles.data(), surfi.lightmapStyles, 4);
+		
 		surfo.shader = hw_inst->shaders.reg(m_shaders[surfi.shaderNum].shader, true, true);
+		
+		bool vertex_lit = false;
+		
 		switch (surfi.surfaceType) {
 			default: break;
 			//================================
+			// BRUSH AND TRIANGLE SOUP
+			//================================
+			case MST_TRIANGLE_SOUP:
+				vertex_lit = true;
+				[[fallthrough]];
 			case MST_PLANAR: {
+				
 				mapVert_t const * surf_verts = dvert + surfi.firstVert;
 				int const * surf_indicies = dindx + surfi.firstIndex;
+				
+				if (conv_lm_mode(surfi.lightmapNum[0]) == LIGHTMAP_MODE_VERTEX)
+					vertex_lit = true;
 				
 				for (int32_t i = 0; i < surfi.numIndexes; i ++) {
 					
 					surfo.proto.verticies.emplace_back(
 						surf_verts[surf_indicies[i]].xyz[1],
-						-surf_verts[surf_indicies[i]].xyz[2],
+						surf_verts[surf_indicies[i]].xyz[2],
 						surf_verts[surf_indicies[i]].xyz[0]
 					);
 					
@@ -260,35 +305,119 @@ void q3world::load_surfaces(int32_t idx) {
 						surf_verts[surf_indicies[i]].st[1]
 					);
 					
-					surfo.proto.lightmap_uvs.emplace_back(
-						lightmap_uvs_t {
-							    uv_for_lightmap( surfi.lightmapNum[0], qm::vec2_t {
-								surf_verts[surf_indicies[i]].lightmap[0][0],
-								surf_verts[surf_indicies[i]].lightmap[0][1]
-							}), uv_for_lightmap( surfi.lightmapNum[1], qm::vec2_t {
-								surf_verts[surf_indicies[i]].lightmap[1][0],
-								surf_verts[surf_indicies[i]].lightmap[1][1]
-							}), uv_for_lightmap( surfi.lightmapNum[2], qm::vec2_t {
-								surf_verts[surf_indicies[i]].lightmap[2][0],
-								surf_verts[surf_indicies[i]].lightmap[2][1]
-							}), uv_for_lightmap( surfi.lightmapNum[3], qm::vec2_t {
-								surf_verts[surf_indicies[i]].lightmap[3][0],
-								surf_verts[surf_indicies[i]].lightmap[3][1]
-							})
-						}
+					if (vertex_lit) {
+						surfo.proto.lightmap_data.emplace_back(
+							lightmap_data_t {
+								conv_color(surf_verts[surf_indicies[i]].color[0]),
+								conv_color(surf_verts[surf_indicies[i]].color[1]),
+								conv_color(surf_verts[surf_indicies[i]].color[2]),
+								conv_color(surf_verts[surf_indicies[i]].color[3]),
+							}
+						);
+					} else {
+						surfo.proto.lightmap_data.emplace_back(
+							lightmap_data_t {
+								qm::vec3_t { 
+									uv_for_lightmap( surfi.lightmapNum[0], qm::vec2_t {
+										surf_verts[surf_indicies[i]].lightmap[0][0],
+										surf_verts[surf_indicies[i]].lightmap[0][1]
+								}), 0},
+								qm::vec3_t {
+									uv_for_lightmap( surfi.lightmapNum[1], qm::vec2_t {
+										surf_verts[surf_indicies[i]].lightmap[1][0],
+										surf_verts[surf_indicies[i]].lightmap[1][1]
+								}), 0},
+								qm::vec3_t {
+									uv_for_lightmap( surfi.lightmapNum[2], qm::vec2_t {
+										surf_verts[surf_indicies[i]].lightmap[2][0],
+										surf_verts[surf_indicies[i]].lightmap[2][1]
+								}), 0},
+								qm::vec3_t {
+									uv_for_lightmap( surfi.lightmapNum[3], qm::vec2_t {
+										surf_verts[surf_indicies[i]].lightmap[3][0],
+										surf_verts[surf_indicies[i]].lightmap[3][1]
+								}), 0}
+							}
+						);
+					}
+					
+					surfo.proto.vertex_colors.emplace_back(
+						conv_color(surf_verts[surf_indicies[i]].color[0])
 					);
 					
 					surfo.proto.lightmap_styles.emplace_back(
 						lightmap_styles_t {
-							surfi.lightmapStyles[0],
-							surfi.lightmapStyles[1],
-							surfi.lightmapStyles[2],
-							surfi.lightmapStyles[3]
+							vertex_lit ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
+							vertex_lit ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
+							vertex_lit ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
+							vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
 						}
 					);
-				} break;
+					
+					surfo.proto.lightmap_modes.emplace_back(
+						lightmap_modes_t {
+							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[0]),
+							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[1]),
+							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[2]),
+							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[3]),
+						}
+					);
+					
+				}
+			} break;
 			//================================
-			}
+			// PATCH MESH SOUP
+			//================================
+			case MST_PATCH: {
+				
+				mapVert_t const * surf_verts = dvert + surfi.firstVert;
+				int32_t num_points = surfi.patchWidth * surfi.patchHeight;
+				
+				q3patchsurface surf;
+				surf.width = surfi.patchWidth;
+				surf.height = surfi.patchHeight;
+				
+				if (conv_lm_mode(surfi.lightmapNum[0]) == LIGHTMAP_MODE_VERTEX)
+					vertex_lit = true;
+				
+				surf.vertex_lit = vertex_lit;
+				
+				surf.styles = lightmap_styles_t {
+					vertex_lit ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
+					vertex_lit ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
+					vertex_lit ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
+					vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
+				};
+				
+				surf.modes = lightmap_modes_t {
+					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[0]),
+					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[1]),
+					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[2]),
+					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[3]),
+				};
+				
+				for (int32_t i = 0; i < num_points; i ++) {
+					surf.verts.emplace_back( q3patchvert {
+						qm::vec3_t {surf_verts[i].xyz[1], surf_verts[i].xyz[2], surf_verts[i].xyz[0]},
+						qm::vec2_t {surf_verts[i].st[0], surf_verts[i].st[1]},
+						qm::vec3_t {surf_verts[i].normal},
+						{
+							uv_for_lightmap(surfi.lightmapNum[0], surf_verts[i].lightmap[0]),
+							uv_for_lightmap(surfi.lightmapNum[1], surf_verts[i].lightmap[1]),
+							uv_for_lightmap(surfi.lightmapNum[2], surf_verts[i].lightmap[2]),
+							uv_for_lightmap(surfi.lightmapNum[3], surf_verts[i].lightmap[3]),
+						}, {
+							conv_color4(surf_verts[i].color[0]),
+							conv_color4(surf_verts[i].color[1]),
+							conv_color4(surf_verts[i].color[2]),
+							conv_color4(surf_verts[i].color[3]),
+						}
+					});
+				}
+				
+				surfo.proto.append(surf.process());
+			} break;
+			//================================
 		}
 	}
 }
@@ -384,6 +513,41 @@ void q3world::load_nodesleafs() {
 
 void q3world::load_submodels() {
 	
+	lump_t const & l = m_header->lumps[LUMP_MODELS];
+	
+	dmodel_t const * dmodels = base<dmodel_t>(l.fileofs);
+	int32_t num_dmodels = l.filelen / sizeof(dmodel_t);
+	
+	for (int32_t i = 0; i < num_dmodels; i++) {
+		
+		dmodel_t const & in = dmodels[i];
+		
+		q3basemodel_ptr mod = make_q3basemodel();
+		
+		mod->buffer.resize(sizeof(bmodel_t));
+		bmodel_t & bmod = *(mod->base.bmodel = reinterpret_cast<bmodel_t *>(mod->buffer.data()));
+		
+		bmod = {};
+		mod->base.type = MOD_BRUSH;
+		
+		VectorCopy(in.mins, bmod.bounds[0]);
+		VectorCopy(in.maxs, bmod.bounds[1]);
+		
+		bmod.surf_idx = in.firstSurface;
+		bmod.surf_num = in.numSurfaces;
+		
+		Com_sprintf( mod->base.name, sizeof( mod->base.name ), "*%d", i);
+		
+		q3model & model = *(mod->model = make_q3model());
+		for (int32_t m = 0; m < bmod.surf_num; m++) {
+			q3worldsurface const & surf = m_surfaces[bmod.surf_idx + m];
+			q3mesh_ptr mesh = make_q3mesh();
+			surf.proto.upload(*mesh);
+			model.meshes.emplace_back(surf.shader, mesh);
+		}
+		
+		hw_inst->models.reg(mod);
+	}
 }
 
 //================================================================

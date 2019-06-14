@@ -11,27 +11,42 @@ static std::string generate_vertex_shader() {
 	#version 450
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
-	layout(location = )GLSL" << LAYOUT_LIGHTMAP_UV << R"GLSL() in vec2 lm_uvs[4];
+	layout(location = )GLSL" << LAYOUT_LIGHTMAP_DATA << R"GLSL() in vec3 lm_data[4];
 	layout(location = )GLSL" << LAYOUT_LIGHTMAP_STYLE << R"GLSL() in uint lm_styles[4];
+	layout(location = )GLSL" << LAYOUT_LIGHTMAP_MODE << R"GLSL() in uint lm_modes[4];
 
 	layout(location = )GLSL" << location_mvp << R"GLSL() uniform mat4 vertex_matrix;
 
 	out vec2 lm_uv[4];
-	out float lm_factor[4];
-	
-	flat out uint lm_style[4];
+	out vec3 lm_col[4];
+	out float lm_uvfactor[4];
+	out float lm_colfactor[4];
 
 	void main() {
 	
-		lm_uv[0] = lm_uvs[0];
-		/*lm_uv[1] = lm_uvs[1];
-		lm_uv[2] = lm_uvs[2];
-		lm_uv[3] = lm_uvs[3];*/
-		
-		lm_factor[0] = lm_styles[0] == 0 ? 1 : 0;
-		/*lm_factor[1] = lm_styles[1] == 0 ? 1 : 0;
-		lm_factor[2] = lm_styles[2] == 0 ? 1 : 0;
-		lm_factor[3] = lm_styles[3] == 0 ? 1 : 0;*/
+		for (uint i = 0; i < 4; i++) {
+			switch (lm_modes[i]) {
+				default:
+					lm_uvfactor[i] = 0;
+					lm_colfactor[i] = 0;
+					break;
+				case 1:
+					lm_uv[i] = lm_data[i].xy;
+					lm_uvfactor[i] = 1;
+					lm_colfactor[i] = 0;
+					break;
+				case 2:
+					lm_col[i] = lm_data[i];
+					lm_uvfactor[i] = 0;
+					lm_colfactor[i] = 1;
+					break;
+				case 3:
+					lm_col[i] = vec3(1, 1, 1);
+					lm_uvfactor[i] = 0;
+					lm_colfactor[i] = 1;
+					break;
+			}
+		}
 		
 		gl_Position = vertex_matrix * vec4(vert, 1);
 	}
@@ -52,18 +67,20 @@ static std::string generate_fragment_shader() {
 	layout(binding = )GLSL" << BINDING_LIGHTMAP << R"GLSL() uniform sampler2D lm;
 	
 	in vec2 lm_uv[4];
-	in float lm_factor[4];
+	in vec3 lm_col[4];
+	in float lm_uvfactor[4];
+	in float lm_colfactor[4];
 	
 	layout(location = 0) out vec4 color;
 	
 	void main() {
 	
-		color = vec4(0, 0, 0, 0);
+		color = vec4(0, 0, 0, 1);
 		
-		color += texture(lm, lm_uv[0]) * lm_factor[0];
-		/*color += texture(lm, lm_uv[1]) * lm_factor[1];
-		color += texture(lm, lm_uv[2]) * lm_factor[2];
-		color += texture(lm, lm_uv[3]) * lm_factor[3];*/
+		for (uint i = 0; i < 4; i++) {
+			color += vec4(texture(lm, lm_uv[i]).xyz * lm_uvfactor[i], 0);
+			//color += vec4(lm_col[i] * lm_colfactor[i], 0);
+		}
 		
 		color *= q3color;
 	}

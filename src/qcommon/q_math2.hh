@@ -40,13 +40,41 @@ namespace qm::meta {
 	
 	template <typename T> struct mat3_t;
 	template <typename T> struct mat4_t;
+	
+	// SIGNAL TRANSFORMS
+	
+	template <typename T>
+	constexpr T pexp(T const & v, T const & e) noexcept {
+		T const ve = std::pow(v, e);
+		return ve / (ve + std::pow(static_cast<T>(1) - v, e));
+	}
+	
+	// LERPS
+	
+	template <typename T, typename V>
+	constexpr T lerp(T const & a, T const & b, V const & v) noexcept {
+		return (static_cast<V>(1) - v) * a + v * b;
+	}
+	
+	template <typename T, typename V>
+	constexpr T plerp(T const & a, T const & b, V const & v, V const & e) noexcept {
+		V const l = pexp<V>(v, e);
+		return (static_cast<V>(1) - l) * a + l * b;
+	}
 }
+
+//================================================================
+//----------------------------------------------------------------
+//================================================================
 
 namespace qm {
 	
 	static constexpr float pi = meta::pi<float>;
 	constexpr float deg2rad(float const & v) { return v * pi / 180.0f; }
 	constexpr float rad2deg(float const & v) { return v / pi * 180.0f; }
+	
+	template <typename T>
+	constexpr T lerp(T const & A, T const & B, float v) { return meta::lerp<T, float>(A, B, v); }
 	
 	template <typename T> constexpr T clamp(T const & value, T const & min, T const & max) {
 		if (value < min) return min;
@@ -97,36 +125,6 @@ namespace qm {
 
 //================================================================
 //----------------------------------------------------------------
-// GENERAL
-//----------------------------------------------------------------
-//================================================================
-
-namespace qm::meta {
-	
-	// SIGNAL TRANSFORMS
-	
-	template <typename T>
-	constexpr T pexp(T const & v, T const & e) noexcept {
-		T const ve = std::pow(v, e);
-		return ve / (ve + std::pow(static_cast<T>(1) - v, e));
-	}
-	
-	// LERPS
-	
-	template <typename T>
-	constexpr T lerp(T const & a, T const & b, T const & v) noexcept {
-		return (static_cast<T>(1) - v) * a + v * b;
-	}
-	
-	template <typename T>
-	constexpr T plerp(T const & a, T const & b, T const & v, T const & e) noexcept {
-		T const l = pexp(v, e);
-		return (static_cast<T>(1) - l) * a + l * b;
-	}
-}
-
-//================================================================
-//----------------------------------------------------------------
 // VEC2_T
 //----------------------------------------------------------------
 //================================================================
@@ -144,6 +142,7 @@ struct qm::meta::vec2_t {
 	constexpr vec2_t(vec2_t &&) noexcept = default;
 	
 	constexpr vec2_t(T const & x, T const & y) noexcept : data { x, y } {}
+	constexpr vec2_t(::vec2_t const & ptr) : data { ptr[0], ptr[1] } {}
 	
 	template <typename U>
 	static vec2_t from(vec2_t<U> const & other) noexcept {
@@ -163,8 +162,12 @@ struct qm::meta::vec2_t {
 	constexpr T * ptr() { return data.data(); }
 	constexpr T const * ptr() const { return data.data(); }
 	
+	constexpr T magnitude_squared() const noexcept {
+		return data[0] * data[0] + data[1] * data[1];
+	}
+	
 	constexpr T magnitude() const noexcept {
-		return std::sqrt(data[0] * data[0] + data[1] * data[1]);
+		return std::sqrt(magnitude_squared());
 	}
 	
 	constexpr T normalize() noexcept {
@@ -246,6 +249,7 @@ struct qm::meta::vec3_t {
 	constexpr vec3_t(vec3_t &&) noexcept = default;
 	
 	constexpr vec3_t(T const & x, T const & y, T const & z) noexcept : data { x, y, z } {}
+	constexpr vec3_t(vec2_t<T> const & v, float const & z) : data { v.data[0], v.data[1], z } {}
 	constexpr vec3_t(::vec3_t const & ptr) : data { ptr[0], ptr[1], ptr[2] } {}
 	
 	template <typename U>
@@ -269,8 +273,12 @@ struct qm::meta::vec3_t {
 	constexpr T * ptr() { return data.data(); }
 	constexpr T const * ptr() const { return data.data(); }
 	
+	constexpr T magnitude_squared() const noexcept {
+		return data[0] * data[0] + data[1] * data[1] + data[2] * data[2];
+	}
+	
 	constexpr T magnitude() const noexcept {
-		return std::sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2]);
+		return std::sqrt(magnitude_squared());
 	}
 	
 	constexpr T normalize() noexcept {
@@ -371,6 +379,7 @@ struct qm::meta::vec4_t {
 	constexpr vec4_t(vec4_t &&) noexcept = default;
 	
 	constexpr vec4_t(T const & x, T const & y, T const & z, T const & w) noexcept : data { x, y, z, w } {}
+	constexpr vec4_t(vec3_t<T> const & v, float const & w) : data { v.data[0], v.data[1], v.data[2], w } {}
 	
 	template <typename U>
 	static vec4_t from(vec4_t<U> const & other) noexcept {
@@ -396,8 +405,12 @@ struct qm::meta::vec4_t {
 	constexpr T * ptr() { return data.data(); }
 	constexpr T const * ptr() const { return data.data(); }
 	
+	constexpr T magnitude_squared() const noexcept {
+		return data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3];
+	}
+	
 	constexpr T magnitude() const noexcept {
-		return std::sqrt(data[0] * data[0] + data[1] * data[1] + data[2] * data[2] + data[3] * data[3]);
+		return std::sqrt(magnitude_squared());
 	}
 	
 	constexpr T normalize() noexcept {
@@ -929,11 +942,18 @@ struct qm::meta::mat4_t {
 
 //================================================================
 //----------------------------------------------------------------
-// CROSS-CLASS OPERATIONS
+// CROSS-CLASS AND REVERSE OPERATIONS
 //----------------------------------------------------------------
 //================================================================
 
 namespace qm::meta {
+	
+	template <typename T> constexpr vec2_t<T> operator + (T const & a, vec2_t<T> const & b) { return b + a; }
+	template <typename T> constexpr vec3_t<T> operator + (T const & a, vec3_t<T> const & b) { return b + a; }
+	template <typename T> constexpr vec4_t<T> operator + (T const & a, vec4_t<T> const & b) { return b + a; }
+	template <typename T> constexpr vec2_t<T> operator * (T const & a, vec2_t<T> const & b) { return b * a; }
+	template <typename T> constexpr vec3_t<T> operator * (T const & a, vec3_t<T> const & b) { return b * a; }
+	template <typename T> constexpr vec4_t<T> operator * (T const & a, vec4_t<T> const & b) { return b * a; }
 	
 	template <typename T> 
 	constexpr vec4_t<T> operator * (vec4_t<T> const & v, mat4_t<T> const & m) noexcept {
