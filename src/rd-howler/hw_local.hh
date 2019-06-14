@@ -114,6 +114,11 @@ namespace howler {
 		
 		static q3mesh_ptr generate_fullquad();
 		static q3mesh_ptr generate_unitquad();
+		
+		#ifdef _DEBUG
+		static size_t m_debug_draw_count;
+		#endif
+		
 	private:
 		static GLuint bound_handle;
 		static constexpr size_t num_vbos = 6;

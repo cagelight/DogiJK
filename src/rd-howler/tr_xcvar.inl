@@ -40,4 +40,8 @@ XCVAR_DEF( r_lockpvs,					"0",				0,												"" )
 XCVAR_DEF( r_vis,						"1",				0,												"" )
 XCVAR_DEF( r_viscachesize,				"20",				CVAR_ARCHIVE,									"" )
 
+#ifdef _DEBUG
+XCVAR_DEF( r_drawcalls,					"0",				0,												"" )
+#endif
+
 #undef XCVAR_DEF

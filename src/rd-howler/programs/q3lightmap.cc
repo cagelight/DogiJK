@@ -79,7 +79,7 @@ static std::string generate_fragment_shader() {
 		
 		for (uint i = 0; i < 4; i++) {
 			color += vec4(texture(lm, lm_uv[i]).xyz * lm_uvfactor[i], 0);
-			//color += vec4(lm_col[i] * lm_colfactor[i], 0);
+			color += vec4(lm_col[i] * lm_colfactor[i], 0);
 		}
 		
 		color *= q3color;

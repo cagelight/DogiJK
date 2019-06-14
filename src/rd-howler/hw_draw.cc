@@ -169,4 +169,10 @@ void instance::end_frame(float time) {
 	}
 	
 	ri.WIN_Present(&window);
+	
+	#ifdef _DEBUG
+	if (r_drawcalls->integer)
+		Com_Printf("Draw Calls: %zu\n", q3mesh::m_debug_draw_count);
+	q3mesh::m_debug_draw_count = 0;
+	#endif
 }

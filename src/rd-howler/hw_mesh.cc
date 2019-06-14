@@ -1,6 +1,10 @@
 #include "hw_local.hh"
 using namespace howler;
 
+#ifdef _DEBUG
+size_t q3mesh::m_debug_draw_count = 0;
+#endif
+
 GLuint q3mesh::bound_handle = 0;
 
 static constexpr std::array<float, 12> fullquad_verts = {
@@ -178,6 +182,10 @@ void q3mesh::bind() {
 void q3mesh::draw() {
 	bind();
 	glDrawArrays(static_cast<GLenum>(m_mode), 0, m_size);
+	
+	#ifdef _DEBUG
+	m_debug_draw_count++;
+	#endif
 }
 
 q3mesh_ptr q3mesh::generate_fullquad() {
