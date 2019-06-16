@@ -115,11 +115,15 @@ void instance::end_frame(float time) {
 			}, cmd);
 		}
 		
-		size_t draws = 0;
-		for (auto & [shader, meshes] : draw_map) {
-			draws += meshes.size();
+		#ifdef _DEBUG
+		if (r_drawcalls->integer) {
+			size_t draws = 0;
+			for (auto & [shader, meshes] : draw_map) {
+				draws += meshes.size();
+			}
+			Com_Printf("draw_map size: %zu shaders with %zu draws\n", draw_map.size(), draws);
 		}
-		Com_Printf("draw_map size: %zu shaders with %zu draws\n", draw_map.size(), draws);
+		#endif
 		
 		std::vector<q3drawset> draw_set;
 		for (auto & [shader, meshes] : draw_map) {
@@ -173,6 +177,13 @@ void instance::end_frame(float time) {
 				}
 			}
 		}, c2d);
+	}
+	
+	//================================================================
+	// CUSTOM SHADER PROGRAMS
+	//================================================================
+	if (r_showtris->integer) {
+		
 	}
 	
 	ri.WIN_Present(&window);

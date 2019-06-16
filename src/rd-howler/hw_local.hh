@@ -738,7 +738,8 @@ namespace howler {
 		//----------------
 		
 		//std::unordered_map<int32_t, q3model_ptr> m_vis_cache;
-		std::vector<std::pair<int32_t, q3model_ptr>> m_vis_cache;
+		using vis_cache_t = std::tuple<int32_t, q3model_ptr, std::array<byte, 32>>;
+		std::vector<vis_cache_t> m_vis_cache;
 		
 		int32_t m_lockpvs_cluster = -1;
 		q3worldnode const * find_leaf(qm::vec3_t const & coords);

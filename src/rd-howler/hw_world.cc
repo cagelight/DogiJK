@@ -39,6 +39,8 @@ void q3world::load(char const * name) {
 
 q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	
+	std::array<byte, 32> areamask;
+	memcpy(areamask.data(), ref.areamask, 32);
 	int32_t cluster = -1;
 	
 	if (m_vis && r_vis->integer > 0) {
@@ -57,10 +59,10 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	else
 		m_lockpvs_cluster = cluster;
 	
-	auto iter = std::find_if(m_vis_cache.begin(), m_vis_cache.end(), [&](auto const & i){return i.first == cluster;});
-	if (iter != m_vis_cache.end()) return iter->second;
+	auto iter = std::find_if(m_vis_cache.begin(), m_vis_cache.end(), [&](vis_cache_t const & i){return std::get<0>(i) == cluster && std::get<2>(i) == areamask;});
+	if (iter != m_vis_cache.end()) return std::get<1>(*iter);
 	
-	q3model_ptr & model = m_vis_cache.emplace(m_vis_cache.begin(), cluster, make_q3model())->second;
+	q3model_ptr & model = std::get<1>(*m_vis_cache.emplace(m_vis_cache.begin(), cluster, make_q3model(), areamask));
 	
 	if (r_viscachesize->integer > 0 && m_vis_cache.size() > static_cast<unsigned>(r_viscachesize->integer)) m_vis_cache.resize(r_viscachesize->integer);
 	
