@@ -72,6 +72,9 @@ void instance::end_frame(float time) {
 	m_ui_draw = false;
 	m_shader_color = {1, 1, 1, 1};
 	
+	std::vector<q3drawmesh> debug_meshes;
+	bool debug_enabled = r_showtris->integer || r_showedges->integer;
+	
 	for (q3scene const & scene : drawframe->scenes) {
 		
 		if (!scene.finalized) continue;
@@ -94,8 +97,10 @@ void instance::end_frame(float time) {
 		if (!(scene.ref.rdflags & RDF_NOWORLDMODEL) && m_world) {
 			qm::mat4_t m = qm::mat4_t::scale(1, -1, 1);
 			for (auto const & dmesh : m_world->get_vis_model(scene.ref)->meshes) {
+				qm::mat4_t mvp = m * vp;
+				if (debug_enabled) debug_meshes.emplace_back(dmesh.second, mvp);
 				if (!dmesh.second) continue;
-				draw_map[dmesh.first].emplace_back(dmesh.second, m * vp);
+				draw_map[dmesh.first].emplace_back(dmesh.second, mvp);
 			}
 		}
 		
@@ -109,6 +114,7 @@ void instance::end_frame(float time) {
 					}
 					qm::mat4_t mvp = obj.model_matrix * vp;
 					for (auto const & mesh : obj.basemodel->model->meshes) {
+						if (debug_enabled) debug_meshes.emplace_back(mesh.second, mvp);
 						draw_map[mesh.first].emplace_back(mesh.second, mvp);
 					}
 				}
@@ -171,6 +177,7 @@ void instance::end_frame(float time) {
 				
 				m_shader_color = cmd.color;
 				qm::mat4_t mvp = m * ui_ortho;
+				if (debug_enabled) debug_meshes.emplace_back(unitquad, mvp);
 				for (auto const & stg : cmd.shader->stages) {
 					stg.setup_draw(time, mvp, uv);
 					unitquad->draw();
@@ -182,9 +189,33 @@ void instance::end_frame(float time) {
 	//================================================================
 	// CUSTOM SHADER PROGRAMS
 	//================================================================
-	if (r_showtris->integer) {
-		
+	if (debug_enabled) {
+		std::sort(debug_meshes.begin(), debug_meshes.end(), [&](q3drawmesh const & A, q3drawmesh const & B) -> bool{ return A.mesh < B.mesh; });
+		if (r_showtris->integer || r_showedges->integer) {
+			gl::initialize();
+			gl::polygon_mode(GL_FRONT_AND_BACK, GL_LINE);
+			gl::line_width(r_showtris->value);
+			gl::blend(true);
+			gl::blend(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+			
+			if (r_showtris->integer) {
+				gl::stencil_test(true);
+				gl::stencil_mask(1);
+				gl::stencil_func(GL_EQUAL, 0);
+				gl::stencil_op(GL_KEEP, GL_KEEP, GL_INCR);
+			}
+			
+			glClear(GL_STENCIL_BUFFER_BIT);
+			
+			q3lineprog->bind();
+			
+			for (q3drawmesh const & d : debug_meshes) {
+				q3lineprog->mvp(d.mvp);
+				d.mesh->draw();
+			}
+		}
 	}
+	//================================================================
 	
 	ri.WIN_Present(&window);
 	

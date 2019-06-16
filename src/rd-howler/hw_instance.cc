@@ -44,6 +44,7 @@ void instance::initialize_renderer() {
 	
 	//gl::blend(true);
 	glEnable(GL_SCISSOR_TEST);
+	//glEnable(GL_LINE_SMOOTH);
 	//gl::depth_test(true);
 	
 	glClearColor(0.25, 0, 0, 1);
@@ -52,6 +53,7 @@ void instance::initialize_renderer() {
 	
 	q3mainprog.reset( new programs::q3main );
 	q3lmprog.reset( new programs::q3lightmap );
+	q3lineprog.reset( new programs::q3line );
 	
 	fullquad = q3mesh::generate_fullquad();
 	unitquad = q3mesh::generate_unitquad();

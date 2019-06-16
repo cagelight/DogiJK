@@ -65,6 +65,9 @@ void RE_BeginRegistration (vidconfig_t *config) {
 	#define XCVAR_REGISTER
 	#include "tr_xcvar.inl"
 	
+	r_showedges->min = 1;
+	r_showtris->min = 1;
+	
 	glConfig = *config;
 	hw_inst->initialize_renderer();
 	*config = glConfig;

@@ -494,6 +494,16 @@ namespace howler {
 			uniform_lmmode m_mode = 0;
 		};
 		
+		struct q3line : public q3program {
+			q3line();
+			~q3line() = default;
+			
+			void mvp(qm::mat4_t const &);
+		protected:
+			virtual void on_bind() override;
+		private:
+			uniform_mat4 m_mvp = qm::mat4_t::identity();
+		};
 	}
 	
 //================================================================
@@ -566,6 +576,13 @@ namespace howler {
 		void depth_func(GLenum);
 		void depth_test(bool);
 		void depth_write(bool);
+		
+		void stencil_func(GLenum func, GLint ref, GLuint mask = static_cast<GLuint>(-1));
+		void stencil_test(bool);
+		void stencil_mask(GLuint);
+		void stencil_op(GLenum fail, GLenum passdfail, GLenum pass);
+		
+		void line_width(float);
 		
 		void polygon_mode(GLenum, GLenum);
 		void polygon_offset_fill(bool);
@@ -854,6 +871,7 @@ namespace howler {
 		
 		std::unique_ptr<programs::q3main> q3mainprog = nullptr;
 		std::unique_ptr<programs::q3lightmap> q3lmprog = nullptr;
+		std::unique_ptr<programs::q3line> q3lineprog = nullptr;
 		
 		q3sampler_ptr main_sampler = nullptr;
 		

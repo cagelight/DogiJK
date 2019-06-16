@@ -122,12 +122,11 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 	{ // STAGE 0
 		q3stage & stg = shad->stages.emplace_back();
 		stg.diffuse = diffuse;
-		if (diffuse->is_transparent()) {
+		if (diffuse->is_transparent() && !shad->mips /* vanilla behavior, transparency only automatically used if no mipmaps */) {
 			stg.blend_src = GL_SRC_ALPHA;
 			stg.blend_dst = GL_ONE_MINUS_SRC_ALPHA;
 			stg.blend = true;
-		} else {
-			stg.blend = false;
+			shad->sort = q3shader::q3sort_basetrans;
 		}
 	}
 	if (shad->lightmap_if_texture) { // STAGE 1

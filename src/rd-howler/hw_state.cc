@@ -115,6 +115,51 @@ void gl::depth_write(bool v) {
 }
 
 //================================
+// STENCIL
+//================================
+
+using stencil_func_set = std::tuple<GLenum, GLint, GLuint>;
+inline static void stencil_func_func(stencil_func_set const & v) { glStencilFunc(std::get<0>(v), std::get<1>(v), std::get<2>(v)); }
+static state_object<stencil_func_set, stencil_func_func> stencil_func_state {{ GL_ALWAYS, 0, -1 }};
+
+inline static void stencil_test_enabled_func(bool const & v) { v ? glEnable(GL_STENCIL_TEST) : glDisable(GL_STENCIL_TEST); }
+static state_object<bool, stencil_test_enabled_func> stencil_test_state {false};
+
+inline static void stencil_write_enabled_func(GLuint const & v) { glStencilMask(v ? GL_TRUE : GL_FALSE); }
+static state_object<GLuint, stencil_write_enabled_func> stencil_mask_state {static_cast<GLuint>(-1)};
+
+using stencil_op_set = std::tuple<GLenum, GLenum, GLenum>;
+inline static void stencil_op_func(stencil_op_set const & v) { glStencilOp(std::get<0>(v), std::get<1>(v), std::get<2>(v)); }
+static state_object<stencil_op_set, stencil_op_func> stencil_op_state {{ GL_KEEP, GL_KEEP, GL_KEEP }};
+
+void gl::stencil_func(GLenum func, GLint ref, GLuint mask) {
+	stencil_func_state.set({func, ref, mask});
+}
+
+void gl::stencil_test(bool v) {
+	stencil_test_state.set(v);
+}
+
+void gl::stencil_mask(GLuint v) {
+	stencil_mask_state.set(v);
+}
+
+void gl::stencil_op(GLenum fail, GLenum passdfail, GLenum pass) {
+	stencil_op_state.set({fail, passdfail, pass});
+}
+
+//================================
+// PRIMITIVES
+//================================
+
+inline static void line_width_func(float const & v) { glLineWidth(v); }
+static state_object<float, line_width_func> line_width_state { 1.0f };
+
+void gl::line_width(float v) {
+	line_width_state.set(v);
+}
+
+//================================
 // POLYGONS
 //================================
 
@@ -155,6 +200,11 @@ void gl::initialize() {
 	depthfunc.reset();
 	depth_test_enabled.reset();
 	depth_write_enabled.reset();
+	stencil_func_state.reset();
+	stencil_test_state.reset();
+	stencil_mask_state.reset();
+	stencil_op_state.reset();
+	line_width_state.reset();
 	polygonmode.reset();
 	polygon_offset_enabled.reset();
 	polygonoffset.reset();
