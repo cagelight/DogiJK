@@ -37,12 +37,12 @@ void q3world::load(char const * name) {
 	load_lightgridarray();
 }
 
-q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
+q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	
 	int32_t cluster = -1;
 	
 	if (m_vis && r_vis->integer > 0) {
-		q3worldnode const * leaf = find_leaf(coords);
+		q3worldnode const * leaf = find_leaf(ref.vieworg);
 		cluster = std::get<q3worldnode::leaf_data>(leaf->data).cluster;
 	} else if (m_vis && r_vis->integer < 0) {
 		cluster = -r_vis->integer;
@@ -74,6 +74,7 @@ q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
 				[&](q3worldnode::leaf_data const & data) {
 					if (data.cluster <= 0 || data.cluster >= m_clusters) return;
 					if (!(cluster_vis[data.cluster>>3] & (1<<(data.cluster&7)))) return; // WTF???
+					if ( (ref.areamask[data.area>>3] & (1<<(data.area&7)) ) ) return;
 					for (auto const & surf : data.surfaces) marked_surfaces.emplace(surf);
 				}
 			}, node.data);
@@ -115,6 +116,8 @@ q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
 		proto.mode = q3mesh::mode::triangles;
 		model->meshes.emplace_back(shader, proto.generate());
 	}
+	
+	Com_Printf("%zu vis meshes\n", model->meshes.size());
 	
 	return model;
 }

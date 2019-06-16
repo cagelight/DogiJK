@@ -93,7 +93,7 @@ void instance::end_frame(float time) {
 		
 		if (!(scene.ref.rdflags & RDF_NOWORLDMODEL) && m_world) {
 			qm::mat4_t m = qm::mat4_t::scale(1, -1, 1);
-			for (auto const & dmesh : m_world->get_vis_model(scene.ref.vieworg)->meshes) {
+			for (auto const & dmesh : m_world->get_vis_model(scene.ref)->meshes) {
 				if (!dmesh.second) continue;
 				draw_map[dmesh.first].emplace_back(dmesh.second, m * vp);
 			}
@@ -114,6 +114,12 @@ void instance::end_frame(float time) {
 				}
 			}, cmd);
 		}
+		
+		size_t draws = 0;
+		for (auto & [shader, meshes] : draw_map) {
+			draws += meshes.size();
+		}
+		Com_Printf("draw_map size: %zu shaders with %zu draws\n", draw_map.size(), draws);
 		
 		std::vector<q3drawset> draw_set;
 		for (auto & [shader, meshes] : draw_map) {

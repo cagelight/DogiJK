@@ -399,7 +399,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				}
 			}
 			
-		} else if (!Q_stricmp("animmap", token) || !Q_stricmp("clampanimmap", token) || !Q_stricmp("oneshotanimmap", token)) {
+		/*} else if (!Q_stricmp("animmap", token) || !Q_stricmp("clampanimmap", token) || !Q_stricmp("oneshotanimmap", token)) {
 			
 			stg.clamp = !Q_stricmp("clampanimmap", token);
 			token = COM_ParseExt(&sptr, qfalse);
@@ -407,7 +407,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			
 		//================================
 			
-		} else if (!Q_stricmp("alphaFunc", token)) {
+		*/} else if (!Q_stricmp("alphaFunc", token)) {
 			
 			token = COM_ParseExt(&sptr, qfalse);
 			auto iter = alphafunc_map.find(token);
@@ -533,6 +533,29 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 		} else if (!Q_stricmp( token, "depthwrite" )) {
 			// TODO -- figure out why this is a stage property, it doesn't seem to make any sense
 			stg.depthwrite = true;
+		} else if (!Q_stricmp( token, "depthfunc" )) {
+			
+			static std::unordered_map<istring, GLenum> const depth_func_map {
+				{"less",		GL_LESS},
+				{"equal",		GL_EQUAL},
+				{"lequal",		GL_LEQUAL},
+				{"greater",		GL_GREATER},
+				{"notequal",	GL_NOTEQUAL},
+				{"gequal",		GL_GEQUAL},
+				{"disable",		GL_NEVER},
+				{"never",		GL_NEVER},
+				{"always",		GL_ALWAYS},
+			};
+			
+			token = COM_ParseExt(&sptr, qfalse);
+			auto iter = depth_func_map.find(token);
+			if (iter == depth_func_map.end()) {
+				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid depthFunc (\"%s\").\n", name.c_str(), token);
+				continue;
+			}
+			
+			stg.depth_func = iter->second;
+			
 		} else {
 			
 			Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid key (\"%s\").\n", name.c_str(), token);
@@ -756,6 +779,8 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 }
 
 void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & uvm, q3mesh::uniform_info_t const * mesh_uniforms) const {
+	
+	gl::depth_func(depth_func);
 	
 	if (has_diffuse())
 		std::visit( lambda_visit {

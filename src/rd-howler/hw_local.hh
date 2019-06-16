@@ -290,6 +290,7 @@ namespace howler {
 		} alpha_test = alpha_func::none;
 		
 		GLenum blend_src = GL_ONE, blend_dst = GL_ZERO;
+		GLenum depth_func = GL_LEQUAL;
 		
 		void validate();
 		
@@ -586,7 +587,7 @@ namespace howler {
 		void load(char const * name);
 		qboolean get_entity_token(char * buffer, int size);
 		
-		q3model_ptr get_vis_model(qm::vec3_t coords);
+		q3model_ptr get_vis_model(refdef_t const & ref);
 		
 	private:		
 		istring m_name;
@@ -624,6 +625,7 @@ namespace howler {
 		struct q3worldmesh_maplit_proto {
 			q3mesh::mode mode;
 			std::vector<q3worldmesh_maplit::vertex_t> verticies;
+			
 			inline q3mesh_ptr generate() const { return std::make_shared<q3worldmesh_maplit>(verticies.data(), verticies.size(), mode); }
 			inline void append(q3worldmesh_maplit_proto const & other) { verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end()); }
 		};
@@ -645,6 +647,7 @@ namespace howler {
 		struct q3worldmesh_vertexlit_proto {
 			q3mesh::mode mode;
 			std::vector<q3worldmesh_vertexlit::vertex_t> verticies;
+			
 			inline q3mesh_ptr generate() const { return std::make_shared<q3worldmesh_vertexlit>(verticies.data(), verticies.size(), mode); }
 			inline void append(q3worldmesh_vertexlit_proto const & other) { verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end()); }
 		};
