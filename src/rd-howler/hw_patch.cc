@@ -18,7 +18,7 @@ struct q3world::q3patchsubdivider {
 	}
 	
 	void subdivide();
-	q3protosurface generate_surface();
+	q3worldmesh_proto_variant generate_surface();
 	
 private:
 	q3patchsurface const & parent;
@@ -170,55 +170,71 @@ void q3world::q3patchsubdivider::subdivide() {
 	// MakeMeshNormals( width, height, ctrl ); TODO
 }
 
-static qm::vec3_t protocolor(qm::vec4_t const & v) { return {v[0], v[1], v[2]}; }
-static qm::vec3_t protouv(qm::vec2_t const & v) { return {v[0], v[1], 0}; }
+static qm::vec4_t protocolor(qm::vec4_t const & v) { return {v[0], v[1], v[2], v[3]}; }
+static qm::vec2_t protouv(qm::vec2_t const & v) { return {v[0], v[1]}; }
 
-q3world::q3protosurface q3world::q3patchsubdivider::generate_surface() {
-	q3protosurface proto {};
+q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface() {
 	
-	auto addfunc = [&](q3patchvert const & v) {
-		proto.verticies.emplace_back(v.xyz);
-		proto.uvs.emplace_back(v.uv);
-		proto.vertex_colors.emplace_back(protocolor(v.lm_colors[0]));
+	q3worldmesh_proto_variant proto_var;
+	
+	if (parent.vertex_lit) {
+		q3worldmesh_vertexlit_proto & proto = proto_var.emplace<q3worldmesh_vertexlit_proto>();
+		proto.mode = q3mesh::mode::triangles;
 		
-		if (parent.vertex_lit) {
-			proto.lightmap_data.emplace_back(
-				lightmap_data_t {
+		auto addfunc = [&](q3patchvert const & v) {
+			proto.verticies.emplace_back( q3worldmesh_vertexlit::vertex_t {
+				v.xyz,
+				v.uv,
+				lightmap_color_t {
 					protocolor(v.lm_colors[0]),
 					protocolor(v.lm_colors[1]),
 					protocolor(v.lm_colors[2]),
 					protocolor(v.lm_colors[3])
 				}
-			);
-		} else {
-			proto.lightmap_data.emplace_back(
-				lightmap_data_t {
+			});
+		};
+		
+		for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
+			addfunc(ctrl[y][x]);
+			addfunc(ctrl[y+1][x]);
+			addfunc(ctrl[y][x+1]);
+			addfunc(ctrl[y][x+1]);
+			addfunc(ctrl[y+1][x]);
+			addfunc(ctrl[y+1][x+1]);
+		}
+	} else {
+		q3worldmesh_maplit_proto & proto = proto_var.emplace<q3worldmesh_maplit_proto>();
+		proto.mode = q3mesh::mode::triangles;
+		
+		auto addfunc = [&](q3patchvert const & v) {
+			proto.verticies.emplace_back( q3worldmesh_maplit::vertex_t {
+				v.xyz,
+				v.uv,
+				protocolor(v.lm_colors[0]),
+				lightmap_uv_t {
 					protouv(v.lm_uvs[0]),
 					protouv(v.lm_uvs[1]),
 					protouv(v.lm_uvs[2]),
 					protouv(v.lm_uvs[3])
 				}
-			);
-		}
+			});
+		};
 		
-		proto.lightmap_styles.emplace_back(parent.styles);
-		proto.lightmap_modes.emplace_back(parent.modes);
-	};
-	
-	for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
-		addfunc(ctrl[y][x]);
-		addfunc(ctrl[y+1][x]);
-		addfunc(ctrl[y][x+1]);
-		addfunc(ctrl[y][x+1]);
-		addfunc(ctrl[y+1][x]);
-		addfunc(ctrl[y+1][x+1]);
+		for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
+			addfunc(ctrl[y][x]);
+			addfunc(ctrl[y+1][x]);
+			addfunc(ctrl[y][x+1]);
+			addfunc(ctrl[y][x+1]);
+			addfunc(ctrl[y+1][x]);
+			addfunc(ctrl[y+1][x+1]);
+		}
 	}
 	
-	return proto;
+	return proto_var;
 }
 
-q3world::q3protosurface q3world::q3patchsurface::process() {
-	q3patchsubdivider sub {*this};
-	sub.subdivide();
-	return sub.generate_surface();
+q3world::q3worldmesh_proto_variant q3world::q3patchsurface::process() {
+	std::unique_ptr<q3patchsubdivider> sub { new q3patchsubdivider {*this} };
+	sub->subdivide();
+	return sub->generate_surface();
 }

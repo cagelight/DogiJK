@@ -16,7 +16,7 @@ static std::string generate_vertex_shader() {
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
 	layout(location = )GLSL" << LAYOUT_UV << R"GLSL() in vec2 uv;
-	layout(location = )GLSL" << LAYOUT_VERTEX_COLOR << R"GLSL() in vec3 vertex_color;
+	layout(location = )GLSL" << LAYOUT_COLOR << R"GLSL() in vec4 vertex_color;
 
 	layout(location = )GLSL" << location_time << R"GLSL() uniform float time;
 	layout(location = )GLSL" << location_mvp << R"GLSL() uniform mat4 vertex_matrix;
@@ -32,7 +32,7 @@ static std::string generate_vertex_shader() {
 	void main() {
 	
 		if (use_vertex_color)
-			vcolor = vec4(vertex_color, 1);
+			vcolor = vertex_color;
 		else
 			vcolor = vec4(1, 1, 1, 1);
 		

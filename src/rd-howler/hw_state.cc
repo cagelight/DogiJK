@@ -34,6 +34,25 @@ private:
 };
 
 //================================
+// ALPHA
+//================================
+
+inline static void alpha_test_enabled_func(bool const & v) { v ? glEnable(GL_ALPHA_TEST) : glDisable(GL_ALPHA_TEST); }
+static state_object<bool, alpha_test_enabled_func> alpha_test_enabled_state {false};
+
+using alpha_func_pair = std::pair<GLenum, float>;
+inline static void alpha_func_func(alpha_func_pair const & v) { glAlphaFunc(v.first, v.second); }
+static state_object<alpha_func_pair, alpha_func_func> alpha_func_state {{GL_GREATER, 0.0f}};
+
+void gl::alpha_test(bool v) {
+	alpha_test_enabled_state.set(v);
+}
+
+void gl::alpha_func(GLenum func, float value) {
+	alpha_func_state.set({func, value});
+}
+
+//================================
 // BLENDING
 //================================
 
@@ -127,6 +146,8 @@ void gl::polygon_offset(float factor, float units) {
 //================================
 
 void gl::initialize() {
+	alpha_test_enabled_state.reset();
+	alpha_func_state.reset();
 	blend_enabled.reset();
 	blendfunc.reset();
 	cull_enabled_obj.reset();

@@ -64,7 +64,6 @@ q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
 	
 	if (r_viscachesize->integer > 0 && m_vis_cache.size() > static_cast<unsigned>(r_viscachesize->integer)) m_vis_cache.resize(r_viscachesize->integer);
 	
-	std::unordered_map<q3shader_ptr, q3protosurface> buckets;
 	std::unordered_set<q3worldsurface const *> marked_surfaces;
 	
 	if (cluster >= 0) {
@@ -91,14 +90,30 @@ q3model_ptr q3world::get_vis_model(qm::vec3_t coords) {
 		}
 	}
 	
+	std::unordered_map<q3shader_ptr, q3worldmesh_maplit_proto> buckets_maplit;
+	std::unordered_map<q3shader_ptr, q3worldmesh_vertexlit_proto> buckets_vertlit;
+	
 	for (q3worldsurface const * surf : marked_surfaces) {
-		q3protosurface & proto = buckets[surf->shader];
-		proto.append(surf->proto);
+		std::visit( lambda_visit {
+			[&](q3worldmesh_maplit_proto const & proto) {
+				q3worldmesh_maplit_proto & sub = buckets_maplit[surf->shader];
+				sub.append(proto);
+			},
+			[&](q3worldmesh_vertexlit_proto const & proto) {
+				q3worldmesh_vertexlit_proto & sub = buckets_vertlit[surf->shader];
+				sub.append(proto);
+			},
+		}, surf->proto);
 	}
 	
-	for (auto & [shader, proto] : buckets) {
-		q3mesh_ptr mesh = model->meshes.emplace_back(shader, make_q3mesh()).second;
-		proto.upload(*mesh);
+	for (auto & [shader, proto] : buckets_maplit) {
+		proto.mode = q3mesh::mode::triangles;
+		model->meshes.emplace_back(shader, proto.generate());
+	}
+	
+	for (auto & [shader, proto] : buckets_vertlit) {
+		proto.mode = q3mesh::mode::triangles;
+		model->meshes.emplace_back(shader, proto.generate());
 	}
 	
 	return model;
@@ -210,15 +225,7 @@ void q3world::load_fogs() {
 // SURFACES
 //================================================================
 
-static constexpr qm::vec3_t conv_color(byte const * arr) {
-	return qm::vec3_t {
-		static_cast<float>(arr[0]) / 255.0f,
-		static_cast<float>(arr[1]) / 255.0f,
-		static_cast<float>(arr[2]) / 255.0f,
-	};
-}
-
-static constexpr qm::vec4_t conv_color4(byte const * arr) {
+static constexpr qm::vec4_t conv_color(byte const * arr) {
 	return qm::vec4_t {
 		static_cast<float>(arr[0]) / 255.0f,
 		static_cast<float>(arr[1]) / 255.0f,
@@ -292,77 +299,70 @@ void q3world::load_surfaces(int32_t idx) {
 				if (conv_lm_mode(surfi.lightmapNum[0]) == LIGHTMAP_MODE_VERTEX)
 					vertex_lit = true;
 				
-				for (int32_t i = 0; i < surfi.numIndexes; i ++) {
-					
-					surfo.proto.verticies.emplace_back(
-						surf_verts[surf_indicies[i]].xyz[1],
-						surf_verts[surf_indicies[i]].xyz[2],
-						surf_verts[surf_indicies[i]].xyz[0]
-					);
-					
-					surfo.proto.uvs.emplace_back(
-						surf_verts[surf_indicies[i]].st[0],
-						surf_verts[surf_indicies[i]].st[1]
-					);
-					
-					if (vertex_lit) {
-						surfo.proto.lightmap_data.emplace_back(
-							lightmap_data_t {
+				lightmap_styles_t styles {
+					vertex_lit ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
+					vertex_lit ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
+					vertex_lit ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
+					vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
+				};
+				
+				if (vertex_lit) {
+					q3worldmesh_vertexlit_proto & proto = surfo.proto.emplace<q3worldmesh_vertexlit_proto>();
+					proto.mode = q3mesh::mode::triangles;
+					for (int32_t i = 0; i < surfi.numIndexes; i ++) {
+						proto.verticies.emplace_back( q3worldmesh_vertexlit::vertex_t {
+							qm::vec3_t {
+								surf_verts[surf_indicies[i]].xyz[1],
+								surf_verts[surf_indicies[i]].xyz[2],
+								surf_verts[surf_indicies[i]].xyz[0]
+							},
+							qm::vec2_t {
+								surf_verts[surf_indicies[i]].st[0],
+								surf_verts[surf_indicies[i]].st[1]
+							},
+							lightmap_color_t {
 								conv_color(surf_verts[surf_indicies[i]].color[0]),
 								conv_color(surf_verts[surf_indicies[i]].color[1]),
 								conv_color(surf_verts[surf_indicies[i]].color[2]),
 								conv_color(surf_verts[surf_indicies[i]].color[3]),
 							}
-						);
-					} else {
-						surfo.proto.lightmap_data.emplace_back(
-							lightmap_data_t {
-								qm::vec3_t { 
-									uv_for_lightmap( surfi.lightmapNum[0], qm::vec2_t {
-										surf_verts[surf_indicies[i]].lightmap[0][0],
-										surf_verts[surf_indicies[i]].lightmap[0][1]
-								}), 0},
-								qm::vec3_t {
-									uv_for_lightmap( surfi.lightmapNum[1], qm::vec2_t {
-										surf_verts[surf_indicies[i]].lightmap[1][0],
-										surf_verts[surf_indicies[i]].lightmap[1][1]
-								}), 0},
-								qm::vec3_t {
-									uv_for_lightmap( surfi.lightmapNum[2], qm::vec2_t {
-										surf_verts[surf_indicies[i]].lightmap[2][0],
-										surf_verts[surf_indicies[i]].lightmap[2][1]
-								}), 0},
-								qm::vec3_t {
-									uv_for_lightmap( surfi.lightmapNum[3], qm::vec2_t {
-										surf_verts[surf_indicies[i]].lightmap[3][0],
-										surf_verts[surf_indicies[i]].lightmap[3][1]
-								}), 0}
-							}
-						);
+						});
 					}
-					
-					surfo.proto.vertex_colors.emplace_back(
-						conv_color(surf_verts[surf_indicies[i]].color[0])
-					);
-					
-					surfo.proto.lightmap_styles.emplace_back(
-						lightmap_styles_t {
-							vertex_lit ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
-							vertex_lit ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
-							vertex_lit ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
-							vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
-						}
-					);
-					
-					surfo.proto.lightmap_modes.emplace_back(
-						lightmap_modes_t {
-							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[0]),
-							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[1]),
-							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[2]),
-							vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[3]),
-						}
-					);
-					
+				} else {
+					q3worldmesh_maplit_proto & proto = surfo.proto.emplace<q3worldmesh_maplit_proto>();
+					proto.mode = q3mesh::mode::triangles;
+					for (int32_t i = 0; i < surfi.numIndexes; i ++) {
+						proto.verticies.emplace_back( q3worldmesh_maplit::vertex_t {
+							qm::vec3_t {
+								surf_verts[surf_indicies[i]].xyz[1],
+								surf_verts[surf_indicies[i]].xyz[2],
+								surf_verts[surf_indicies[i]].xyz[0]
+							},
+							qm::vec2_t {
+								surf_verts[surf_indicies[i]].st[0],
+								surf_verts[surf_indicies[i]].st[1]
+							},
+							conv_color(surf_verts[surf_indicies[i]].color[0]),
+							lightmap_uv_t {
+								uv_for_lightmap( surfi.lightmapNum[0], qm::vec2_t {
+									surf_verts[surf_indicies[i]].lightmap[0][0],
+									surf_verts[surf_indicies[i]].lightmap[0][1]
+								}),
+								uv_for_lightmap( surfi.lightmapNum[1], qm::vec2_t {
+									surf_verts[surf_indicies[i]].lightmap[1][0],
+									surf_verts[surf_indicies[i]].lightmap[1][1]
+								}),
+								uv_for_lightmap( surfi.lightmapNum[2], qm::vec2_t {
+									surf_verts[surf_indicies[i]].lightmap[2][0],
+									surf_verts[surf_indicies[i]].lightmap[2][1]
+								}),
+								uv_for_lightmap( surfi.lightmapNum[3], qm::vec2_t {
+									surf_verts[surf_indicies[i]].lightmap[3][0],
+									surf_verts[surf_indicies[i]].lightmap[3][1]
+								})
+							}
+						});
+					}
 				}
 			} break;
 			//================================
@@ -389,12 +389,14 @@ void q3world::load_surfaces(int32_t idx) {
 					vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
 				};
 				
+				/*
 				surf.modes = lightmap_modes_t {
 					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[0]),
 					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[1]),
 					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[2]),
 					vertex_lit ? static_cast<uint8_t>(2) : conv_lm_mode(surfi.lightmapNum[3]),
 				};
+				*/
 				
 				for (int32_t i = 0; i < num_points; i ++) {
 					surf.verts.emplace_back( q3patchvert {
@@ -407,15 +409,15 @@ void q3world::load_surfaces(int32_t idx) {
 							uv_for_lightmap(surfi.lightmapNum[2], surf_verts[i].lightmap[2]),
 							uv_for_lightmap(surfi.lightmapNum[3], surf_verts[i].lightmap[3]),
 						}, {
-							conv_color4(surf_verts[i].color[0]),
-							conv_color4(surf_verts[i].color[1]),
-							conv_color4(surf_verts[i].color[2]),
-							conv_color4(surf_verts[i].color[3]),
+							conv_color(surf_verts[i].color[0]),
+							conv_color(surf_verts[i].color[1]),
+							conv_color(surf_verts[i].color[2]),
+							conv_color(surf_verts[i].color[3]),
 						}
 					});
 				}
 				
-				surfo.proto.append(surf.process());
+				surfo.proto = surf.process();
 			} break;
 			//================================
 		}
@@ -541,9 +543,11 @@ void q3world::load_submodels() {
 		q3model & model = *(mod->model = make_q3model());
 		for (int32_t m = 0; m < bmod.surf_num; m++) {
 			q3worldsurface const & surf = m_surfaces[bmod.surf_idx + m];
-			q3mesh_ptr mesh = make_q3mesh();
-			surf.proto.upload(*mesh);
-			model.meshes.emplace_back(surf.shader, mesh);
+			
+			model.meshes.emplace_back(surf.shader, std::visit( lambda_visit {
+				[&](q3worldmesh_maplit_proto const & proto) -> q3mesh_ptr { return proto.generate(); },
+				[&](q3worldmesh_vertexlit_proto const & proto) -> q3mesh_ptr { return proto.generate(); },
+			}, surf.proto));
 		}
 		
 		hw_inst->models.reg(mod);

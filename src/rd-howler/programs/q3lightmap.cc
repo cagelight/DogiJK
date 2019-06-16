@@ -4,6 +4,8 @@ using namespace howler;
 static constexpr GLint location_mvp = 0;
 static constexpr GLint location_uv = 1;
 static constexpr GLint location_color = 2;
+static constexpr GLint location_styles = 3;
+static constexpr GLint location_mode = 4;
 
 static std::string generate_vertex_shader() {
 	std::stringstream ss;
@@ -11,44 +13,46 @@ static std::string generate_vertex_shader() {
 	#version 450
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
-	layout(location = )GLSL" << LAYOUT_LIGHTMAP_DATA << R"GLSL() in vec3 lm_data[4];
-	layout(location = )GLSL" << LAYOUT_LIGHTMAP_STYLE << R"GLSL() in uint lm_styles[4];
-	layout(location = )GLSL" << LAYOUT_LIGHTMAP_MODE << R"GLSL() in uint lm_modes[4];
+	
+	layout(location = )GLSL" << LAYOUT_LMUV0 << R"GLSL() in vec2 lm_uv0;
+	layout(location = )GLSL" << LAYOUT_LMUV1 << R"GLSL() in vec2 lm_uv1;
+	layout(location = )GLSL" << LAYOUT_LMUV2 << R"GLSL() in vec2 lm_uv2;
+	layout(location = )GLSL" << LAYOUT_LMUV3 << R"GLSL() in vec2 lm_uv3;
+	
+	layout(location = )GLSL" << LAYOUT_LMCOLOR0 << R"GLSL() in vec4 lm_color0;
+	layout(location = )GLSL" << LAYOUT_LMCOLOR1 << R"GLSL() in vec4 lm_color1;
+	layout(location = )GLSL" << LAYOUT_LMCOLOR2 << R"GLSL() in vec4 lm_color2;
+	layout(location = )GLSL" << LAYOUT_LMCOLOR3 << R"GLSL() in vec4 lm_color3;
 
 	layout(location = )GLSL" << location_mvp << R"GLSL() uniform mat4 vertex_matrix;
+	layout(location = )GLSL" << location_mode << R"GLSL() uniform uint lm_mode;
 
-	out vec2 lm_uv[4];
-	out vec3 lm_col[4];
-	out float lm_uvfactor[4];
-	out float lm_colfactor[4];
-
-	void main() {
+	out vec4 vertex_color;
+	out vec2 vertex_uv[4];
+	out float factor;
 	
-		for (uint i = 0; i < 4; i++) {
-			switch (lm_modes[i]) {
-				default:
-					lm_uvfactor[i] = 0;
-					lm_colfactor[i] = 0;
-					break;
-				case 1:
-					lm_uv[i] = lm_data[i].xy;
-					lm_uvfactor[i] = 1;
-					lm_colfactor[i] = 0;
-					break;
-				case 2:
-					lm_col[i] = lm_data[i];
-					lm_uvfactor[i] = 0;
-					lm_colfactor[i] = 1;
-					break;
-				case 3:
-					lm_col[i] = vec3(1, 1, 1);
-					lm_uvfactor[i] = 0;
-					lm_colfactor[i] = 1;
-					break;
-			}
-		}
-		
+	void main() {
 		gl_Position = vertex_matrix * vec4(vert, 1);
+		
+		switch (lm_mode) {
+			case 1:
+				vertex_color = vec4(1, 1, 1, 1);
+				vertex_uv[0] = lm_uv0;
+				vertex_uv[1] = lm_uv1;
+				vertex_uv[2] = lm_uv2;
+				vertex_uv[3] = lm_uv3;
+				factor = 1;
+				break;
+			case 2:
+				vertex_color = lm_color0;
+				factor = 0;
+				break;
+			default:
+			case 3:
+				vertex_color = vec4(1, 1, 1, 1);
+				factor = 0;
+				break;
+		}
 	}
 	)GLSL";
 	
@@ -66,23 +70,19 @@ static std::string generate_fragment_shader() {
 	// TEXTURE BINDINGS
 	layout(binding = )GLSL" << BINDING_LIGHTMAP << R"GLSL() uniform sampler2D lm;
 	
-	in vec2 lm_uv[4];
-	in vec3 lm_col[4];
-	in float lm_uvfactor[4];
-	in float lm_colfactor[4];
+	in vec4 vertex_color;
+	in vec2 vertex_uv[4];
+	in float factor;
 	
 	layout(location = 0) out vec4 color;
 	
 	void main() {
-	
-		color = vec4(0, 0, 0, 1);
 		
-		for (uint i = 0; i < 4; i++) {
-			color += vec4(texture(lm, lm_uv[i]).xyz * lm_uvfactor[i], 0);
-			color += vec4(lm_col[i] * lm_colfactor[i], 0);
-		}
-		
+		vec4 vcolor = vertex_color;
+		vec4 ucolor = texture(lm, vertex_uv[0]);
+		color = mix(vcolor, ucolor, factor);
 		color *= q3color;
+		
 	}
 	)GLSL";
 	
@@ -118,14 +118,26 @@ programs::q3lightmap::q3lightmap() {
 void programs::q3lightmap::on_bind() {
 	m_mvp.push(location_mvp);
 	m_color.push(location_color);
+	m_styles.push(location_styles);
+	m_mode.push(location_mode);
 }
 
 void programs::q3lightmap::mvp(qm::mat4_t const & value) {
 	m_mvp = value;
-	if (is_bound()) m_mvp.push_direct(location_mvp);
+	if (is_bound()) m_mvp.push(location_mvp);
 }
 
 void programs::q3lightmap::color(qm::vec4_t const & value) {
 	m_color = value;
-	if (is_bound()) m_color.push_direct(location_color);
+	if (is_bound()) m_color.push(location_color);
+}
+
+void programs::q3lightmap::styles(lightmap_styles_t const & value) {
+	m_styles = value;
+	if (is_bound()) m_styles.push(location_styles);
+}
+
+void programs::q3lightmap::mode(GLuint const & value) {
+	m_mode = value;
+	if (is_bound()) m_mode.push_direct(location_mode);
 }

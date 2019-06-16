@@ -44,15 +44,15 @@ struct q3drawset {
 	
 	static inline bool compare(q3drawset & A, q3drawset & B) {	
 		
-		switch (compare3(A.shader->depthwrite, B.shader->depthwrite)) {
-			case -1: return false;
-			case 1: return true;
-			case 0: break;
-		}
-		
 		switch (compare3(A.shader->sort, B.shader->sort)) {
 			case -1: return true;
 			case 1: return false;
+			case 0: break;
+		}
+		
+		switch (compare3(A.shader->depthwrite, B.shader->depthwrite)) {
+			case -1: return false;
+			case 1: return true;
 			case 0: break;
 		}
 		
@@ -93,8 +93,8 @@ void instance::end_frame(float time) {
 		
 		if (!(scene.ref.rdflags & RDF_NOWORLDMODEL) && m_world) {
 			qm::mat4_t m = qm::mat4_t::scale(1, -1, 1);
-			// int32_t cluster = std::get<world_t::mapnode_t::leaf_data>(world->point_in_leaf(view_origin)->data).cluster;
 			for (auto const & dmesh : m_world->get_vis_model(scene.ref.vieworg)->meshes) {
+				if (!dmesh.second) continue;
 				draw_map[dmesh.first].emplace_back(dmesh.second, m * vp);
 			}
 		}
@@ -130,7 +130,8 @@ void instance::end_frame(float time) {
 			draw.shader->setup_draw();
 			for (auto const & stg : draw.shader->stages)
 				for (auto const & mesh : draw.meshes) {
-					stg.setup_draw(time, mesh.mvp);
+					if (!mesh.mesh) continue;
+					stg.setup_draw(time, mesh.mvp, qm::mat3_t::identity(), mesh.mesh->uniform_info());
 					mesh.mesh->draw();
 			}
 		}

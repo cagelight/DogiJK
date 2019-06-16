@@ -98,6 +98,48 @@ void q3basemodel::setup_render() {
 	}
 }
 
+//================================================================
+// MD3
+//================================================================
+
+struct q3md3mesh : public q3mesh {
+	struct vertex_t {
+		qm::vec3_t vert;
+		qm::vec2_t uv;
+	};
+	
+	q3md3mesh(vertex_t const * data, size_t num) : q3mesh(mode::triangles) {
+		
+		static constexpr uint_fast16_t offsetof_verts = 0;
+		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
+		static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
+		static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
+		static constexpr uint_fast16_t sizeof_all = offsetof_uv + sizeof_uv;
+		static_assert(sizeof_all == sizeof(vertex_t));
+		
+		m_size = num;
+		glCreateBuffers(1, &m_vbo);
+		glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
+		
+		glVertexArrayVertexBuffer(m_handle, 0, m_vbo, 0, sizeof_all);
+		
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
+		
+		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, sizeof_verts / 4, GL_FLOAT, GL_FALSE, offsetof_verts);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, sizeof_uv / 4, GL_FLOAT, GL_FALSE, offsetof_uv);
+		
+	}
+	
+	~q3md3mesh() {
+		glDeleteBuffers(1, &m_vbo);
+	}
+private:
+	GLuint m_vbo;
+};
+
 void q3basemodel::setup_render_md3() {
 	model = make_q3model();
 	
@@ -106,29 +148,25 @@ void q3basemodel::setup_render_md3() {
 	md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
 	for (int32_t s = 0; s < header->numSurfaces; s++) {
 		
-		q3mesh_ptr mesh = make_q3mesh();
 		
 		md3XyzNormal_t * verts = (md3XyzNormal_t *) ((byte *)surf + surf->ofsXyzNormals);
 		md3St_t * uvs = (md3St_t *) ((byte *)surf + surf->ofsSt);
 		md3Triangle_t * triangles = (md3Triangle_t *) ((byte *)surf + surf->ofsTriangles);
 		
-		std::vector<float> vert_data;
-		std::vector<float> uv_data;
+		std::vector<q3md3mesh::vertex_t> vert_data;
 		
 		for (int32_t i = 0; i < surf->numTriangles; i++) {
 			for (size_t j = 0; j < 3; j++) {
 				auto const & v = verts[triangles[i].indexes[j]];
-				vert_data.push_back(v.xyz[1] / 64.0);
-				vert_data.push_back(v.xyz[2] / 64.0);
-				vert_data.push_back(v.xyz[0] / 64.0);
 				auto const & u = uvs[triangles[i].indexes[j]];
-				uv_data.push_back(u.st[0]);
-				uv_data.push_back(u.st[1]);
+				vert_data.emplace_back( q3md3mesh::vertex_t {
+					qm::vec3_t { v.xyz[1], v.xyz[2], v.xyz[0] } / 64.0,
+					qm::vec2_t { u.st[0], u.st[1] }
+				});
 			}
 		}
 		
-		mesh->upload_verts(vert_data);
-		mesh->upload_uvs(uv_data);
+		std::shared_ptr<q3md3mesh> mesh = std::make_shared<q3md3mesh>(vert_data.data(), vert_data.size());
 		
 		assert(surf->numShaders == 1); // how can there ever be more than 1? that makes no sense...
 		md3Shader_t * shader = (md3Shader_t *) ( (byte *)surf + surf->ofsShaders );
@@ -137,6 +175,8 @@ void q3basemodel::setup_render_md3() {
 		surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );
 	}
 }
+
+//================================================================
 
 void q3basemodel::load_mdxa() {
 	mdxaHeader_t * header = (mdxaHeader_t *)buffer.data();

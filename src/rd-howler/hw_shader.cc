@@ -144,6 +144,13 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 // STATIC HELPERS
 //================================================================
 
+static std::unordered_map<istring, q3stage::alpha_func> alphafunc_map = {
+	{"GT0",			q3stage::alpha_func::gt0},
+	{"LT128",		q3stage::alpha_func::lt128},
+	{"GE128",		q3stage::alpha_func::ge128},
+	{"GE192",		q3stage::alpha_func::ge192},
+};
+
 static std::unordered_map<istring, GLenum> blendfunc_map = {
 	{"GL_ONE",						GL_ONE},
 	{"GL_ZERO",						GL_ZERO},
@@ -270,6 +277,8 @@ static inline float parse_sort(char const * token) {
 // SHADER PARSING
 //================================================================
 
+
+
 bool q3shader::parse_shader(istring const & src, bool mips) {
 	
 	char const * token, * p = src.c_str();
@@ -298,6 +307,8 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") failed to parse.\n", name.c_str());
 				return false;
 			}
+		} else if (!Q_stricmp(token, "detail")) {
+			// IGNORED
 		} else if (!Q_stricmp(token, "nopicmip")) {
 			SkipRestOfLine(&p);
 			// TODO -- the hell is a picmip
@@ -317,8 +328,6 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 			SkipRestOfLine(&p);
 		} else if (!Q_stricmp(token, "notc")) {
 			// IGNORED
-		} else if (!Q_stricmp(token, "detail")) {
-			// TODO ???
 		} else if (!Q_stricmpn(token, "qer_", 4) || !Q_stricmpn(token, "q3map_", 6)) {
 			SkipRestOfLine(&p);
 		} else {
@@ -364,44 +373,51 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 		token = COM_ParseExt(&sptr, qtrue);
 		
 		if (!token[0]) {
+			
 			Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") ends abruptly.\n", name.c_str());
 			return false;
-		}
+			
+		} else if (token[0] == '}')
+			
+			break;
 		
-		else if (token[0] == '}') break;
+		//================================
+		// MAP
+		//================================
 		
-		else if (!Q_stricmp("map", token)) {
+		else if (!Q_stricmp("map", token) || !Q_stricmp("clampmap", token)) {
+			
+			stg.clamp = !Q_stricmp("clampmap", token);
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("$lightmap", token)) {
 				stg.mode = q3stage::shading_mode::lightmap;
 			} else {
-			/*
-			if (!Q_stricmp("$lightmap", token)) {
-				stg.is_lightmap_stage = true;
-				stg.blend_src = GL_DST_COLOR;
-				stg.blend_dst = GL_ZERO;
-				stg.blend = true;
-			} else {
-				*/
 				stg.diffuse = hw_inst->textures.reg(token, mips);
-				if (!stg.diffuse) {
+				if (!stg.has_diffuse()) {
 					Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid map (\"%s\"), could not find this image.\n", name.c_str(), token);
 					return false;
 				}
 			}
-		}
-		
-		else if (!Q_stricmp("clampmap", token)) {
+			
+		} else if (!Q_stricmp("animmap", token) || !Q_stricmp("clampanimmap", token) || !Q_stricmp("oneshotanimmap", token)) {
+			
+			stg.clamp = !Q_stricmp("clampanimmap", token);
 			token = COM_ParseExt(&sptr, qfalse);
-			stg.diffuse = hw_inst->textures.reg(token, mips);
-			if (!stg.diffuse) {
-				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid clampmap (\"%s\"), could not find this image.\n", name.c_str(), token);
+			q3stage::diffuse_anim_ptr anim = std::make_shared<q3stage::diffuse_anim_t>();
+			
+		//================================
+			
+		} else if (!Q_stricmp("alphaFunc", token)) {
+			
+			token = COM_ParseExt(&sptr, qfalse);
+			auto iter = alphafunc_map.find(token);
+			if (iter == alphafunc_map.end()) {
+				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid alphaFunc (\"%s\"), could not find this image.\n", name.c_str(), token);
 				return false;
 			}
-			stg.clamp = true;
-		}
-		
-		else if (!Q_stricmp("blendFunc", token)) {
+			stg.alpha_test = iter->second;
+			
+		} else if (!Q_stricmp("blendFunc", token)) {
 			
 			token = COM_ParseExt(&sptr, qfalse);
 			auto iter = named_blendfunc_map.find(token);
@@ -414,9 +430,13 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				stg.blend_dst = blendfunc_str2enum(token);
 			}
 			stg.blend = true;
-		}
-		
-		else if (!Q_stricmp("rgbGen", token)) {
+			
+		} else if (!Q_stricmp(token, "detail")) {
+			
+			// IGNORED
+			
+		} else if (!Q_stricmp("rgbGen", token)) {
+			
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("const", token)) {
 				vec3_t color;
@@ -473,9 +493,9 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				SkipRestOfLine(&sptr);
 				continue;
 			}
-		}
-		
-		else if (!Q_stricmp("alphaGen", token)) {
+			
+		} else if (!Q_stricmp("alphaGen", token)) {
+			
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("const", token)) {
 				token = COM_ParseExt(&sptr, qfalse);
@@ -493,9 +513,9 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				SkipRestOfLine(&sptr);
 				continue;
 			}
-		}
-		
-		else if (!Q_stricmp(token, "tcMod")) {
+			
+		} else if (!Q_stricmp(token, "tcMod")) {
+			
 			char buffer [1024] = "";
 			while (true) {
 				token = COM_ParseExt(&sptr, qfalse);
@@ -506,16 +526,19 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			parse_texmod(stg, buffer);
 			
 		} else if (!Q_stricmp(token, "glow")) {
+			
 			//stg.glow = true;
 			//TODO
+			
 		} else if (!Q_stricmp( token, "depthwrite" )) {
 			// TODO -- figure out why this is a stage property, it doesn't seem to make any sense
-			depthwrite = true;
+			stg.depthwrite = true;
 		} else {
 			
 			Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid key (\"%s\").\n", name.c_str(), token);
 			SkipRestOfLine(&sptr);
 			continue;
+			
 		}
 	}
 	
@@ -528,7 +551,7 @@ void q3stage::validate() {
 	
 	if (gen_alpha == q3stage::gen_type::constant && const_color[3] < 1) opaque = false;
 	if (blend) {
-		if (blend_dst == GL_ONE_MINUS_SRC_ALPHA && diffuse && diffuse->is_transparent()) opaque = false;
+		if (blend_dst == GL_ONE_MINUS_SRC_ALPHA && has_diffuse() && diffuse_has_transparency()) opaque = false;
 		else if (blend_dst != GL_ZERO) opaque = false;
 		else if (
 			blend_src == GL_DST_ALPHA ||
@@ -732,10 +755,37 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 	return 0;
 }
 
-void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & uvm) const {
+void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & uvm, q3mesh::uniform_info_t const * mesh_uniforms) const {
 	
-	if (diffuse) diffuse->bind(BINDING_DIFFUSE);
-	else q3texture::unbind(BINDING_DIFFUSE);
+	if (has_diffuse())
+		std::visit( lambda_visit {
+			[&](q3texture_ptr const & tex) { tex->bind(BINDING_DIFFUSE); },
+			[&](diffuse_anim_ptr const & anim) {  }
+		}, diffuse);
+	else
+		q3texture::unbind(BINDING_DIFFUSE);
+	
+	switch (alpha_test) {
+		case alpha_func::none:
+			gl::alpha_test(false);
+			break;
+		case alpha_func::gt0:
+			gl::alpha_test(true);
+			gl::alpha_func(GL_GREATER, 0.0f);
+			break;
+		case alpha_func::lt128:
+			gl::alpha_test(true);
+			gl::alpha_func(GL_LESS, 0.5f);
+			break;
+		case alpha_func::ge128:
+			gl::alpha_test(true);
+			gl::alpha_func(GL_GEQUAL, 0.5f);
+			break;
+		case alpha_func::ge192:
+			gl::alpha_test(true);
+			gl::alpha_func(GL_GEQUAL, 0.75f);
+			break;
+	}
 	
 	gl::blend(blend_src, blend_dst);
 	
@@ -842,6 +892,9 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			hw_inst->q3lmprog->bind();
 			hw_inst->q3lmprog->mvp(mvp);
 			hw_inst->q3lmprog->color(q3color);
+			if (mesh_uniforms) {
+				hw_inst->q3lmprog->mode(mesh_uniforms->mode);
+			}
 			break;
 		case shading_mode::noise:
 			break;
