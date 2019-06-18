@@ -99,11 +99,26 @@ programs::q3main::q3main() {
 	}
 }
 
+void programs::q3main::bind_and_reset() {
+	m_time.reset();
+	m_mvp.reset();
+	m_uv.reset();
+	m_color.reset();
+	m_use_vertex_colors.reset();
+	m_turb.reset();
+	m_turb_data.reset();
+	
+	bind();
+}
+
 void programs::q3main::on_bind() {
+	m_time.push(location_time);
 	m_mvp.push(location_mvp);
 	m_uv.push(location_uv);
 	m_color.push(location_color);
 	m_use_vertex_colors.push(location_use_vertex_color);
+	m_turb.push(location_turb);
+	m_turb_data.push(location_turb_data);
 }
 
 void programs::q3main::time(float const & v) {

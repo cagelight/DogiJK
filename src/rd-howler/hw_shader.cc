@@ -110,12 +110,14 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 			return;
 		
 		Com_Printf(S_COLOR_RED "ERROR: Could not parse shader '%s'!\n", shad->name.c_str());
+		shad->index = 0;
 		return;
 	}
 	
 	q3texture_ptr diffuse = hw_inst->textures.reg(shad->name, shad->mips);
 	if (!diffuse) {
 		Com_Printf(S_COLOR_RED "ERROR: Could not find image for shader '%s'!\n", shad->name.c_str());
+		shad->index = 0;
 		return;
 	}
 	
@@ -126,6 +128,7 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 			stg.blend_src = GL_SRC_ALPHA;
 			stg.blend_dst = GL_ONE_MINUS_SRC_ALPHA;
 			stg.blend = true;
+			stg.clamp = true;
 			shad->sort = q3shader::q3sort_basetrans;
 		}
 	}
@@ -289,8 +292,6 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 		return false;
 	}
 	
-	bool manual_sort = false;
-	
 	while (true) {
 		
 		token = COM_ParseExt(&p, qtrue);
@@ -299,51 +300,82 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 			Com_Printf(S_COLOR_RED "ERROR: shader (\"%s\") ends abruptly.\n", name.c_str());
 			return false;
 		} 
-		else if (token[0] == '}') break;
+		else if (token[0] == '}')
+			goto end;
 		else if (token[0] == '{') {
 			q3stage & stg = stages.emplace_back();
 			if (!parse_stage(stg, p, mips)) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") failed to parse.\n", name.c_str());
 				return false;
 			}
+			goto next;
 		} else if (!Q_stricmp(token, "detail")) {
 			// IGNORED
+			goto next;
 		} else if (!Q_stricmp(token, "nopicmip")) {
-			SkipRestOfLine(&p);
 			// TODO -- the hell is a picmip
+			goto next;
 		} else if (!Q_stricmp(token, "nomips") || !Q_stricmp(token, "nomipmaps")) {
 			mips = false;
-			SkipRestOfLine(&p);
+			goto next;
 		} else if (!Q_stricmp(token, "cull")) {
 			token = COM_ParseExt(&p, qtrue);
 			cull = parse_cull(name.c_str(), token);
-			SkipRestOfLine(&p);
+			goto next;
 		} else if ( !Q_stricmp(token, "polygonOffset" )) {
 			polygon_offset = true;
+			goto next;
 		} else if (!Q_stricmp(token, "sort")) {
 			token = COM_ParseExt(&p, qtrue);
 			sort = parse_sort(token);
-			manual_sort = true;
-			SkipRestOfLine(&p);
+			goto next;
 		} else if (!Q_stricmp(token, "notc")) {
 			// IGNORED
+			goto next;
+		} else if ( !Q_stricmp( token, "skyparms" ) ) {
+			
+			static constexpr char const * suf[6] {"rt", "lf", "bk", "ft", "up", "dn"};
+			sky_parms = std::make_unique<sky_parms_t>();
+			
+			token = COM_ParseExt(&p, qfalse);
+			if (!token[0]) goto next;
+			if (strcmp(token, "-" )) {
+				char path [MAX_QPATH];
+				for (auto i = 0; i < 6; i++) {
+					Com_sprintf(path, sizeof(path), "%s_%s", token, suf[i]);
+					sky_parms->sides[i] = hw_inst->textures.reg(path, qtrue);
+					if (!sky_parms->sides[i] && i) sky_parms->sides[i] = sky_parms->sides[i-1];
+				}
+			}
+			
+			token = COM_ParseExt(&p, qfalse);
+			if (!token[0]) goto next;
+			sky_parms->cloud_height = strtof(token, nullptr);
+			if (!sky_parms->cloud_height) sky_parms->cloud_height = 512;
+			
+			token = COM_ParseExt(&p, qfalse);
+			if (!token[0]) goto next;
+			if (strcmp(token, "-" )) {
+				Com_Printf(S_COLOR_YELLOW "WARNING: shader (\"%s\") skyparms have an inner box, this is not yet supported.\n", name.c_str());
+			}
+			
+			goto next;
+			
 		} else if (!Q_stricmpn(token, "qer_", 4) || !Q_stricmpn(token, "q3map_", 6)) {
-			SkipRestOfLine(&p);
+			goto next;
 		} else {
 			Com_Printf(S_COLOR_YELLOW "WARNING: shader (\"%s\") has unknown/invalid key (\"%s\").\n", name.c_str(), token);
-			SkipRestOfLine(&p);
+			goto next;
 		}
 		
+		next:
+		SkipRestOfLine(&p);
+		continue;
+		end:
+		break;
 	}
 	
 	validate();
-	
-	if (!manual_sort) {
-		if (opaque)
-			sort = q3sort_opaque;
-		else
-			sort = depthwrite ? q3sort_seethrough : q3sort_basetrans;
-	}
 	
 	return true;
 }
@@ -358,6 +390,13 @@ void q3shader::validate() {
 		if (stg.depthwrite) depthwrite = true;
 		if (stg.opaque) opaque = true;
 		if (stg.blend) blended = true;
+	}
+	
+	if (!sort) {
+		if (opaque)
+			sort = q3sort_opaque;
+		else
+			sort = depthwrite ? q3sort_seethrough : q3sort_basetrans;
 	}
 	
 	valid = true;

@@ -148,9 +148,8 @@ static bool setup_skin( q3skin & q3s, char const * path, bool server )
 		q3s.skin.surfaces[q3s.skin.numSurfaces] = (_skinSurface_t *)&surf;
 
 		Q_strncpyz( surf.name, surfName, sizeof( surf.name ) );
-
-		if (!server) surf.shader = hw_inst->shaders.reg(token, true);
-		else surf.shader = nullptr;
+		
+		surf.shader = hw_inst->shaders.reg(token, true);
 		
 		q3s.skin.numSurfaces++;
 	}

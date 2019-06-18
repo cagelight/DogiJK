@@ -66,8 +66,7 @@ void instance::end_frame(float time) {
 	m_frame.reset();
 	
 	gl::depth_write(true);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	
 	m_ui_draw = false;
 	m_shader_color = {1, 1, 1, 1};
@@ -79,18 +78,16 @@ void instance::end_frame(float time) {
 		
 		if (!scene.finalized) continue;
 		
-		gl::initialize();
-		gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
-		gl::depth_test(true);
-		
 		qm::mat4_t p = qm::mat4_t::perspective(qm::deg2rad(scene.ref.fov_y), scene.ref.width, scene.ref.height, 4, m_cull * 2);
 		qm::mat4_t v = qm::mat4_t::translate(-scene.ref.vieworg[1], scene.ref.vieworg[2], -scene.ref.vieworg[0]);
-		qm::quat_t r = qm::quat_t::identity();
-		r *= qm::quat_t { {1, 0, 0}, qm::deg2rad(scene.ref.viewangles[PITCH]) };
-		r *= qm::quat_t { {0, 0, 1}, qm::deg2rad(scene.ref.viewangles[ROLL]) + qm::pi };
-		r *= qm::quat_t { {0, 1, 0}, qm::deg2rad(scene.ref.viewangles[YAW]) };
-		v *= qm::mat4_t { r };
-		qm::mat4_t vp = v * p;
+		qm::quat_t rq = qm::quat_t::identity();
+		rq *= qm::quat_t { {1, 0, 0}, qm::deg2rad(scene.ref.viewangles[PITCH]) };
+		rq *= qm::quat_t { {0, 0, 1}, qm::deg2rad(scene.ref.viewangles[ROLL]) + qm::pi };
+		rq *= qm::quat_t { {0, 1, 0}, qm::deg2rad(scene.ref.viewangles[YAW]) };
+		qm::mat4_t r = qm::mat4_t { rq };
+		qm::mat4_t vp = (v * r) * p;
+		
+		qm::mat4_t sbvp = r * qm::mat4_t::perspective(qm::deg2rad(scene.ref.fov_y), scene.ref.width, scene.ref.height, 0.125, 8);
 		
 		std::unordered_map<q3shader_ptr, std::vector<q3drawmesh>> draw_map;
 		
@@ -131,9 +128,15 @@ void instance::end_frame(float time) {
 		}
 		#endif
 		
+		std::vector<std::pair<q3shader_ptr, std::vector<q3drawmesh>>> skyboxes;
+		
 		std::vector<q3drawset> draw_set;
 		for (auto & [shader, meshes] : draw_map) {
 			if (!shader) continue;
+			if (shader->sky_parms) {
+				skyboxes.emplace_back(shader, std::move(meshes));
+				continue;
+			}
 			draw_set.emplace_back(
 				shader,
 				meshes
@@ -141,6 +144,61 @@ void instance::end_frame(float time) {
 		}
 		
 		std::sort(draw_set.begin(), draw_set.end(), q3drawset::compare);
+		
+		// ================================
+		// SKYBOXES
+		// ================================
+		
+		gl::initialize();
+		gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
+		gl::stencil_test(true);
+		gl::depth_test(false);
+		gl::cull(false);
+		glClear(GL_STENCIL_BUFFER_BIT);
+		
+		q3skyboxstencilprog->bind();
+		
+		// stencil skybox zones
+		GLuint stencil_id = 1;
+		for (auto const & sbp : skyboxes) {
+			gl::stencil_func(GL_ALWAYS, stencil_id);
+			gl::stencil_op(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+			for (auto const & dmesh : sbp.second) {
+				q3skyboxstencilprog->mvp(dmesh.mvp);
+				dmesh.mesh->draw();
+			}
+			stencil_id ++;
+		}
+		
+		main_sampler->wrap(GL_CLAMP_TO_EDGE);
+		q3skyboxprog->bind();
+		q3skyboxprog->mvp(sbvp);
+		
+		for (auto i = 0; i < 6; i++)
+			main_sampler->bind(BINDING_SKYBOX + i);
+		
+		// draw skyboxes on correct stencil
+		stencil_id = 1;
+		for (auto const & sbp : skyboxes) {
+			gl::stencil_func(GL_EQUAL, stencil_id);
+			gl::stencil_op(GL_KEEP, GL_KEEP, GL_KEEP);
+			for (auto i = 0; i < 6; i++)
+				sbp.first->sky_parms->sides[i]->bind(BINDING_SKYBOX + i);
+			skybox->draw();
+			stencil_id ++;
+		}
+		
+		// ================================
+		// REGULAR GEOMETRY
+		// ================================
+		
+		gl::initialize();
+		gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
+		gl::depth_test(true);
+		gl::stencil_test(true);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		
+		if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
 		
 		for (q3drawset const & draw : draw_set) {
 			draw.shader->setup_draw();
@@ -151,6 +209,8 @@ void instance::end_frame(float time) {
 					mesh.mesh->draw();
 			}
 		}
+		
+		// ================================
 	}
 	
 	gl::initialize();

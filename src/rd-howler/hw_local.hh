@@ -37,9 +37,11 @@ namespace howler {
 	static constexpr GLint LAYOUT_LMCOLOR1 = 8;
 	static constexpr GLint LAYOUT_LMCOLOR2 = 9;
 	static constexpr GLint LAYOUT_LMCOLOR3 = 10;
+	static constexpr GLint LAYOUT_TEXBIND = 11;
 	
 	static constexpr GLint BINDING_DIFFUSE = 0;
 	static constexpr GLint BINDING_LIGHTMAP = 1;
+	static constexpr GLint BINDING_SKYBOX = 2; // TO 7
 	
 	static constexpr uint_fast16_t LIGHTMAP_NUM = 4;
 	static constexpr uint_fast16_t LIGHTMAP_DIM = 128;
@@ -95,9 +97,9 @@ namespace howler {
 		inline bool is_bound() const { return m_handle == bound_handle; }
 		inline uniform_info_t const * uniform_info() const { return m_uniform_info.get(); }
 		
-		
 		static q3mesh_ptr generate_fullquad();
 		static q3mesh_ptr generate_unitquad();
+		static q3mesh_ptr generate_skybox_mesh();
 		
 		#ifdef _DEBUG
 		static size_t m_debug_draw_count;
@@ -402,7 +404,7 @@ namespace howler {
 		
 		// properties
 		bool polygon_offset = false;
-		float sort = q3sort_opaque;
+		float sort = 0;
 		std::vector<q3stage> stages;
 		
 		enum struct cull_type {
@@ -410,6 +412,13 @@ namespace howler {
 			back,
 			both
 		} cull = cull_type::front;
+		
+		struct sky_parms_t {
+			std::array<q3texture_ptr, 6> sides;
+			float cloud_height;
+		};
+		
+		std::unique_ptr<sky_parms_t> sky_parms = nullptr;
 		
 		void setup_draw() const;
 			
@@ -426,13 +435,15 @@ namespace howler {
 	
 	template <typename T, void(*UPLOAD)(GLint, T const &)>
 	struct uniform {
-		constexpr uniform(T const & value_in) : value(value_in), modified(true) {}
+		constexpr uniform(T const & value_in) : value(value_in), value_default(value_in), modified(true) {}
 		constexpr bool operator == (T const & other) const { return other == value; }
 		constexpr T const & operator = (T const & other) { if (value != other) modified = true; value = other; return value; }
 		inline void push(GLint location) { if (!modified) return; push_direct(location); }
 		inline void push_direct(GLint location) { modified = false; UPLOAD(location, value); }
+		inline void reset() { operator = (value_default); }
  	private:
 		T value;
+		T const value_default;
 		bool modified;
 	};
 	
@@ -456,6 +467,8 @@ namespace howler {
 		struct q3main : public q3program {
 			q3main();
 			~q3main() = default;
+			
+			void bind_and_reset();
 			
 			void time(float const &);
 			void mvp(qm::mat4_t const &);
@@ -497,6 +510,28 @@ namespace howler {
 		struct q3line : public q3program {
 			q3line();
 			~q3line() = default;
+			
+			void mvp(qm::mat4_t const &);
+		protected:
+			virtual void on_bind() override;
+		private:
+			uniform_mat4 m_mvp = qm::mat4_t::identity();
+		};
+		
+		struct q3skybox : public q3program {
+			q3skybox();
+			~q3skybox() = default;
+			
+			void mvp(qm::mat4_t const &);
+		protected:
+			virtual void on_bind() override;
+		private:
+			uniform_mat4 m_mvp = qm::mat4_t::identity();
+		};
+		
+		struct q3skyboxstencil : public q3program {
+			q3skyboxstencil();
+			~q3skyboxstencil() = default;
 			
 			void mvp(qm::mat4_t const &);
 		protected:
@@ -577,7 +612,7 @@ namespace howler {
 		void depth_test(bool);
 		void depth_write(bool);
 		
-		void stencil_func(GLenum func, GLint ref, GLuint mask = static_cast<GLuint>(-1));
+		void stencil_func(GLenum func, GLint ref = 0, GLuint mask = 0xFFFFFFFF);
 		void stencil_test(bool);
 		void stencil_mask(GLuint);
 		void stencil_op(GLenum fail, GLenum passdfail, GLenum pass);
@@ -873,12 +908,15 @@ namespace howler {
 		std::unique_ptr<programs::q3lightmap> q3lmprog = nullptr;
 		std::unique_ptr<programs::q3line> q3lineprog = nullptr;
 		
+		std::unique_ptr<programs::q3skyboxstencil> q3skyboxstencilprog = nullptr;
+		std::unique_ptr<programs::q3skybox> q3skyboxprog = nullptr;
+		
 		q3sampler_ptr main_sampler = nullptr;
 		
 		bool m_ui_draw = false;
 		qm::vec4_t m_shader_color {1, 1, 1, 1};
 		
-		q3mesh_ptr fullquad, unitquad;
+		q3mesh_ptr fullquad, unitquad, skybox;
 		q3frame_ptr m_frame;
 		std::unique_ptr<q3world> m_world = nullptr;
 	};
