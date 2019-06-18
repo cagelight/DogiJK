@@ -473,81 +473,71 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			
 			// IGNORED
 			
-		} else if (!Q_stricmp("rgbGen", token)) {
+		} else if (!Q_stricmp("rgbGen", token) || !Q_stricmp("alphaGen", token)) {
+			
+			bool alpha = !Q_stricmp("alphaGen", token);
+			q3stage::gen_type & gen = alpha ? stg.gen_alpha : stg.gen_rgb;
+			q3stage::wave_func_t & wave = alpha ? stg.wave_alpha : stg.wave_rgb;
 			
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("const", token)) {
-				vec3_t color;
-				parse_vector(&sptr, 3, color);
-				stg.gen_rgb = q3stage::gen_type::constant;
-				stg.const_color[0] = color[0];
-				stg.const_color[1] = color[1];
-				stg.const_color[2] = color[2];
+				gen = q3stage::gen_type::constant;
+				if (!alpha) {
+					vec3_t color;
+					parse_vector(&sptr, 3, color);
+					stg.const_color[0] = color[0];
+					stg.const_color[1] = color[1];
+					stg.const_color[2] = color[2];
+				} else {
+					token = COM_ParseExt(&sptr, qfalse);
+					stg.const_color[3] = strtof(token, nullptr);
+				}
 			} else if (!Q_stricmp("identity", token)) {
-				stg.gen_rgb = q3stage::gen_type::constant;
-				stg.const_color[0] = 1;
-				stg.const_color[1] = 1;
-				stg.const_color[2] = 1;
+				gen = q3stage::gen_type::constant;
+				if (!alpha) {
+					stg.const_color[0] = 1;
+					stg.const_color[1] = 1;
+					stg.const_color[2] = 1;
+				} else
+					stg.const_color[3] = 1;
 			} else if (!Q_stricmp("vertex", token)) {
-				stg.gen_rgb = q3stage::gen_type::vertex;
+				gen = q3stage::gen_type::vertex;
 			} else if (!Q_stricmp("exactvertex", token)) {
-				stg.gen_alpha = q3stage::gen_type::vertex_exact;
+				gen = q3stage::gen_type::vertex_exact;
 			} else if (!Q_stricmp("wave", token)) {
-				stg.gen_rgb = q3stage::gen_type::wave;
+				gen = q3stage::gen_type::wave;
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
 					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"genfunc\" in shader (\"%s\")\n", name.c_str());
 					SkipRestOfLine(&sptr);
 					continue;
 				}
-				stg.wave.rgb.func = genfunc_str2enum(token);
+				wave.func = genfunc_str2enum(token);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
 					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"base\" in shader (\"%s\")\n", name.c_str());
 					SkipRestOfLine(&sptr);
 					continue;
 				}
-				stg.wave.rgb.base = strtof(token, nullptr);
+				wave.base = strtof(token, nullptr);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
 					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"amplitude\" in shader (\"%s\")\n", name.c_str());
 					SkipRestOfLine(&sptr);
 					continue;
 				}
-				stg.wave.rgb.amplitude = strtof(token, nullptr);
+				wave.amplitude = strtof(token, nullptr);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
 					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"phase\" in shader (\"%s\")\n", name.c_str());
 					SkipRestOfLine(&sptr);
 					continue;
 				}
-				stg.wave.rgb.phase= strtof(token, nullptr);
+				wave.phase= strtof(token, nullptr);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
 					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"frequency\" in shader (\"%s\")\n", name.c_str());
 					SkipRestOfLine(&sptr);
 					continue;
 				}
-				stg.wave.rgb.frequency = strtof(token, nullptr);
-			} else if (!Q_stricmp("lightingDiffuse", token)) {
-				stg.gen_rgb = q3stage::gen_type::diffuse_lighting;
+				wave.frequency = strtof(token, nullptr);
 			} else {
-				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid rgbGen (\"%s\").\n", name.c_str(), token);
-				SkipRestOfLine(&sptr);
-				continue;
-			}
-			
-		} else if (!Q_stricmp("alphaGen", token)) {
-			
-			token = COM_ParseExt(&sptr, qfalse);
-			if (!Q_stricmp("const", token)) {
-				token = COM_ParseExt(&sptr, qfalse);
-				stg.gen_alpha = q3stage::gen_type::constant;
-				stg.const_color[3] = strtof(token, nullptr);
-			} else if (!Q_stricmp("identity", token)) {
-				stg.gen_alpha = q3stage::gen_type::constant;
-				stg.const_color[3] = 1;
-			} else if (!Q_stricmp("vertex", token)) {
-				stg.gen_alpha = q3stage::gen_type::vertex;
-			} else if (!Q_stricmp("exactvertex", token)) {
-				stg.gen_alpha = q3stage::gen_type::vertex_exact;
-			} else {
-				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid alphaGen (\"%s\").\n", name.c_str(), token);
+				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid %s (\"%s\").\n", name.c_str(), alpha ? "alphaGen" : "rgbGen", token);
 				SkipRestOfLine(&sptr);
 				continue;
 			}
@@ -874,7 +864,7 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			q3color = const_color;
 			break;
 		case q3stage::gen_type::wave:
-			mult = gen_func_do(wave.rgb.func, time, wave.rgb.base, wave.rgb.amplitude, wave.rgb.phase, wave.rgb.frequency);
+			mult = gen_func_do(wave_rgb.func, time, wave_rgb.base, wave_rgb.amplitude, wave_rgb.phase, wave_rgb.frequency);
 			q3color = const_color * mult;
 			break;
 		case q3stage::gen_type::diffuse_lighting:
@@ -896,7 +886,7 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			q3color[3] = const_color[3];
 			break;
 		case q3stage::gen_type::wave:
-			mult = gen_func_do(wave.rgb.func, time, wave.rgb.base, wave.rgb.amplitude, wave.rgb.phase, wave.rgb.frequency);
+			mult = gen_func_do(wave_alpha.func, time, wave_alpha.base, wave_alpha.amplitude, wave_alpha.phase, wave_alpha.frequency);
 			q3color[3] = const_color[3] * mult;
 			break;
 		case q3stage::gen_type::diffuse_lighting: 

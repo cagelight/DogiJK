@@ -323,22 +323,13 @@ namespace howler {
 			diffuse_lighting,
 		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
 		
-		struct {
-			struct {
-				gen_func func;
-				float base;
-				float amplitude;
-				float phase;
-				float frequency;
-			} rgb;
-			struct {
-				gen_func func;
-				float base;
-				float amplitude;
-				float phase;
-				float frequency;
-			} alpha;
-		} wave;
+		struct wave_func_t {
+			gen_func func;
+			float base;
+			float amplitude;
+			float phase;
+			float frequency;
+		} wave_rgb, wave_alpha;
 		
 		struct tx_turb {
 			float base;

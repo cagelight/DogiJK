@@ -1320,7 +1320,11 @@ void hurt_use( gentity_t *self, gentity_t *other, gentity_t *activator ) {
 void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 	int		dflags;
 	
-	if(other->flags & FL_GODMODE) return;
+    if(other->flags & FL_GODMODE) {
+        other->client->ps.fallingToDeath = 0;
+		other->client->ps.eFlags &= ~EF_RAG;
+        return;
+    }
 
 	if (level.gametype == GT_SIEGE && self->team && self->team[0])
 	{
