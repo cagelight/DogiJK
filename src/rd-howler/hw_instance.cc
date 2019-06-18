@@ -84,6 +84,7 @@ void instance::initialize_renderer() {
 	
 	renderer_initialized = true;
 	shaders.process_waiting();
+	models.process_waiting();
 	
 	R_InitFonts();
 }

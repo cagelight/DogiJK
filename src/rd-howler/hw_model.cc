@@ -61,8 +61,9 @@ q3basemodel_ptr instance::model_registry::reg(char const * name, bool server) {
 	
 	if (!server) {
 		if (!hw_inst->renderer_initialized)
-			Com_Error(ERR_FATAL, "instance::model_registry::reg: tried to load model \"%s\" as renderable before renderer initialized", name);
-		mod->setup_render();
+			waiting_models.push_back(mod);
+		else
+			mod->setup_render();
 	}
 	
 	return mod;
@@ -77,6 +78,12 @@ void instance::model_registry::reg(q3basemodel_ptr ptr) {
 q3basemodel_ptr instance::model_registry::get(qhandle_t h) {
 	if (h < 0 || h >= static_cast<int32_t>(models.size())) return nullptr;
 	return models[h];
+}
+
+void instance::model_registry::process_waiting() {
+	for (q3basemodel_ptr & model : waiting_models)
+		model->setup_render();
+	waiting_models.clear();
 }
 
 void q3basemodel::load() {
@@ -173,6 +180,58 @@ void q3basemodel::setup_render_md3() {
 		model->meshes.emplace_back( hw_inst->shaders.get(shader->shaderIndex), mesh );
 		
 		surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );
+	}
+}
+
+struct q3MDXMmesh : public q3mesh {
+	struct vertex_t {
+		qm::vec3_t vert;
+		qm::vec2_t uv;
+	};
+	
+	q3MDXMmesh(vertex_t const * data, size_t num) : q3mesh(mode::triangles) {
+		
+		static constexpr uint_fast16_t offsetof_verts = 0;
+		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
+		static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
+		static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
+		static constexpr uint_fast16_t sizeof_all = offsetof_uv + sizeof_uv;
+		static_assert(sizeof_all == sizeof(vertex_t));
+		
+		m_size = num;
+		glCreateBuffers(1, &m_vbo);
+		glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
+		
+		glVertexArrayVertexBuffer(m_handle, 0, m_vbo, 0, sizeof_all);
+		
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
+		
+		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, sizeof_verts / 4, GL_FLOAT, GL_FALSE, offsetof_verts);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, sizeof_uv / 4, GL_FLOAT, GL_FALSE, offsetof_uv);
+		
+	}
+	
+	~q3MDXMmesh() {
+		glDeleteBuffers(1, &m_vbo);
+	}
+private:
+	GLuint m_vbo;
+};
+
+void q3basemodel::setup_render_mdxm() {
+	model = make_q3model();
+	
+	mdxmHeader_t * header = base.mdxm;
+	for (size_t i = 0; i < header->numSurfaces; i++) {
+		mdxmSurface_t * surf = (mdxmSurface_t *)ri.G2_FindSurface(&base, i, 0);
+		mdxmHierarchyOffsets_t * surfI = (mdxmHierarchyOffsets_t *)((byte *)base.mdxm + sizeof(mdxmHeader_t));
+		mdxmSurfHierarchy_t * surfH = (mdxmSurfHierarchy_t *)((byte *)surfI + surfI->offsets[surf->thisSurfaceIndex]);
+		if (surfH->name[0] == '*') continue;
+		
+		std::vector<q3MDXMmesh::vertex_t> verticies;
 	}
 }
 

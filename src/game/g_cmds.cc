@@ -512,6 +512,7 @@ void Cmd_TeamTask_f( gentity_t *ent ) {
 
 void G_Kill( gentity_t *ent ) {
 	if(ent->flags & FL_GODMODE) {
+		trap->SendServerCommand( ent-g_entities, "print \"You cannot kill a god!\n\"" );
 		return;
 	}
 	if ((level.gametype == GT_DUEL || level.gametype == GT_POWERDUEL) &&

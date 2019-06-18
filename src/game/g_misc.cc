@@ -201,7 +201,8 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles, qboolean s
 	{
 		isNPC = qtrue;
 	}
-
+	
+	angles[ROLL] = 0; // because roll was causing problems
 	noAngles = (angles[0] > 999999.0) ? qtrue : qfalse;
 
 	// use temp events at source and destination to prevent the effect

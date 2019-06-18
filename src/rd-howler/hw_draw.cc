@@ -152,9 +152,11 @@ void instance::end_frame(float time) {
 		gl::initialize();
 		gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
 		gl::stencil_test(true);
-		gl::depth_test(false);
+		gl::depth_test(true);
+		gl::depth_func(GL_LESS);
+		gl::depth_write(true);
 		gl::cull(false);
-		glClear(GL_STENCIL_BUFFER_BIT);
+		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
 		q3skyboxstencilprog->bind();
 		
@@ -162,7 +164,7 @@ void instance::end_frame(float time) {
 		GLuint stencil_id = 1;
 		for (auto const & sbp : skyboxes) {
 			gl::stencil_func(GL_ALWAYS, stencil_id);
-			gl::stencil_op(GL_REPLACE, GL_REPLACE, GL_REPLACE);
+			gl::stencil_op(GL_KEEP, GL_KEEP, GL_REPLACE);
 			for (auto const & dmesh : sbp.second) {
 				q3skyboxstencilprog->mvp(dmesh.mvp);
 				dmesh.mesh->draw();
@@ -170,6 +172,7 @@ void instance::end_frame(float time) {
 			stencil_id ++;
 		}
 		
+		gl::depth_test(false);
 		main_sampler->wrap(GL_CLAMP_TO_EDGE);
 		q3skyboxprog->bind();
 		q3skyboxprog->mvp(sbvp);
@@ -196,6 +199,7 @@ void instance::end_frame(float time) {
 		gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
 		gl::depth_test(true);
 		gl::stencil_test(true);
+		gl::depth_write(true);
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
 		if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);

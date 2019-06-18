@@ -77,6 +77,7 @@ namespace howler {
 		void load_md3(int32_t lod = 0);
 		
 		void setup_render_md3();
+		void setup_render_mdxm();
 	};
 	
 	// MESH
@@ -833,9 +834,11 @@ namespace howler {
 			q3basemodel_ptr get(qhandle_t);
 			
 			void reg(q3basemodel_ptr); // direct register for q3world
+			void process_waiting();
 		private:
 			std::unordered_map<istring, q3basemodel_ptr> lookup;
 			std::vector<q3basemodel_ptr> models;
+			std::vector<q3basemodel_ptr> waiting_models;
 		} models;
 		
 		// SHADERS
