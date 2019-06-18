@@ -321,6 +321,7 @@ namespace howler {
 			vertex_exact,
 			wave,
 			diffuse_lighting,
+			entity,
 		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
 		
 		struct wave_func_t {
@@ -373,7 +374,14 @@ namespace howler {
 		
 		std::vector<texmod> texmods {};
 		
-		void setup_draw(float time, qm::mat4_t const & mvp = qm::mat4_t::identity(), qm::mat3_t const & uvm = qm::mat3_t::identity(), q3mesh::uniform_info_t const * mesh_uniforms = nullptr) const;
+		struct setup_draw_parameters_t {
+			float time;
+			qm::mat4_t mvp = qm::mat4_t::identity();
+			qm::mat3_t uvm = qm::mat3_t::identity();
+			q3mesh::uniform_info_t const * mesh_uniforms = nullptr;
+			qm::vec4_t shader_color {1, 1, 1, 1};
+		};
+		void setup_draw(setup_draw_parameters_t const &) const;
 	};
 	
 	struct q3shader {
@@ -531,6 +539,19 @@ namespace howler {
 		private:
 			uniform_mat4 m_mvp = qm::mat4_t::identity();
 		};
+		
+		struct q3noise : public q3program {
+			q3noise();
+			~q3noise() = default;
+			
+			void time(float const &);
+			void mvp(qm::mat4_t const &);
+		protected:
+			virtual void on_bind() override;
+		private:
+			uniform_float m_time = 0;
+			uniform_mat4 m_mvp = qm::mat4_t::identity();
+		};
 	}
 	
 //================================================================
@@ -551,6 +572,7 @@ namespace howler {
 		struct basic_object {
 			q3basemodel_ptr basemodel;
 			qm::mat4_t model_matrix;
+			qm::vec4_t shader_color;
 		};
 	};
 	
@@ -901,9 +923,9 @@ namespace howler {
 		std::unique_ptr<programs::q3main> q3mainprog = nullptr;
 		std::unique_ptr<programs::q3lightmap> q3lmprog = nullptr;
 		std::unique_ptr<programs::q3line> q3lineprog = nullptr;
-		
 		std::unique_ptr<programs::q3skyboxstencil> q3skyboxstencilprog = nullptr;
 		std::unique_ptr<programs::q3skybox> q3skyboxprog = nullptr;
+		std::unique_ptr<programs::q3noise> q3noiseprog = nullptr;
 		
 		q3sampler_ptr main_sampler = nullptr;
 		

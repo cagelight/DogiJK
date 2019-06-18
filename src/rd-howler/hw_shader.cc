@@ -6,7 +6,12 @@ instance::shader_registry::shader_registry() {
 	q3shader_ptr & ds = shaders.emplace_back( make_q3shader() );
 	ds->name = "*default";
 	ds->index = 0;
+	ds->sort = q3shader::q3sort_opaque;
 	lookup[ds->name] = ds;
+	ds->stages.emplace_back();
+	ds->stages[0].mode = q3stage::shading_mode::noise;
+	ds->valid = false;
+	ds->depthwrite = true;
 	
 	int num_shader_files;
 	char * * shfiles = ri.FS_ListFiles("shaders", ".shader", &num_shader_files);
@@ -500,6 +505,10 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 					stg.const_color[2] = 1;
 				} else
 					stg.const_color[3] = 1;
+			} else if (!Q_stricmp("entity", token)) {
+				gen = q3stage::gen_type::entity;
+			} else if (!Q_stricmp("lightingDiffuse", token)) {
+				gen = q3stage::gen_type::diffuse_lighting;
 			} else if (!Q_stricmp("vertex", token)) {
 				gen = q3stage::gen_type::vertex;
 			} else if (!Q_stricmp("exactvertex", token)) {
@@ -591,6 +600,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			continue;
 			
 		}
+		
 	}
 	
 	return true;
@@ -806,7 +816,7 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 	return 0;
 }
 
-void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & uvm, q3mesh::uniform_info_t const * mesh_uniforms) const {
+void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	
 	gl::depth_func(depth_func);
 	
@@ -849,6 +859,11 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 	
 	qm::vec4_t q3color {1, 1, 1, 1};
 	switch (gen_rgb) {
+		case q3stage::gen_type::entity:
+			q3color[0] = parm.shader_color[0];
+			q3color[1] = parm.shader_color[1];
+			q3color[2] = parm.shader_color[2];
+			break;
 		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
 			if (!hw_inst->m_ui_draw) {
@@ -864,7 +879,7 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			q3color = const_color;
 			break;
 		case q3stage::gen_type::wave:
-			mult = gen_func_do(wave_rgb.func, time, wave_rgb.base, wave_rgb.amplitude, wave_rgb.phase, wave_rgb.frequency);
+			mult = gen_func_do(wave_rgb.func, parm.time, wave_rgb.base, wave_rgb.amplitude, wave_rgb.phase, wave_rgb.frequency);
 			q3color = const_color * mult;
 			break;
 		case q3stage::gen_type::diffuse_lighting:
@@ -874,6 +889,9 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 	}
 	
 	switch (gen_alpha) {
+		case q3stage::gen_type::entity:
+			q3color[3] = parm.shader_color[3];
+			break;
 		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
 			// TODO -- too niche for now
@@ -886,7 +904,7 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			q3color[3] = const_color[3];
 			break;
 		case q3stage::gen_type::wave:
-			mult = gen_func_do(wave_alpha.func, time, wave_alpha.base, wave_alpha.amplitude, wave_alpha.phase, wave_alpha.frequency);
+			mult = gen_func_do(wave_alpha.func, parm.time, wave_alpha.base, wave_alpha.amplitude, wave_alpha.phase, wave_alpha.frequency);
 			q3color[3] = const_color[3] * mult;
 			break;
 		case q3stage::gen_type::diffuse_lighting: 
@@ -897,7 +915,7 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 	bool turb = false;
 	q3stage::tx_turb const * turb_data = nullptr;
 	
-	qm::mat3_t uvm2 = uvm;
+	qm::mat3_t uvm2 = parm.uvm;
 	for (texmod const & tx : texmods) {
 		std::visit(lambda_visit{
 			[&](tx_turb const & value){
@@ -908,10 +926,10 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 				uvm2 *= qm::mat3_t::scale(value.value[0], value.value[1]);
 			},
 			[&](tx_scroll const & value){
-				uvm2 *= qm::mat3_t::translate(value.value[0] * time, value.value[1] * time);
+				uvm2 *= qm::mat3_t::translate(value.value[0] * parm.time, value.value[1] * parm.time);
 			},
 			[&](tx_stretch const & value){
-				float p = 1.0f / gen_func_do(value.gfunc, time, value.base, value.amplitude, value.phase, value.frequency);
+				float p = 1.0f / gen_func_do(value.gfunc, parm.time, value.base, value.amplitude, value.phase, value.frequency);
 				qm::mat3_t mat = qm::mat3_t::identity();
 				mat[0][0] = mat[1][1] = p;
 				mat[2][0] = mat[2][1] = 0.5f - 0.5f * p;
@@ -922,7 +940,7 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			},
 			[&](tx_rotate const & value){
 				uvm2 *= qm::mat3_t::translate(-0.5, -0.5);
-				uvm2 *= qm::mat3_t::rotate(value.angle * time);
+				uvm2 *= qm::mat3_t::rotate(value.angle * parm.time);
 				uvm2 *= qm::mat3_t::translate(0.5, 0.5);
 			}
 		}, tx);
@@ -931,8 +949,8 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 	switch (mode) {
 		case shading_mode::main:
 			hw_inst->q3mainprog->bind();
-			hw_inst->q3mainprog->time(time);
-			hw_inst->q3mainprog->mvp(mvp);
+			hw_inst->q3mainprog->time(parm.time);
+			hw_inst->q3mainprog->mvp(parm.mvp);
 			hw_inst->q3mainprog->uvm(uvm2);
 			hw_inst->q3mainprog->color(q3color);
 			hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
@@ -943,13 +961,16 @@ void q3stage::setup_draw(float time, qm::mat4_t const & mvp, qm::mat3_t const & 
 			break;
 		case shading_mode::lightmap:
 			hw_inst->q3lmprog->bind();
-			hw_inst->q3lmprog->mvp(mvp);
+			hw_inst->q3lmprog->mvp(parm.mvp);
 			hw_inst->q3lmprog->color(q3color);
-			if (mesh_uniforms) {
-				hw_inst->q3lmprog->mode(mesh_uniforms->mode);
+			if (parm.mesh_uniforms) {
+				hw_inst->q3lmprog->mode(parm.mesh_uniforms->mode);
 			}
 			break;
 		case shading_mode::noise:
+			hw_inst->q3noiseprog->bind();
+			hw_inst->q3noiseprog->time(parm.time);
+			hw_inst->q3noiseprog->mvp(parm.mvp);
 			break;
 	}
 }

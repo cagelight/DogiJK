@@ -138,6 +138,12 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 		0, 0, 0, 1
 	};
 	
+	obj.shader_color = {
+		re->shaderRGBA[0] / 255.0f,
+		re->shaderRGBA[1] / 255.0f,
+		re->shaderRGBA[2] / 255.0f,
+		re->shaderRGBA[3] / 255.0f,
+	};
 	obj.model_matrix = axis_conv * origin_m;
 }
 

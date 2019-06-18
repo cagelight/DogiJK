@@ -19,7 +19,7 @@ constexpr int8_t compare3(T const & A, T const & B) {
 
 struct q3drawmesh {
 	q3drawmesh() = delete;
-	q3drawmesh(q3mesh_ptr const & mesh, qm::mat4_t const & mvp) : mesh(mesh), mvp(mvp) {}
+	q3drawmesh(q3mesh_ptr const & mesh, qm::mat4_t const & mvp, qm::vec4_t shader_color = {1, 1, 1, 1}) : mesh(mesh), mvp(mvp), shader_color(shader_color) {}
 	q3drawmesh(q3drawmesh const &) = delete;
 	q3drawmesh(q3drawmesh &&) = default;
 	
@@ -28,6 +28,7 @@ struct q3drawmesh {
 	
 	q3mesh_ptr mesh;
 	qm::mat4_t mvp;
+	qm::vec4_t shader_color;
 };
 
 struct q3drawset {
@@ -132,13 +133,12 @@ void instance::end_frame(float time) {
 		
 		std::vector<q3drawset> draw_set;
 		for (auto & [shader, meshes] : draw_map) {
-			if (!shader) continue;
-			if (shader->sky_parms) {
+			if (shader && shader->sky_parms) {
 				skyboxes.emplace_back(shader, std::move(meshes));
 				continue;
 			}
 			draw_set.emplace_back(
-				shader,
+				(shader && shader->valid) ? shader : shaders.get(0),
 				meshes
 			);
 		}
@@ -155,7 +155,6 @@ void instance::end_frame(float time) {
 		gl::depth_test(true);
 		gl::depth_func(GL_LESS);
 		gl::depth_write(true);
-		gl::cull(false);
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
 		q3skyboxstencilprog->bind();
@@ -209,7 +208,12 @@ void instance::end_frame(float time) {
 			for (auto const & stg : draw.shader->stages)
 				for (auto const & mesh : draw.meshes) {
 					if (!mesh.mesh) continue;
-					stg.setup_draw(time, mesh.mvp, qm::mat3_t::identity(), mesh.mesh->uniform_info());
+					q3stage::setup_draw_parameters_t params;
+					params.time = time;
+					params.mvp = mesh.mvp;
+					params.mesh_uniforms = mesh.mesh->uniform_info();
+					params.shader_color = mesh.shader_color;
+					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}
 		}
@@ -230,8 +234,8 @@ void instance::end_frame(float time) {
 	
 	for (auto & c2d : drawframe->c2ds) {
 		std::visit(lambda_visit{
-			[&](cmd2d::stretchpic const & cmd){
-				if (!cmd.shader) return;
+			[&](cmd2d::stretchpic & cmd){
+				if (!cmd.shader || !cmd.shader->valid) cmd.shader = shaders.get(0);
 				
 				qm::mat4_t m = qm::mat4_t::scale(cmd.w ? cmd.w : cmd.h * (640.0f / 480.0f), cmd.h, 1);
 				m *= qm::mat4_t::translate(cmd.x, cmd.y, 0);
@@ -243,7 +247,11 @@ void instance::end_frame(float time) {
 				qm::mat4_t mvp = m * ui_ortho;
 				if (debug_enabled) debug_meshes.emplace_back(unitquad, mvp);
 				for (auto const & stg : cmd.shader->stages) {
-					stg.setup_draw(time, mvp, uv);
+					q3stage::setup_draw_parameters_t params;
+					params.time = time;
+					params.mvp = mvp;
+					params.uvm = uv;
+					stg.setup_draw(params);
 					unitquad->draw();
 				}
 			}
