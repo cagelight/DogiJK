@@ -6,7 +6,7 @@ import os, sys
 top = os.getcwd()
 out = 'build'
 	
-g_comflags = ['-pthread', '-Wall', '-Wextra', '-Wno-unused-variable', '-Wno-unused-parameter', '-Werror=invalid-offsetof']
+g_comflags = ['-pthread', '-Wall', '-Wextra', '-Wno-unused-variable', '-Wno-unused-parameter', '-Werror=invalid-offsetof', '-finput-charset=utf8']
 g_cflags = ['-std=c99'] + g_comflags
 g_cxxflags = ['-std=c++17'] + g_comflags
 

@@ -119,8 +119,6 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 		model->meshes.emplace_back(shader, proto.generate());
 	}
 	
-	Com_Printf("%zu vis meshes\n", model->meshes.size());
-	
 	return model;
 }
 

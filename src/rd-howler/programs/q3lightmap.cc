@@ -1,12 +1,6 @@
 #include "../hw_local.hh"
 using namespace howler;
 
-static constexpr GLint location_mvp = 0;
-static constexpr GLint location_uv = 1;
-static constexpr GLint location_color = 2;
-static constexpr GLint location_styles = 3;
-static constexpr GLint location_mode = 4;
-
 static std::string generate_vertex_shader() {
 	std::stringstream ss;
 	ss << R"GLSL(
@@ -24,15 +18,15 @@ static std::string generate_vertex_shader() {
 	layout(location = )GLSL" << LAYOUT_LMCOLOR2 << R"GLSL() in vec4 lm_color2;
 	layout(location = )GLSL" << LAYOUT_LMCOLOR3 << R"GLSL() in vec4 lm_color3;
 
-	layout(location = )GLSL" << location_mvp << R"GLSL() uniform mat4 vertex_matrix;
-	layout(location = )GLSL" << location_mode << R"GLSL() uniform uint lm_mode;
+	uniform mat4 mvp;
+	uniform uint lm_mode;
 
 	out vec4 vertex_color;
 	out vec2 vertex_uv[4];
 	out float factor;
 	
 	void main() {
-		gl_Position = vertex_matrix * vec4(vert, 1);
+		gl_Position = mvp * vec4(vert, 1);
 		
 		switch (lm_mode) {
 			case 1:
@@ -65,7 +59,7 @@ static std::string generate_fragment_shader() {
 	#version 450
 		
 	// UNIFORMS
-	layout(location = )GLSL" << location_color << R"GLSL() uniform vec4 q3color;
+	uniform vec4 q3color;
 	
 	// TEXTURE BINDINGS
 	layout(binding = )GLSL" << BINDING_LIGHTMAP << R"GLSL() uniform sampler2D lm;
@@ -89,7 +83,26 @@ static std::string generate_fragment_shader() {
 	return ss.str();
 }
 
-programs::q3lightmap::q3lightmap() {
+struct programs::q3lightmap::private_data {
+	uniform_mat4 m_mvp = qm::mat4_t::identity();
+	uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
+	uniform_lmmode m_mode = 0;
+	
+	void reset() {
+		m_mvp.reset();
+		m_color.reset();
+		m_mode.reset();
+	}
+	
+	void push() {
+		m_mvp.push_direct();
+		m_color.push_direct();
+		m_mode.push_direct();
+	}
+};
+
+
+programs::q3lightmap::q3lightmap() : m_data(new private_data) {
 	
 	std::string log;
 	std::string vsrc = generate_vertex_shader();
@@ -113,31 +126,32 @@ programs::q3lightmap::q3lightmap() {
 	if (!link(&log)) {
 		Com_Error(ERR_FATAL, va("programs::q3lightmap failed to link:\n%s", log.c_str()));
 	}
+	
+	if (m_data->m_mvp.set_location(get_location("mvp")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3lightmap: could not find uniform location for \"mvp\"");
+	if (m_data->m_color.set_location(get_location("q3color")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3lightmap: could not find uniform location for \"q3color\"");
+	if (m_data->m_mode.set_location(get_location("lm_mode")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3lightmap: could not find uniform location for \"lm_mode\"");
 }
 
+programs::q3lightmap::~q3lightmap() {}
+
 void programs::q3lightmap::on_bind() {
-	m_mvp.push(location_mvp);
-	m_color.push(location_color);
-	m_styles.push(location_styles);
-	m_mode.push(location_mode);
+	m_data->push();
 }
 
 void programs::q3lightmap::mvp(qm::mat4_t const & value) {
-	m_mvp = value;
-	if (is_bound()) m_mvp.push(location_mvp);
+	m_data->m_mvp = value;
+	if (is_bound()) m_data->m_mvp.push();
 }
 
 void programs::q3lightmap::color(qm::vec4_t const & value) {
-	m_color = value;
-	if (is_bound()) m_color.push(location_color);
-}
-
-void programs::q3lightmap::styles(lightmap_styles_t const & value) {
-	m_styles = value;
-	if (is_bound()) m_styles.push(location_styles);
+	m_data->m_color = value;
+	if (is_bound()) m_data->m_color.push();
 }
 
 void programs::q3lightmap::mode(GLuint const & value) {
-	m_mode = value;
-	if (is_bound()) m_mode.push_direct(location_mode);
+	m_data->m_mode = value;
+	if (is_bound()) m_data->m_mode.push();
 }

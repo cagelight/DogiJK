@@ -26,22 +26,46 @@ namespace howler {
 	
 	#undef FUNDAMENTAL
 	
+	//================================
+	// GROUP 1
 	static constexpr GLint LAYOUT_VERTEX = 0;
-	static constexpr GLint LAYOUT_UV = 1;
-	static constexpr GLint LAYOUT_COLOR = 2;
-	static constexpr GLint LAYOUT_LMUV0 = 3;
-	static constexpr GLint LAYOUT_LMUV1 = 4;
-	static constexpr GLint LAYOUT_LMUV2 = 5;
-	static constexpr GLint LAYOUT_LMUV3 = 6;
-	static constexpr GLint LAYOUT_LMCOLOR0 = 7;
-	static constexpr GLint LAYOUT_LMCOLOR1 = 8;
-	static constexpr GLint LAYOUT_LMCOLOR2 = 9;
-	static constexpr GLint LAYOUT_LMCOLOR3 = 10;
-	static constexpr GLint LAYOUT_TEXBIND = 11;
+	static constexpr GLint LAYOUT_UV = LAYOUT_VERTEX + 1;
+	
+	// GROUP 2 EXTENDS GROUP 1
+	static constexpr GLint LAYOUT_NORMAL = LAYOUT_UV + 1;
+	static constexpr GLint LAYOUT_COLOR = LAYOUT_NORMAL + 1;
+	
+	// GROUP 3 EXTENDS GROUP 1
+	static constexpr GLint LAYOUT_TEXBIND = LAYOUT_UV + 1;
+	
+	// GROUP 4 EXTENDS GROUP 2
+	static constexpr GLint LAYOUT_BONE_GROUP0 = LAYOUT_COLOR + 1;
+	static constexpr GLint LAYOUT_BONE_GROUP1 = LAYOUT_BONE_GROUP0 + 1;
+	static constexpr GLint LAYOUT_BONE_GROUP2 = LAYOUT_BONE_GROUP1 + 1;
+	static constexpr GLint LAYOUT_BONE_GROUP3 = LAYOUT_BONE_GROUP2 + 1;
+	static constexpr GLint LAYOUT_BONE_WEIGHT = LAYOUT_BONE_GROUP3 + 1;
+	static_assert(LAYOUT_BONE_WEIGHT < 16);
+	
+	// GROUP 5 EXTENDS GROUP 2
+	static constexpr GLint LAYOUT_LMUV0 = LAYOUT_COLOR + 1;
+	static constexpr GLint LAYOUT_LMUV1 = LAYOUT_LMUV0 + 1;
+	static constexpr GLint LAYOUT_LMUV2 = LAYOUT_LMUV1 + 1;
+	static constexpr GLint LAYOUT_LMUV3 = LAYOUT_LMUV2 + 1;
+	static_assert(LAYOUT_LMUV3 < 16);
+	
+	// GROUP 6 EXTENDS GROUP 2
+	static constexpr GLint LAYOUT_LMCOLOR0 = LAYOUT_COLOR + 1;
+	static constexpr GLint LAYOUT_LMCOLOR1 = LAYOUT_LMCOLOR0 + 1;
+	static constexpr GLint LAYOUT_LMCOLOR2 = LAYOUT_LMCOLOR1 + 1;
+	static constexpr GLint LAYOUT_LMCOLOR3 = LAYOUT_LMCOLOR2 + 1;
+	static_assert(LAYOUT_LMCOLOR3 < 16);
+	//================================
+	
 	
 	static constexpr GLint BINDING_DIFFUSE = 0;
 	static constexpr GLint BINDING_LIGHTMAP = 1;
 	static constexpr GLint BINDING_SKYBOX = 2; // TO 7
+	static constexpr GLint BINDING_BONE_MATRICIES = 8;
 	
 	static constexpr uint_fast16_t LIGHTMAP_NUM = 4;
 	static constexpr uint_fast16_t LIGHTMAP_DIM = 128;
@@ -118,13 +142,6 @@ namespace howler {
 		static GLuint bound_handle;
 	};
 	
-	
-	/*
-		void upload_verts(float const *, size_t);
-		inline void upload_verts(qm::vec3_t const * ptr, size_t num) { upload_verts(reinterpret_cast<float const *>(ptr), num * 3); }
-		template <typename T> inline void upload_verts(T const & v) { upload_verts(v.data(), v.size()); }
-	*/
-	
 	// MODEL
 	struct q3model {
 		q3model() = default;
@@ -171,7 +188,8 @@ namespace howler {
 		bool link(std::string * log = nullptr);
 		
 		virtual void on_bind() = 0;
-		
+		GLint get_location(char const * var) const { return glGetUniformLocation(m_handle, var); }
+		GLuint const & get_handle() const { return m_handle; }
 	private:
 		GLuint m_handle = 0;
 		static GLuint bound_id;
@@ -300,7 +318,7 @@ namespace howler {
 		enum struct shading_mode {
 			main,
 			lightmap,
-			noise,
+			noise
 		} mode = shading_mode::main;
 		
 		enum struct gen_func {
@@ -380,6 +398,7 @@ namespace howler {
 			qm::mat3_t uvm = qm::mat3_t::identity();
 			q3mesh::uniform_info_t const * mesh_uniforms = nullptr;
 			qm::vec4_t shader_color {1, 1, 1, 1};
+			std::vector<qm::mat4_t> const * bone_weights = nullptr;
 		};
 		void setup_draw(setup_draw_parameters_t const &) const;
 	};
@@ -438,15 +457,19 @@ namespace howler {
 		constexpr uniform(T const & value_in) : value(value_in), value_default(value_in), modified(true) {}
 		constexpr bool operator == (T const & other) const { return other == value; }
 		constexpr T const & operator = (T const & other) { if (value != other) modified = true; value = other; return value; }
-		inline void push(GLint location) { if (!modified) return; push_direct(location); }
-		inline void push_direct(GLint location) { modified = false; UPLOAD(location, value); }
+		inline void push() { if (!modified) return; push_direct(); }
+		inline void push_direct() { modified = false; UPLOAD(location, value); }
 		inline void reset() { operator = (value_default); }
+		inline GLint set_location(GLint in) { location = in; return in; }
  	private:
 		T value;
 		T const value_default;
+		GLint location;
 		bool modified;
 	};
 	
+	inline void upload_uint(GLint location, GLuint const & value) { glUniform1ui(location, value); }
+	using uniform_uint = uniform<GLuint, upload_uint>;
 	inline void upload_bool(GLint location, bool const & value) { glUniform1i(location, value); }
 	using uniform_bool = uniform<bool, upload_bool>;
 	inline void upload_float(GLint location, float const & value) { glUniform1f(location, value); }
@@ -466,7 +489,7 @@ namespace howler {
 	namespace programs {
 		struct q3main : public q3program {
 			q3main();
-			~q3main() = default;
+			~q3main();
 			
 			void bind_and_reset();
 			
@@ -477,34 +500,28 @@ namespace howler {
 			void use_vertex_colors(bool const &);
 			void turb(bool const &);
 			void turb_data(q3stage::tx_turb const &);
+			void mapgen(uint8_t);
+			
+			void bone_matricies(qm::mat4_t const *, size_t num);
 		protected:
 			virtual void on_bind() override;
 		private:
-			uniform_float m_time = 0;
-			uniform_mat4 m_mvp = qm::mat4_t::identity();
-			uniform_mat3 m_uv = qm::mat3_t::identity();
-			uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
-			uniform_bool m_use_vertex_colors = false;
-			
-			uniform_bool m_turb = false;
-			uniform_vec4 m_turb_data = qm::vec4_t {0, 0, 0, 0};
+			struct private_data;
+			std::unique_ptr<private_data> m_data;
 		};
 		
 		struct q3lightmap : public q3program {
 			q3lightmap();
-			~q3lightmap() = default;
+			~q3lightmap();
 			
 			void mvp(qm::mat4_t const &);
 			void color(qm::vec4_t const &);
-			void styles(lightmap_styles_t const &);
 			void mode(GLuint const &);
 		protected:
 			virtual void on_bind() override;
 		private:
-			uniform_mat4 m_mvp = qm::mat4_t::identity();
-			uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
-			uniform_lmstyles m_styles = lightmap_styles_t {0, 0, 0, 0};
-			uniform_lmmode m_mode = 0;
+			struct private_data;
+			std::unique_ptr<private_data> m_data;
 		};
 		
 		struct q3line : public q3program {
@@ -539,19 +556,6 @@ namespace howler {
 		private:
 			uniform_mat4 m_mvp = qm::mat4_t::identity();
 		};
-		
-		struct q3noise : public q3program {
-			q3noise();
-			~q3noise() = default;
-			
-			void time(float const &);
-			void mvp(qm::mat4_t const &);
-		protected:
-			virtual void on_bind() override;
-		private:
-			uniform_float m_time = 0;
-			uniform_mat4 m_mvp = qm::mat4_t::identity();
-		};
 	}
 	
 //================================================================
@@ -574,6 +578,18 @@ namespace howler {
 			qm::mat4_t model_matrix;
 			qm::vec4_t shader_color;
 		};
+		
+		struct ghoul2_object {
+			q3basemodel_ptr basemodel;
+			CGhoul2Info_v * g2;
+			qm::vec3_t origin;
+			qm::vec3_t scale;
+			qm::vec3_t angles;
+			qm::quat_t rotation;
+			qm::vec4_t shader_color;
+			vec3_t orig_origin, orig_angles;
+			qm::mat4_t model_matrix;
+		};
 	};
 	
 	using c2d = std::variant<
@@ -581,7 +597,8 @@ namespace howler {
 	>;
 	
 	using c3d = std::variant<
-		cmd3d::basic_object
+		cmd3d::basic_object,
+		cmd3d::ghoul2_object
 	>;
 	
 	struct q3scene {
@@ -920,12 +937,11 @@ namespace howler {
 		uint32_t width, height;
 		bool renderer_initialized = false;
 		
-		std::unique_ptr<programs::q3main> q3mainprog = nullptr;
-		std::unique_ptr<programs::q3lightmap> q3lmprog = nullptr;
-		std::unique_ptr<programs::q3line> q3lineprog = nullptr;
-		std::unique_ptr<programs::q3skyboxstencil> q3skyboxstencilprog = nullptr;
-		std::unique_ptr<programs::q3skybox> q3skyboxprog = nullptr;
-		std::unique_ptr<programs::q3noise> q3noiseprog = nullptr;
+		std::unique_ptr<programs::q3main> q3mainprog;
+		std::unique_ptr<programs::q3lightmap> q3lmprog;
+		std::unique_ptr<programs::q3line> q3lineprog;
+		std::unique_ptr<programs::q3skyboxstencil> q3skyboxstencilprog;
+		std::unique_ptr<programs::q3skybox> q3skyboxprog;
 		
 		q3sampler_ptr main_sampler = nullptr;
 		

@@ -41,6 +41,7 @@ XCVAR_DEF( r_showedges,					"0",				CVAR_CHEAT,										"" )
 XCVAR_DEF( r_showtris,					"0",				CVAR_CHEAT,										"" )
 XCVAR_DEF( r_vis,						"1",				0,												"" )
 XCVAR_DEF( r_viscachesize,				"20",				CVAR_ARCHIVE,									"" )
+XCVAR_DEF (r_debug,						"0",				CVAR_ARCHIVE,									"" )
 
 #ifdef _DEBUG
 XCVAR_DEF( r_drawcalls,					"0",				0,												"" )

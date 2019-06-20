@@ -93,3 +93,7 @@ int Z_MemSize( memtag_t eTag ) {
 void Z_MorphMallocTag( void *pvBuffer, memtag_t eDesiredTag ) {
 	ri.Z_MorphMallocTag( pvBuffer, eDesiredTag );
 }
+
+void G2_TransformBone(int index,CBoneCache &CB) {
+	ri.G2_TransformBone(index, CB);
+}

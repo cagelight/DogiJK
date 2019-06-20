@@ -126,25 +126,61 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 	
 	if (!re || re->reType == RT_ENT_CHAIN) return;
 	
-	auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::basic_object>();
-	obj.basemodel = hw_inst->models.get(re->hModel);
-	qm::vec3_t origin = {re->origin[1], -re->origin[2], re->origin[0]};
-	
-	qm::mat4_t origin_m = qm::mat4_t::translate(origin);
-	qm::mat4_t axis_conv = {
-		re->axis[1][1], -re->axis[1][2], re->axis[1][0], 0,
-		re->axis[2][1], -re->axis[2][2], re->axis[2][0], 0,
-		re->axis[0][1], -re->axis[0][2], re->axis[0][0], 0,
-		0, 0, 0, 1
-	};
-	
-	obj.shader_color = {
-		re->shaderRGBA[0] / 255.0f,
-		re->shaderRGBA[1] / 255.0f,
-		re->shaderRGBA[2] / 255.0f,
-		re->shaderRGBA[3] / 255.0f,
-	};
-	obj.model_matrix = axis_conv * origin_m;
+	if (re->reType == RT_MODEL && re->ghoul2) {
+		
+		auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::ghoul2_object>();
+		obj.g2 = (CGhoul2Info_v *)re->ghoul2;
+		obj.basemodel = hw_inst->models.get(ri.G2_At(*obj.g2, 0).mModel);
+		obj.origin = {re->origin[1], -re->origin[2], re->origin[0]};
+		if (re->modelScale[0] || re->modelScale[1] || re->modelScale[2])
+			obj.scale = {re->modelScale[1], -re->modelScale[2], re->modelScale[0]};
+		else obj.scale = {1, -1, 1};
+		obj.angles = re->angles;
+		obj.rotation = qm::quat_t::identity();
+		obj.rotation *= qm::quat_t { {0, 1, 0}, -qm::deg2rad(re->angles[YAW]) };
+		obj.rotation *= qm::quat_t { {1, 0, 0}, qm::deg2rad(re->angles[PITCH]) };
+		obj.rotation *= qm::quat_t { {0, 0, 1}, qm::deg2rad(re->angles[ROLL]) };
+		
+		VectorCopy(re->origin, obj.orig_origin);
+		VectorCopy(re->angles, obj.orig_angles);
+		
+		qm::mat4_t axis_conv = {
+			re->axis[1][1], -re->axis[1][2], re->axis[1][0], 0,
+			re->axis[2][1], -re->axis[2][2], re->axis[2][0], 0,
+			re->axis[0][1], -re->axis[0][2], re->axis[0][0], 0,
+			0, 0, 0, 1
+		};
+		obj.model_matrix = axis_conv * qm::mat4_t::translate(obj.origin);
+		
+		obj.shader_color = {
+			re->shaderRGBA[0] / 255.0f,
+			re->shaderRGBA[1] / 255.0f,
+			re->shaderRGBA[2] / 255.0f,
+			re->shaderRGBA[3] / 255.0f,
+		};
+		
+	} else if (re->reType == RT_MODEL) {
+		
+		auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::basic_object>();
+		obj.basemodel = hw_inst->models.get(re->hModel);
+		qm::vec3_t origin = {re->origin[1], -re->origin[2], re->origin[0]};
+		
+		qm::mat4_t origin_m = qm::mat4_t::translate(origin);
+		qm::mat4_t axis_conv = {
+			re->axis[1][1], -re->axis[1][2], re->axis[1][0], 0,
+			re->axis[2][1], -re->axis[2][2], re->axis[2][0], 0,
+			re->axis[0][1], -re->axis[0][2], re->axis[0][0], 0,
+			0, 0, 0, 1
+		};
+		
+		obj.shader_color = {
+			re->shaderRGBA[0] / 255.0f,
+			re->shaderRGBA[1] / 255.0f,
+			re->shaderRGBA[2] / 255.0f,
+			re->shaderRGBA[3] / 255.0f,
+		};
+		obj.model_matrix = axis_conv * origin_m;
+	}
 }
 
 void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {

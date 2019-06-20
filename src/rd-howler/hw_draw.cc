@@ -19,8 +19,11 @@ constexpr int8_t compare3(T const & A, T const & B) {
 
 struct q3drawmesh {
 	q3drawmesh() = delete;
-	q3drawmesh(q3mesh_ptr const & mesh, qm::mat4_t const & mvp, qm::vec4_t shader_color = {1, 1, 1, 1}) : mesh(mesh), mvp(mvp), shader_color(shader_color) {}
-	q3drawmesh(q3drawmesh const &) = delete;
+	q3drawmesh(q3mesh_ptr const & mesh, qm::mat4_t const & mvp, qm::vec4_t shader_color = {1, 1, 1, 1}) : 
+		mesh(mesh),
+		mvp(mvp),
+		shader_color(shader_color) {}
+	q3drawmesh(q3drawmesh const &) = default;
 	q3drawmesh(q3drawmesh &&) = default;
 	
 	q3drawmesh & operator = (q3drawmesh const &) = delete;
@@ -29,6 +32,7 @@ struct q3drawmesh {
 	q3mesh_ptr mesh;
 	qm::mat4_t mvp;
 	qm::vec4_t shader_color;
+	std::vector<qm::mat4_t> weights;
 };
 
 struct q3drawset {
@@ -115,19 +119,79 @@ void instance::end_frame(float time) {
 						if (debug_enabled) debug_meshes.emplace_back(mesh.second, mvp);
 						draw_map[mesh.first].emplace_back(mesh.second, mvp);
 					}
+				},
+				[&](cmd3d::ghoul2_object const & obj) {
+					if (!obj.basemodel->model) {
+						if (obj.basemodel->base.type == MOD_MESH)
+							Com_Error(ERR_FATAL, "instance::end_frame: tried to draw a mesh not setup for rendering");
+						else return;
+					}
+					
+					if (!ri.G2_IsValid(*obj.g2)) return;
+					if (!ri.G2_SetupModelPointers(*obj.g2)) return;
+					
+					mdxaBone_t root;
+					ri.G2_RootMatrix(*obj.g2, time, obj.scale, root);
+					
+					int32_t model_count;
+					int32_t model_list[256]; model_list[255]=548;
+					ri.G2_Sort_Models(*obj.g2, model_list, &model_count);
+					ri.G2_GenerateWorldMatrix(obj.orig_angles, obj.orig_origin);
+					
+					/*
+					for (int32_t i = 0; i < model_count; i++) {
+						CGhoul2Info & g2 = ri.G2_At(*obj.g2,  model_list[i]);
+						if (g2.mValid && !(g2.mFlags & GHOUL2_NOMODEL) && !(g2.mFlags & GHOUL2_NORENDER)) {
+							auto const & surf = obj.basemodel->model->meshes[g2.mSlist[g2.mSurfaceRoot].surface];
+							if (debug_enabled) debug_meshes.emplace_back(surf.second, mvp);
+							draw_map[surf.first].emplace_back(surf.second, mvp);
+						}
+					}
+					*/
+					
+					CGhoul2Info & g2 = ri.G2_At(*obj.g2, 0);
+					ri.G2_TransformGhoulBones(g2.mBlist, root, g2, ri.G2API_GetTime(time), true);
+					
+					for (int32_t s = 0; s < obj.basemodel->model->meshes.size(); s++) {
+						
+						if (!obj.basemodel->model->meshes[s].second) continue;
+						
+						mdxmSurface_t * surf = (mdxmSurface_t *)ri.G2_FindSurface(&obj.basemodel->base, s, 0);
+						auto const & mesh = obj.basemodel->model->meshes[s];
+						
+						std::vector<qm::mat4_t> bone_array;
+						bone_array.resize(72);
+						
+						int const * refs = reinterpret_cast<int const *>(reinterpret_cast<byte const *>(surf) + surf->ofsBoneReferences);
+						for (int32_t i = 0; i < 72; i++) {
+							
+							if (i >= surf->numBoneReferences) {
+								bone_array[i] = qm::mat4_t::identity();
+								bone_array[i][0][0] = Q_flrand(0, 1);
+								continue;
+							}
+							
+							mdxaBone_t const & bone = g2.mBoneCache->EvalRender(refs[i]);
+							qm::mat4_t bone_conv = {
+								bone.matrix[0][0], bone.matrix[2][0], bone.matrix[1][0], 0,
+								bone.matrix[0][2], bone.matrix[2][2], bone.matrix[1][2], 0,
+								-bone.matrix[0][1], -bone.matrix[2][1], -bone.matrix[1][1], 0,
+								bone.matrix[0][3], bone.matrix[2][3], bone.matrix[1][3], 1
+							};
+							
+							static constexpr qm::mat4_t adjust = qm::mat4_t::scale({1, 1, -1}) * qm::mat4_t {qm::quat_t {{0, 1, 0}, qm::pi / 2}};
+							bone_array[i] = bone_conv * adjust;
+						}
+						
+						q3drawmesh draw {mesh.second, obj.model_matrix * vp};
+						draw.weights = std::move(bone_array);
+						
+						if (debug_enabled) debug_meshes.emplace_back(draw);
+						draw_map[mesh.first].emplace_back(draw);
+					}
 				}
 			}, cmd);
 		}
-		
-		#ifdef _DEBUG
-		if (r_drawcalls->integer) {
-			size_t draws = 0;
-			for (auto & [shader, meshes] : draw_map) {
-				draws += meshes.size();
-			}
-			Com_Printf("draw_map size: %zu shaders with %zu draws\n", draw_map.size(), draws);
-		}
-		#endif
 		
 		std::vector<std::pair<q3shader_ptr, std::vector<q3drawmesh>>> skyboxes;
 		
@@ -213,6 +277,7 @@ void instance::end_frame(float time) {
 					params.mvp = mesh.mvp;
 					params.mesh_uniforms = mesh.mesh->uniform_info();
 					params.shader_color = mesh.shader_color;
+					params.bone_weights = mesh.weights.size() ? &mesh.weights : nullptr;
 					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}

@@ -56,7 +56,6 @@ void instance::initialize_renderer() {
 	q3lineprog.reset( new programs::q3line );
 	q3skyboxstencilprog.reset( new programs::q3skyboxstencil );
 	q3skyboxprog.reset( new programs::q3skybox );
-	q3noiseprog.reset( new programs::q3noise );
 	
 	fullquad = q3mesh::generate_fullquad();
 	unitquad = q3mesh::generate_unitquad();

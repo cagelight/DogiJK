@@ -496,7 +496,7 @@ struct qm::meta::quat_t {
 	constexpr quat_t(quat_t const &) noexcept = default;
 	constexpr quat_t(quat_t &&) noexcept = default;
 	
-	constexpr quat_t(vec3_t<T> const & axis, T const & angle) {
+	constexpr quat_t(vec3_t<T> const & axis, T const & angle) : data {0, 0, 0, 0} {
 		T a = angle/2;
 		T s = std::sin(a);
 		data[0] = axis[0] * s;

@@ -947,6 +947,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	}
 	
 	switch (mode) {
+		case shading_mode::noise:
 		case shading_mode::main:
 			hw_inst->q3mainprog->bind();
 			hw_inst->q3mainprog->time(parm.time);
@@ -955,9 +956,17 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			hw_inst->q3mainprog->color(q3color);
 			hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
 			hw_inst->q3mainprog->turb(turb);
+			
 			if (turb) {
 				hw_inst->q3mainprog->turb_data(*turb_data);
 			}
+			
+			if (parm.bone_weights)
+				hw_inst->q3mainprog->bone_matricies(parm.bone_weights->data(), parm.bone_weights->size());
+			else
+				hw_inst->q3mainprog->bone_matricies(nullptr, 0);
+			
+			hw_inst->q3mainprog->mapgen(mode == shading_mode::noise ? 0 : 1);
 			break;
 		case shading_mode::lightmap:
 			hw_inst->q3lmprog->bind();
@@ -966,11 +975,6 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			if (parm.mesh_uniforms) {
 				hw_inst->q3lmprog->mode(parm.mesh_uniforms->mode);
 			}
-			break;
-		case shading_mode::noise:
-			hw_inst->q3noiseprog->bind();
-			hw_inst->q3noiseprog->time(parm.time);
-			hw_inst->q3noiseprog->mvp(parm.mvp);
 			break;
 	}
 }

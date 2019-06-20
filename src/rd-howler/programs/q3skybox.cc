@@ -85,13 +85,15 @@ programs::q3skybox::q3skybox() {
 	if (!link(&log)) {
 		Com_Error(ERR_FATAL, va("programs::q3skybox failed to link:\n%s", log.c_str()));
 	}
+	
+	m_mvp.set_location(location_mvp);
 }
 
 void programs::q3skybox::on_bind() {
-	m_mvp.push(location_mvp);
+	m_mvp.push();
 }
 
 void programs::q3skybox::mvp(qm::mat4_t const & v) {
 	m_mvp = v;
-	if (is_bound()) m_mvp.push(location_mvp);
+	if (is_bound()) m_mvp.push();
 }
