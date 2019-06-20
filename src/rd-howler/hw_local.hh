@@ -526,13 +526,16 @@ namespace howler {
 		
 		struct q3line : public q3program {
 			q3line();
-			~q3line() = default;
+			~q3line();
 			
 			void mvp(qm::mat4_t const &);
+			
+			void bone_matricies(qm::mat4_t const *, size_t num);
 		protected:
 			virtual void on_bind() override;
 		private:
-			uniform_mat4 m_mvp = qm::mat4_t::identity();
+			struct private_data;
+			std::unique_ptr<private_data> m_data;
 		};
 		
 		struct q3skybox : public q3program {
@@ -581,13 +584,8 @@ namespace howler {
 		
 		struct ghoul2_object {
 			q3basemodel_ptr basemodel;
+			refEntity_t ref;
 			CGhoul2Info_v * g2;
-			qm::vec3_t origin;
-			qm::vec3_t scale;
-			qm::vec3_t angles;
-			qm::quat_t rotation;
-			qm::vec4_t shader_color;
-			vec3_t orig_origin, orig_angles;
 			qm::mat4_t model_matrix;
 		};
 	};

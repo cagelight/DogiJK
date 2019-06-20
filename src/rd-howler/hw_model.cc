@@ -159,7 +159,6 @@ void q3basemodel::setup_render_md3() {
 	md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
 	for (int32_t s = 0; s < header->numSurfaces; s++) {
 		
-		
 		md3XyzNormal_t * verts = (md3XyzNormal_t *) ((byte *)surf + surf->ofsXyzNormals);
 		md3St_t * uvs = (md3St_t *) ((byte *)surf + surf->ofsSt);
 		md3Triangle_t * triangles = (md3Triangle_t *) ((byte *)surf + surf->ofsTriangles);

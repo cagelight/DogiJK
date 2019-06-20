@@ -127,27 +127,20 @@ void instance::end_frame(float time) {
 						else return;
 					}
 					
-					if (!ri.G2_IsValid(*obj.g2)) return;
-					if (!ri.G2_SetupModelPointers(*obj.g2)) return;
+					if (!ri.G2_IsValid(*obj.g2)) 
+						return;
+					if (!ri.G2_SetupModelPointers(*obj.g2)) 
+						return;
+					
+					if ((obj.ref.renderfx & RF_THIRD_PERSON)) return; // FIXME -- these render in mirrors and portals
 					
 					mdxaBone_t root;
-					ri.G2_RootMatrix(*obj.g2, time, obj.scale, root);
+					ri.G2_RootMatrix(*obj.g2, time, obj.ref.modelScale, root);
 					
 					int32_t model_count;
 					int32_t model_list[256]; model_list[255]=548;
 					ri.G2_Sort_Models(*obj.g2, model_list, &model_count);
-					ri.G2_GenerateWorldMatrix(obj.orig_angles, obj.orig_origin);
-					
-					/*
-					for (int32_t i = 0; i < model_count; i++) {
-						CGhoul2Info & g2 = ri.G2_At(*obj.g2,  model_list[i]);
-						if (g2.mValid && !(g2.mFlags & GHOUL2_NOMODEL) && !(g2.mFlags & GHOUL2_NORENDER)) {
-							auto const & surf = obj.basemodel->model->meshes[g2.mSlist[g2.mSurfaceRoot].surface];
-							if (debug_enabled) debug_meshes.emplace_back(surf.second, mvp);
-							draw_map[surf.first].emplace_back(surf.second, mvp);
-						}
-					}
-					*/
+					ri.G2_GenerateWorldMatrix(obj.ref.angles, obj.ref.origin);
 					
 					CGhoul2Info & g2 = ri.G2_At(*obj.g2, 0);
 					ri.G2_TransformGhoulBones(g2.mBlist, root, g2, ri.G2API_GetTime(time), true);
@@ -160,16 +153,9 @@ void instance::end_frame(float time) {
 						auto const & mesh = obj.basemodel->model->meshes[s];
 						
 						std::vector<qm::mat4_t> bone_array;
-						bone_array.resize(72);
 						
 						int const * refs = reinterpret_cast<int const *>(reinterpret_cast<byte const *>(surf) + surf->ofsBoneReferences);
-						for (int32_t i = 0; i < 72; i++) {
-							
-							if (i >= surf->numBoneReferences) {
-								bone_array[i] = qm::mat4_t::identity();
-								bone_array[i][0][0] = Q_flrand(0, 1);
-								continue;
-							}
+						for (int32_t i = 0; i < surf->numBoneReferences; i++) {
 							
 							mdxaBone_t const & bone = g2.mBoneCache->EvalRender(refs[i]);
 							qm::mat4_t bone_conv = {
@@ -180,7 +166,7 @@ void instance::end_frame(float time) {
 							};
 							
 							static constexpr qm::mat4_t adjust = qm::mat4_t::scale({1, 1, -1}) * qm::mat4_t {qm::quat_t {{0, 1, 0}, qm::pi / 2}};
-							bone_array[i] = bone_conv * adjust;
+							bone_array.emplace_back(bone_conv * adjust);
 						}
 						
 						q3drawmesh draw {mesh.second, obj.model_matrix * vp};
@@ -213,45 +199,49 @@ void instance::end_frame(float time) {
 		// SKYBOXES
 		// ================================
 		
-		gl::initialize();
-		gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
-		gl::stencil_test(true);
-		gl::depth_test(true);
-		gl::depth_func(GL_LESS);
-		gl::depth_write(true);
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		if (scene.ref.rdflags & RDF_DRAWSKYBOX) {
 		
-		q3skyboxstencilprog->bind();
-		
-		// stencil skybox zones
-		GLuint stencil_id = 1;
-		for (auto const & sbp : skyboxes) {
-			gl::stencil_func(GL_ALWAYS, stencil_id);
-			gl::stencil_op(GL_KEEP, GL_KEEP, GL_REPLACE);
-			for (auto const & dmesh : sbp.second) {
-				q3skyboxstencilprog->mvp(dmesh.mvp);
-				dmesh.mesh->draw();
+			gl::initialize();
+			gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
+			gl::stencil_test(true);
+			gl::depth_test(true);
+			gl::depth_func(GL_LESS);
+			gl::depth_write(true);
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			
+			q3skyboxstencilprog->bind();
+			
+			// stencil skybox zones
+			GLuint stencil_id = 1;
+			for (auto const & sbp : skyboxes) {
+				gl::stencil_func(GL_ALWAYS, stencil_id);
+				gl::stencil_op(GL_KEEP, GL_KEEP, GL_REPLACE);
+				for (auto const & dmesh : sbp.second) {
+					q3skyboxstencilprog->mvp(dmesh.mvp);
+					dmesh.mesh->draw();
+				}
+				stencil_id ++;
 			}
-			stencil_id ++;
-		}
-		
-		gl::depth_test(false);
-		main_sampler->wrap(GL_CLAMP_TO_EDGE);
-		q3skyboxprog->bind();
-		q3skyboxprog->mvp(sbvp);
-		
-		for (auto i = 0; i < 6; i++)
-			main_sampler->bind(BINDING_SKYBOX + i);
-		
-		// draw skyboxes on correct stencil
-		stencil_id = 1;
-		for (auto const & sbp : skyboxes) {
-			gl::stencil_func(GL_EQUAL, stencil_id);
-			gl::stencil_op(GL_KEEP, GL_KEEP, GL_KEEP);
+			
+			gl::depth_test(false);
+			main_sampler->wrap(GL_CLAMP_TO_EDGE);
+			q3skyboxprog->bind();
+			q3skyboxprog->mvp(sbvp);
+			
 			for (auto i = 0; i < 6; i++)
-				sbp.first->sky_parms->sides[i]->bind(BINDING_SKYBOX + i);
-			skybox->draw();
-			stencil_id ++;
+				main_sampler->bind(BINDING_SKYBOX + i);
+			
+			// draw skyboxes on correct stencil
+			stencil_id = 1;
+			for (auto const & sbp : skyboxes) {
+				gl::stencil_func(GL_EQUAL, stencil_id);
+				gl::stencil_op(GL_KEEP, GL_KEEP, GL_KEEP);
+				for (auto i = 0; i < 6; i++)
+					sbp.first->sky_parms->sides[i]->bind(BINDING_SKYBOX + i);
+				skybox->draw();
+				stencil_id ++;
+			}
+		
 		}
 		
 		// ================================
@@ -348,6 +338,10 @@ void instance::end_frame(float time) {
 			
 			for (q3drawmesh const & d : debug_meshes) {
 				q3lineprog->mvp(d.mvp);
+				if (d.weights.size())
+					q3lineprog->bone_matricies(d.weights.data(), d.weights.size());
+				else
+					q3lineprog->bone_matricies(nullptr, 0);
 				d.mesh->draw();
 			}
 		}

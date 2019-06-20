@@ -37,9 +37,10 @@ static std::string generate_vertex_shader() {
 	
 		if (ghoul2 != 0) {
 			
-			uint num_groups = 0;
-			if (vertex_bg0 != 255) num_groups++;
+			uint num_groups = 1;
 			if (vertex_bg1 != 255) num_groups++;
+			if (vertex_bg2 != 255) num_groups++;
+			if (vertex_bg3 != 255) num_groups++;
 			
 			switch(num_groups) {
 				case 1:
