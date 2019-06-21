@@ -144,13 +144,14 @@ static bool setup_skin( q3skin & q3s, char const * path, bool server )
 			ri.Printf( PRINT_ALL, "WARNING: setup_skin( '%s' ) more than %u surfaces!\n", path, (unsigned int )ARRAY_LEN( q3s.skin.surfaces ) );
 			break;
 		}
-		q3skinsurf & surf = q3s.surfs.emplace_back();
+		q3skinsurf surf;
 		q3s.skin.surfaces[q3s.skin.numSurfaces] = (_skinSurface_t *)&surf;
 
 		Q_strncpyz( surf.name, surfName, sizeof( surf.name ) );
 		
 		surf.shader = hw_inst->shaders.reg(token, true);
 		
+		q3s.lookup[surfName] = std::move(surf);
 		q3s.skin.numSurfaces++;
 	}
 
@@ -162,7 +163,7 @@ static bool setup_skin( q3skin & q3s, char const * path, bool server )
 		return false;		// use default skin
 	}
 	
-	q3s.skin.numSurfaces = q3s.surfs.size();
+	q3s.skin.numSurfaces = q3s.lookup.size();
 
 	return true;
 }
@@ -236,7 +237,6 @@ q3skin_ptr instance::skin_registry::reg(char const * name, bool server) {
 	q3skin_ptr & q3s = lookup[name] = skins[handle];
 	q3s->index = handle;
 	Q_strncpyz( q3s->skin.name, name, sizeof( q3s->skin.name ) );
-	q3s->surfs.reserve(128);
 	
 	char skinhead[MAX_QPATH]={0};
 	char skintorso[MAX_QPATH]={0};

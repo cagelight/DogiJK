@@ -9,7 +9,7 @@ instance::shader_registry::shader_registry() {
 	ds->sort = q3shader::q3sort_opaque;
 	lookup[ds->name] = ds;
 	ds->stages.emplace_back();
-	ds->stages[0].mode = q3stage::shading_mode::noise;
+	ds->stages[0].gen_map = q3stage::map_gen::mnoise;
 	ds->valid = false;
 	ds->depthwrite = true;
 	
@@ -434,6 +434,14 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("$lightmap", token)) {
 				stg.mode = q3stage::shading_mode::lightmap;
+			} else if (!Q_stricmp("$noise", token)) {
+				stg.gen_map = q3stage::map_gen::mnoise;
+			} else if (!Q_stricmp("$alphanoise", token)) {
+				stg.gen_map = q3stage::map_gen::anoise;
+			} else if (!Q_stricmp("$colornoise", token)) {
+				stg.gen_map = q3stage::map_gen::cnoise;
+			} else if (!Q_stricmp("$acnoise", token)) {
+				stg.gen_map = q3stage::map_gen::enoise;
 			} else {
 				stg.diffuse = hw_inst->textures.reg(token, mips);
 				if (!stg.has_diffuse()) {
@@ -774,9 +782,6 @@ void q3shader::setup_draw() const {
 		gl::polygon_offset(-1, -2);
 	}
 	
-	gl::depth_write(opaque || depthwrite);
-	gl::blend(blended);
-	
 	switch (cull) {
 		case q3shader::cull_type::front:
 			gl::cull(true);
@@ -819,14 +824,7 @@ static float gen_func_do(q3stage::gen_func func, float in, float base, float amp
 void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	
 	gl::depth_func(depth_func);
-	
-	if (has_diffuse())
-		std::visit( lambda_visit {
-			[&](q3texture_ptr const & tex) { tex->bind(BINDING_DIFFUSE); },
-			[&](diffuse_anim_ptr const & anim) {  }
-		}, diffuse);
-	else
-		q3texture::unbind(BINDING_DIFFUSE);
+	gl::depth_write(opaque || depthwrite);
 	
 	switch (alpha_test) {
 		case alpha_func::none:
@@ -850,6 +848,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			break;
 	}
 	
+	gl::blend(blend);
 	gl::blend(blend_src, blend_dst);
 	
 	hw_inst->main_sampler->wrap(clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
@@ -946,8 +945,15 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 		}, tx);
 	}
 	
+	if (has_diffuse() && gen_map == map_gen::diffuse)
+		std::visit( lambda_visit {
+			[&](q3texture_ptr const & tex) { tex->bind(BINDING_DIFFUSE); },
+			[&](diffuse_anim_ptr const & anim) {  }
+		}, diffuse);
+	else
+		q3texture::unbind(BINDING_DIFFUSE);
+	
 	switch (mode) {
-		case shading_mode::noise:
 		case shading_mode::main:
 			hw_inst->q3mainprog->bind();
 			hw_inst->q3mainprog->time(parm.time);
@@ -966,7 +972,24 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			else
 				hw_inst->q3mainprog->bone_matricies(nullptr, 0);
 			
-			hw_inst->q3mainprog->mapgen(mode == shading_mode::noise ? 0 : 1);
+			switch (gen_map) {
+				case map_gen::diffuse:
+					hw_inst->q3mainprog->mapgen(0);
+					break;
+				default:
+				case map_gen::mnoise:
+					hw_inst->q3mainprog->mapgen(1);
+					break;
+				case map_gen::cnoise:
+					hw_inst->q3mainprog->mapgen(2);
+					break;
+				case map_gen::anoise:
+					hw_inst->q3mainprog->mapgen(3);
+					break;
+				case map_gen::enoise:
+					hw_inst->q3mainprog->mapgen(4);
+					break;
+			}
 			break;
 		case shading_mode::lightmap:
 			hw_inst->q3lmprog->bind();

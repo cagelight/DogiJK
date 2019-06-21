@@ -209,7 +209,7 @@ namespace howler {
 	struct q3skin {
 		qhandle_t index;
 		skin_t skin;
-		std::vector<q3skinsurf> surfs;
+		std::unordered_map<istring, q3skinsurf> lookup;
 	};
 	
 //================================================================
@@ -315,10 +315,17 @@ namespace howler {
 		
 		void validate();
 		
+		enum struct map_gen {
+			diffuse,
+			mnoise,
+			cnoise,
+			anoise,
+			enoise
+		} gen_map = map_gen::diffuse;
+		
 		enum struct shading_mode {
 			main,
 			lightmap,
-			noise
 		} mode = shading_mode::main;
 		
 		enum struct gen_func {
@@ -583,10 +590,11 @@ namespace howler {
 		};
 		
 		struct ghoul2_object {
-			q3basemodel_ptr basemodel;
 			refEntity_t ref;
-			CGhoul2Info_v * g2;
-			qm::mat4_t model_matrix;
+		};
+		
+		struct primitive_object {
+			refEntity_t ref;
 		};
 	};
 	
@@ -596,7 +604,8 @@ namespace howler {
 	
 	using c3d = std::variant<
 		cmd3d::basic_object,
-		cmd3d::ghoul2_object
+		cmd3d::ghoul2_object,
+		cmd3d::primitive_object
 	>;
 	
 	struct q3scene {

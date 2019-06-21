@@ -1,7 +1,7 @@
+#include "ghoul2/G2.hh"
+
 #include "hw_local.hh"
 using namespace howler;
-
-#include <set>
 
 void instance::begin_frame() {
 	m_frame = make_q3frame();
@@ -61,7 +61,7 @@ struct q3drawset {
 			case 0: break;
 		}
 		
-		return A.shader.get() < B.shader.get();
+		return A.shader.get() > B.shader.get();
 	}
 };
 
@@ -108,73 +108,122 @@ void instance::end_frame(float time) {
 		
 		for (auto const & cmd : scene.c3ds) {
 			std::visit( lambda_visit {
+				
+				//================================================================
+				// BASIC -- SIMPLE MODELS LIKE MD3
+				//================================================================
 				[&](cmd3d::basic_object const & obj) {
-					if (!obj.basemodel->model) {
-						if (obj.basemodel->base.type == MOD_MESH)
-							Com_Error(ERR_FATAL, "instance::end_frame: tried to draw a mesh not setup for rendering");
-						else return;
-					}
+					
+					if (!obj.basemodel->model) return;
 					qm::mat4_t mvp = obj.model_matrix * vp;
 					for (auto const & mesh : obj.basemodel->model->meshes) {
 						if (debug_enabled) debug_meshes.emplace_back(mesh.second, mvp);
 						draw_map[mesh.first].emplace_back(mesh.second, mvp);
 					}
 				},
+			   
+				//================================================================
+				// GHOUL2 -- MDXM MODELS AND THEIR ATTACHMENTS + ANIMATIONS
+				//================================================================
 				[&](cmd3d::ghoul2_object const & obj) {
-					if (!obj.basemodel->model) {
-						if (obj.basemodel->base.type == MOD_MESH)
-							Com_Error(ERR_FATAL, "instance::end_frame: tried to draw a mesh not setup for rendering");
-						else return;
-					}
 					
-					if (!ri.G2_IsValid(*obj.g2)) 
+					CGhoul2Info_v & g2i = *reinterpret_cast<CGhoul2Info_v *>(obj.ref.ghoul2);
+					
+					qm::mat4_t axis_conv = {
+						obj.ref.axis[1][1], -obj.ref.axis[1][2], obj.ref.axis[1][0], 0,
+						obj.ref.axis[2][1], -obj.ref.axis[2][2], obj.ref.axis[2][0], 0,
+						obj.ref.axis[0][1], -obj.ref.axis[0][2], obj.ref.axis[0][0], 0,
+						0, 0, 0, 1
+					};
+					qm::mat4_t model_matrix = axis_conv * qm::mat4_t::translate({obj.ref.origin[1], -obj.ref.origin[2], obj.ref.origin[0]});
+					
+					if (!ri.G2_IsValid(g2i)) 
 						return;
-					if (!ri.G2_SetupModelPointers(*obj.g2)) 
+					if (!ri.G2_SetupModelPointers(g2i)) 
 						return;
 					
 					if ((obj.ref.renderfx & RF_THIRD_PERSON)) return; // FIXME -- these render in mirrors and portals
+					   
+					int g2time = ri.G2API_GetTime(time);
 					
 					mdxaBone_t root;
-					ri.G2_RootMatrix(*obj.g2, time, obj.ref.modelScale, root);
+					ri.G2_RootMatrix(g2i, time, obj.ref.modelScale, root);
 					
 					int32_t model_count;
 					int32_t model_list[256]; model_list[255]=548;
-					ri.G2_Sort_Models(*obj.g2, model_list, &model_count);
+					ri.G2_Sort_Models(g2i, model_list, &model_count);
 					ri.G2_GenerateWorldMatrix(obj.ref.angles, obj.ref.origin);
 					
-					CGhoul2Info & g2 = ri.G2_At(*obj.g2, 0);
-					ri.G2_TransformGhoulBones(g2.mBlist, root, g2, ri.G2API_GetTime(time), true);
-					
-					for (int32_t s = 0; s < obj.basemodel->model->meshes.size(); s++) {
+					for (int32_t model_idx = 0; model_idx < model_count; model_idx++) {
 						
-						if (!obj.basemodel->model->meshes[s].second) continue;
+						CGhoul2Info & g2 = ri.G2_At(g2i, model_idx);
+						if (!g2.mValid || (g2.mFlags & (GHOUL2_NOMODEL | GHOUL2_NORENDER)))
+							continue;
 						
-						mdxmSurface_t * surf = (mdxmSurface_t *)ri.G2_FindSurface(&obj.basemodel->base, s, 0);
-						auto const & mesh = obj.basemodel->model->meshes[s];
+						if (model_idx && g2.mModelBoltLink != -1) {
+							int	boltMod = (g2.mModelBoltLink >> MODEL_SHIFT) & MODEL_AND;
+							int	boltNum = (g2.mModelBoltLink >> BOLT_SHIFT) & BOLT_AND;
+							mdxaBone_t bolt;
+							ri.G2_GetBoltMatrixLow(ri.G2_At(g2i, boltMod), boltNum, obj.ref.modelScale, bolt);
+							ri.G2_TransformGhoulBones(g2.mBlist, bolt, g2, g2time, true);
+						} else
+							ri.G2_TransformGhoulBones(g2.mBlist, root, g2, g2time, true);
 						
-						std::vector<qm::mat4_t> bone_array;
+						q3basemodel_ptr basemod = models.get(g2.mModel);
 						
-						int const * refs = reinterpret_cast<int const *>(reinterpret_cast<byte const *>(surf) + surf->ofsBoneReferences);
-						for (int32_t i = 0; i < surf->numBoneReferences; i++) {
+						for (int32_t s = 0; s < basemod->model->meshes.size(); s++) {
 							
-							mdxaBone_t const & bone = g2.mBoneCache->EvalRender(refs[i]);
-							qm::mat4_t bone_conv = {
-								bone.matrix[0][0], bone.matrix[2][0], bone.matrix[1][0], 0,
-								bone.matrix[0][2], bone.matrix[2][2], bone.matrix[1][2], 0,
-								-bone.matrix[0][1], -bone.matrix[2][1], -bone.matrix[1][1], 0,
-								bone.matrix[0][3], bone.matrix[2][3], bone.matrix[1][3], 1
-							};
+							auto const & mesh = basemod->model->meshes[s];
+							if (!mesh.second) continue;
+							q3shader_ptr shader = mesh.first;
 							
-							static constexpr qm::mat4_t adjust = qm::mat4_t::scale({1, 1, -1}) * qm::mat4_t {qm::quat_t {{0, 1, 0}, qm::pi / 2}};
-							bone_array.emplace_back(bone_conv * adjust);
+							mdxmSurface_t 			* surf =  (mdxmSurface_t *)ri.G2_FindSurface(&basemod->base, s, 0);
+							mdxmHierarchyOffsets_t	* surfI = (mdxmHierarchyOffsets_t *)((byte *)basemod->base.mdxm + sizeof(mdxmHeader_t));
+							mdxmSurfHierarchy_t		* surfH = (mdxmSurfHierarchy_t *)((byte *)surfI + surfI->offsets[surf->thisSurfaceIndex]);
+							
+							if (g2.mCustomSkin && !g2.mCustomShader) {
+								q3skin_ptr skin = skins.get(g2.mCustomSkin);
+								auto const & iter = skin->lookup.find(surfH->name);
+								if (iter == skin->lookup.end())
+									continue;
+								shader = iter->second.shader;
+							} else if (g2.mCustomShader) {
+								shader = shaders.get(g2.mCustomShader);
+							}
+							
+							std::vector<qm::mat4_t> bone_array;
+							
+							int const * refs = reinterpret_cast<int const *>(reinterpret_cast<byte const *>(surf) + surf->ofsBoneReferences);
+							for (int32_t i = 0; i < surf->numBoneReferences; i++) {
+								
+								mdxaBone_t const & bone = g2.mBoneCache->EvalRender(refs[i]);
+								qm::mat4_t bone_conv = {
+									bone.matrix[0][0], bone.matrix[2][0], bone.matrix[1][0], 0,
+									bone.matrix[0][2], bone.matrix[2][2], bone.matrix[1][2], 0,
+									-bone.matrix[0][1], -bone.matrix[2][1], -bone.matrix[1][1], 0,
+									bone.matrix[0][3], bone.matrix[2][3], bone.matrix[1][3], 1
+								};
+								
+								static constexpr qm::mat4_t adjust = qm::mat4_t::scale({1, 1, -1}) * qm::mat4_t {qm::quat_t {{0, 1, 0}, qm::pi / 2}};
+								bone_array.emplace_back(bone_conv * adjust);
+							}
+							
+							q3drawmesh draw {mesh.second, model_matrix * vp};
+							draw.weights = std::move(bone_array);
+							
+							if (debug_enabled) debug_meshes.emplace_back(draw);
+							draw_map[shader].emplace_back(draw);
 						}
-						
-						q3drawmesh draw {mesh.second, obj.model_matrix * vp};
-						draw.weights = std::move(bone_array);
-						
-						if (debug_enabled) debug_meshes.emplace_back(draw);
-						draw_map[mesh.first].emplace_back(draw);
 					}
+				},
+			   
+				//================================================================
+				// PRIMITIVE -- SPRITES AND OTHER PRIMITIVE RENDERABLES
+				//================================================================
+				[&](cmd3d::primitive_object const & obj) {
+					
+					
+					
 				}
 			}, cmd);
 		}

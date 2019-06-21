@@ -137,14 +137,24 @@ static std::string generate_fragment_shader() {
 		vec4 scolor;
 		
 		switch(mapgen) {
+			case 0: // diffuse
+				scolor = texture(tex, f_uv);
+				break;
 			default:
-			case 0: {
+			case 1: { // mnoise
 				float v = rand_value(time);
 				scolor = vec4(v, v, v, 1);
 			} break;
-			case 1:
-				scolor = texture(tex, f_uv);
-				break;
+			case 2: { // cnoise
+				scolor = vec4(rand_value(time), rand_value(time+1), rand_value(time+2), 1);
+			} break;
+			case 3: { // anoise
+				float v = rand_value(time);
+				scolor = vec4(1, 1, 1, v);
+			} break;
+			case 4: { // enoise
+				scolor = vec4(rand_value(time), rand_value(time+1), rand_value(time+2), rand_value(time+3));
+			} break;
 		}
 		color = scolor * q3color * vcolor;
 	}
@@ -241,6 +251,7 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform buffer binding for \"BoneMatricies\"");
 	
 	glCreateBuffers(1, &m_data->bone_matricies_buffer);
+	glUniformBlockBinding(get_handle(), m_data->bone_matricies_binding, BINDING_BONE_MATRICIES);
 }
 
 programs::q3main::~q3main() {
@@ -303,7 +314,6 @@ void programs::q3main::bone_matricies(qm::mat4_t const * ptr, size_t num) {
 		m_data->m_bones = num;
 		m_data->m_bones.push();
 		
-		glUniformBlockBinding(get_handle(), m_data->bone_matricies_binding, BINDING_BONE_MATRICIES);
 		glBindBufferBase(GL_UNIFORM_BUFFER, BINDING_BONE_MATRICIES, m_data->bone_matricies_buffer);
 		glNamedBufferData(m_data->bone_matricies_buffer, num * sizeof(qm::mat4_t), ptr, GL_STATIC_DRAW);
 		

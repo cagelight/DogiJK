@@ -156,6 +156,7 @@ programs::q3line::q3line() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform buffer binding for \"BoneMatricies\"");
 	
 	glCreateBuffers(1, &m_data->bone_matricies_buffer);
+	glUniformBlockBinding(get_handle(), m_data->bone_matricies_binding, BINDING_BONE_MATRICIES);
 }
 
 programs::q3line::~q3line() {
@@ -178,7 +179,6 @@ void programs::q3line::bone_matricies(qm::mat4_t const * ptr, size_t num) {
 		m_data->m_bones = num;
 		m_data->m_bones.push();
 		
-		glUniformBlockBinding(get_handle(), m_data->bone_matricies_binding, BINDING_BONE_MATRICIES);
 		glBindBufferBase(GL_UNIFORM_BUFFER, BINDING_BONE_MATRICIES, m_data->bone_matricies_buffer);
 		glNamedBufferData(m_data->bone_matricies_buffer, num * sizeof(qm::mat4_t), ptr, GL_STATIC_DRAW);
 		
