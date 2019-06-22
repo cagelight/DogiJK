@@ -52,7 +52,6 @@ void instance::initialize_renderer() {
 	main_sampler = make_q3sampler();
 	
 	q3mainprog.reset( new programs::q3main );
-	q3lmprog.reset( new programs::q3lightmap );
 	q3lineprog.reset( new programs::q3line );
 	q3skyboxstencilprog.reset( new programs::q3skyboxstencil );
 	q3skyboxprog.reset( new programs::q3skybox );

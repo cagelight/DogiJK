@@ -527,20 +527,6 @@ namespace howler {
 			std::unique_ptr<private_data> m_data;
 		};
 		
-		struct q3lightmap : public q3program {
-			q3lightmap();
-			~q3lightmap();
-			
-			void mvp(qm::mat4_t const &);
-			void color(qm::vec4_t const &);
-			void mode(GLuint const &);
-		protected:
-			virtual void on_bind() override;
-		private:
-			struct private_data;
-			std::unique_ptr<private_data> m_data;
-		};
-		
 		struct q3line : public q3program {
 			q3line();
 			~q3line();
@@ -940,7 +926,6 @@ namespace howler {
 		bool renderer_initialized = false;
 		
 		std::unique_ptr<programs::q3main> q3mainprog;
-		std::unique_ptr<programs::q3lightmap> q3lmprog;
 		std::unique_ptr<programs::q3line> q3lineprog;
 		std::unique_ptr<programs::q3skyboxstencil> q3skyboxstencilprog;
 		std::unique_ptr<programs::q3skybox> q3skyboxprog;
