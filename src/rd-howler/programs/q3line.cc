@@ -15,10 +15,7 @@ static std::string generate_vertex_shader() {
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
 	
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP0 << R"GLSL() in uint vertex_bg0;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP1 << R"GLSL() in uint vertex_bg1;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP2 << R"GLSL() in uint vertex_bg2;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP3 << R"GLSL() in uint vertex_bg3;
+	layout(location = )GLSL" << LAYOUT_BONE_GROUPS << R"GLSL() in ivec4 vertex_bg;
 	layout(location = )GLSL" << LAYOUT_BONE_WEIGHT << R"GLSL() in vec4 vertex_wgt;
 	
 	layout(location = )GLSL" << location_mvp << R"GLSL() uniform mat4 vertex_matrix;
@@ -31,28 +28,28 @@ static std::string generate_vertex_shader() {
 		if (ghoul2 != 0) {
 			
 			uint num_groups = 1;
-			if (vertex_bg1 != 255) num_groups++;
-			if (vertex_bg2 != 255) num_groups++;
-			if (vertex_bg3 != 255) num_groups++;
+			if (vertex_bg.y != 255) num_groups++;
+			if (vertex_bg.z != 255) num_groups++;
+			if (vertex_bg.w != 255) num_groups++;
 			
 			switch(num_groups) {
 				case 1:
-					gl_Position = vertex_matrix * vec4((bone[vertex_bg0] * vec4(vert, 1)).xyz, 1);
+					gl_Position = vertex_matrix * vec4((bone[vertex_bg.x] * vec4(vert, 1)).xyz, 1);
 					break;
 					
 				default:
 				case 2: {
-					vec3 v0 = (bone[vertex_bg0] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg1] * vec4(vert, 1)).xyz;
+					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
+					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
 					
 					gl_Position = vertex_matrix * vec4(vertex_wgt.x * (v0 - v1) + v1, 1);
 					break;
 				}
 				
 				case 3: {
-					vec3 v0 = (bone[vertex_bg0] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg1] * vec4(vert, 1)).xyz;
-					vec3 v2 = (bone[vertex_bg2] * vec4(vert, 1)).xyz;
+					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
+					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
+					vec3 v2 = (bone[vertex_bg.z] * vec4(vert, 1)).xyz;
 					
 					vec3 sum = vertex_wgt.x * v0;
 					sum     += vertex_wgt.y * v1;
@@ -63,10 +60,10 @@ static std::string generate_vertex_shader() {
 				}
 				
 				case 4: {
-					vec3 v0 = (bone[vertex_bg0] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg1] * vec4(vert, 1)).xyz;
-					vec3 v2 = (bone[vertex_bg2] * vec4(vert, 1)).xyz;
-					vec3 v3 = (bone[vertex_bg3] * vec4(vert, 1)).xyz;
+					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
+					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
+					vec3 v2 = (bone[vertex_bg.z] * vec4(vert, 1)).xyz;
+					vec3 v3 = (bone[vertex_bg.w] * vec4(vert, 1)).xyz;
 					
 					vec3 sum = vertex_wgt.x * v0;
 					sum     += vertex_wgt.y * v1;

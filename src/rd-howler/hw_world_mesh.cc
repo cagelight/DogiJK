@@ -27,26 +27,20 @@ q3world::q3worldmesh_maplit::q3worldmesh_maplit(vertex_t const * data, size_t nu
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_COLOR);
-	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV0);
-	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV1);
-	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV2);
-	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV3);
+	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV01_COLOR0);
+	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV23_COLOR1);
 	
 	glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
 	glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
 	glVertexArrayAttribBinding(m_handle, LAYOUT_COLOR, 0);
-	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV0, 0);
-	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV1, 0);
-	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV2, 0);
-	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV3, 0);
+	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV01_COLOR0, 0);
+	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV23_COLOR1, 0);
 	
 	glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, 3, GL_FLOAT, GL_FALSE, offsetof_verts);
 	glVertexArrayAttribFormat(m_handle, LAYOUT_UV, 2, GL_FLOAT, GL_FALSE, offsetof_uv);
 	glVertexArrayAttribFormat(m_handle, LAYOUT_COLOR, 4, GL_FLOAT, GL_FALSE, offsetof_color);
-	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV0, 2, GL_FLOAT, GL_FALSE, offsetof_lm_uv + 0);
-	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV1, 2, GL_FLOAT, GL_FALSE, offsetof_lm_uv + 8);
-	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV2, 2, GL_FLOAT, GL_FALSE, offsetof_lm_uv + 16);
-	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV3, 2, GL_FLOAT, GL_FALSE, offsetof_lm_uv + 24);
+	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV01_COLOR0, 4, GL_FLOAT, GL_FALSE, offsetof_lm_uv + 0);
+	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV23_COLOR1, 4, GL_FLOAT, GL_FALSE, offsetof_lm_uv + 16);
 }
 
 q3world::q3worldmesh_maplit::~q3worldmesh_maplit() {
@@ -77,24 +71,24 @@ q3world::q3worldmesh_vertexlit::q3worldmesh_vertexlit(vertex_t const * data, siz
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_COLOR);
-	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMCOLOR0);
-	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMCOLOR1);
+	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV01_COLOR0);
+	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMUV23_COLOR1);
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMCOLOR2);
 	glEnableVertexArrayAttrib(m_handle, LAYOUT_LMCOLOR3);
 	
 	glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
 	glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
 	glVertexArrayAttribBinding(m_handle, LAYOUT_COLOR, 0);
-	glVertexArrayAttribBinding(m_handle, LAYOUT_LMCOLOR0, 0);
-	glVertexArrayAttribBinding(m_handle, LAYOUT_LMCOLOR1, 0);
+	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV01_COLOR0, 0);
+	glVertexArrayAttribBinding(m_handle, LAYOUT_LMUV23_COLOR1, 0);
 	glVertexArrayAttribBinding(m_handle, LAYOUT_LMCOLOR2, 0);
 	glVertexArrayAttribBinding(m_handle, LAYOUT_LMCOLOR3, 0);
 	
 	glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, 3, GL_FLOAT, GL_FALSE, offsetof_verts);
 	glVertexArrayAttribFormat(m_handle, LAYOUT_UV, 2, GL_FLOAT, GL_FALSE, offsetof_uv);
 	glVertexArrayAttribFormat(m_handle, LAYOUT_COLOR, 4, GL_FLOAT, GL_FALSE, offsetof_color);
-	glVertexArrayAttribFormat(m_handle, LAYOUT_LMCOLOR0, 4, GL_FLOAT, GL_FALSE, offsetof_color + 0);
-	glVertexArrayAttribFormat(m_handle, LAYOUT_LMCOLOR1, 4, GL_FLOAT, GL_FALSE, offsetof_color + 16);
+	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV01_COLOR0, 4, GL_FLOAT, GL_FALSE, offsetof_color + 0);
+	glVertexArrayAttribFormat(m_handle, LAYOUT_LMUV23_COLOR1, 4, GL_FLOAT, GL_FALSE, offsetof_color + 16);
 	glVertexArrayAttribFormat(m_handle, LAYOUT_LMCOLOR2, 4, GL_FLOAT, GL_FALSE, offsetof_color + 32);
 	glVertexArrayAttribFormat(m_handle, LAYOUT_LMCOLOR3, 4, GL_FLOAT, GL_FALSE, offsetof_color + 48);
 }

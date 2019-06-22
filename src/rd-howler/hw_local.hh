@@ -26,6 +26,7 @@ namespace howler {
 	
 	#undef FUNDAMENTAL
 	
+	/*
 	//================================
 	// GROUP 1
 	static constexpr GLint LAYOUT_VERTEX = 0;
@@ -60,7 +61,21 @@ namespace howler {
 	static constexpr GLint LAYOUT_LMCOLOR3 = LAYOUT_LMCOLOR2 + 1;
 	static_assert(LAYOUT_LMCOLOR3 < 16);
 	//================================
+	*/
 	
+	//================================
+	static constexpr GLint LAYOUT_VERTEX = 0; // VEC3
+	static constexpr GLint LAYOUT_UV = 1; // VEC2
+	static constexpr GLint LAYOUT_NORMAL = 2; // VEC3
+	static constexpr GLint LAYOUT_COLOR = 3; // VEC4
+	static constexpr GLint LAYOUT_TEXBIND = 4; // UINT -- NEEDS TO BE OPTIMIZED OUT!!! 
+	static constexpr GLint LAYOUT_BONE_GROUPS = 5; // IVEC4
+	static constexpr GLint LAYOUT_BONE_WEIGHT = 6; // VEC4
+	static constexpr GLint LAYOUT_LMUV01_COLOR0 = 7; // UV VEC4 (2 VEC2) OR COLOR VEC4
+	static constexpr GLint LAYOUT_LMUV23_COLOR1 = 8; // UV VEC4 (2 VEC2) OR COLOR VEC4
+	static constexpr GLint LAYOUT_LMCOLOR2 = 9; // VEC4
+	static constexpr GLint LAYOUT_LMCOLOR3 = 10; // VEC4
+	//================================
 	
 	static constexpr GLint BINDING_DIFFUSE = 0;
 	static constexpr GLint BINDING_LIGHTMAP = 1;
@@ -317,16 +332,10 @@ namespace howler {
 		
 		enum struct map_gen {
 			diffuse,
-			mnoise,
-			cnoise,
-			anoise,
-			enoise
-		} gen_map = map_gen::diffuse;
-		
-		enum struct shading_mode {
-			main,
 			lightmap,
-		} mode = shading_mode::main;
+			mnoise,
+			anoise,
+		} gen_map = map_gen::diffuse;
 		
 		enum struct gen_func {
 			sine,
@@ -507,6 +516,7 @@ namespace howler {
 			void use_vertex_colors(bool const &);
 			void turb(bool const &);
 			void turb_data(q3stage::tx_turb const &);
+			void lm_mode(GLuint const &);
 			void mapgen(uint8_t);
 			
 			void bone_matricies(qm::mat4_t const *, size_t num);
@@ -593,41 +603,26 @@ namespace howler {
 			refEntity_t ref;
 		};
 		
-		struct primitive_object {
+		struct sprite {
 			refEntity_t ref;
 		};
 	};
 	
-	using c2d = std::variant<
-		cmd2d::stretchpic
-	>;
-	
-	using c3d = std::variant<
-		cmd3d::basic_object,
-		cmd3d::ghoul2_object,
-		cmd3d::primitive_object
-	>;
-	
 	struct q3scene {
 		refdef_t ref {};
 		bool finalized = false;
-		std::vector<c3d> c3ds;
 		
-		template <typename T, typename ... ARGS>
-		T & emplace( ARGS ... args ) { return std::get<T>( c3ds.emplace_back(T { args ... }) ); }
+		std::vector<cmd3d::basic_object> basic_objects;
+		std::vector<cmd3d::ghoul2_object> ghoul2_objects;
+		std::vector<cmd3d::sprite> sprites;
 	};
 	
 	struct q3frame {
-		std::vector<c2d> c2ds;
+		std::vector<cmd2d::stretchpic> ui_stretchpics;
 		std::vector <q3scene> scenes;
 		
 		inline q3scene & scene() { return scenes.back(); }
 		inline void new_scene() { scene().finalized = true; scenes.emplace_back(); }
-
-		template <typename T, typename ... ARGS>
-		T & emplace_2d( ARGS ... args ) { return std::get<T>( c2ds.emplace_back(T { args ... }) ); }
-		template <typename T, typename ... ARGS>
-		T & emplace_3d( ARGS ... args ) { return scene().emplace<T>(args ...); }
 	};
 	
 //================================================================
@@ -798,7 +793,7 @@ namespace howler {
 			q3worldnode * parent = nullptr;
 			vec3_t mins, maxs;
 			
-			std::variant<node_data, leaf_data> data;
+			std::variant<std::monostate, node_data, leaf_data> data;
 		};
 		
 		//================================

@@ -72,6 +72,7 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 		byte const * cluster_vis = &m_vis->m_cluster_data[cluster * m_vis->m_cluster_bytes];
 		for (q3worldnode const & node : m_nodes) {
 			std::visit( lambda_visit{
+				[&](std::monostate) {assert(0);},
 				[&](q3worldnode::node_data const &) {},
 				[&](q3worldnode::leaf_data const & data) {
 					if (data.cluster <= 0 || data.cluster >= m_clusters) return;
@@ -84,6 +85,7 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	} else {
 		for (q3worldnode const & node : m_nodes) {
 			std::visit( lambda_visit{
+				[&](std::monostate) {assert(0);},
 				[&](q3worldnode::node_data const &) {},
 				[&](q3worldnode::leaf_data const & data) {
 					if (data.cluster <= 0 || data.cluster >= m_clusters) return;

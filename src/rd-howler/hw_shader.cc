@@ -10,8 +10,7 @@ instance::shader_registry::shader_registry() {
 	lookup[ds->name] = ds;
 	ds->stages.emplace_back();
 	ds->stages[0].gen_map = q3stage::map_gen::mnoise;
-	ds->valid = false;
-	ds->depthwrite = true;
+	ds->stages[0].depthwrite = true;
 	
 	int num_shader_files;
 	char * * shfiles = ri.FS_ListFiles("shaders", ".shader", &num_shader_files);
@@ -139,7 +138,7 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 	}
 	if (shad->lightmap_if_texture) { // STAGE 1
 		q3stage & stg = shad->stages.emplace_back();
-		stg.mode = q3stage::shading_mode::lightmap;
+		stg.gen_map = q3stage::map_gen::lightmap;
 		stg.blend_src = GL_DST_COLOR;
 		stg.blend_dst = GL_ZERO;
 		stg.blend = true;
@@ -433,15 +432,11 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			stg.clamp = !Q_stricmp("clampmap", token);
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("$lightmap", token)) {
-				stg.mode = q3stage::shading_mode::lightmap;
+				stg.gen_map = q3stage::map_gen::lightmap;
 			} else if (!Q_stricmp("$noise", token)) {
 				stg.gen_map = q3stage::map_gen::mnoise;
 			} else if (!Q_stricmp("$alphanoise", token)) {
 				stg.gen_map = q3stage::map_gen::anoise;
-			} else if (!Q_stricmp("$colornoise", token)) {
-				stg.gen_map = q3stage::map_gen::cnoise;
-			} else if (!Q_stricmp("$acnoise", token)) {
-				stg.gen_map = q3stage::map_gen::enoise;
 			} else {
 				stg.diffuse = hw_inst->textures.reg(token, mips);
 				if (!stg.has_diffuse()) {
@@ -953,51 +948,42 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	else
 		q3texture::unbind(BINDING_DIFFUSE);
 	
-	switch (mode) {
-		case shading_mode::main:
-			hw_inst->q3mainprog->bind();
-			hw_inst->q3mainprog->time(parm.time);
-			hw_inst->q3mainprog->mvp(parm.mvp);
-			hw_inst->q3mainprog->uvm(uvm2);
-			hw_inst->q3mainprog->color(q3color);
-			hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
-			hw_inst->q3mainprog->turb(turb);
-			
-			if (turb) {
-				hw_inst->q3mainprog->turb_data(*turb_data);
-			}
-			
-			if (parm.bone_weights)
-				hw_inst->q3mainprog->bone_matricies(parm.bone_weights->data(), parm.bone_weights->size());
-			else
-				hw_inst->q3mainprog->bone_matricies(nullptr, 0);
-			
-			switch (gen_map) {
-				case map_gen::diffuse:
-					hw_inst->q3mainprog->mapgen(0);
-					break;
-				default:
-				case map_gen::mnoise:
-					hw_inst->q3mainprog->mapgen(1);
-					break;
-				case map_gen::cnoise:
-					hw_inst->q3mainprog->mapgen(2);
-					break;
-				case map_gen::anoise:
-					hw_inst->q3mainprog->mapgen(3);
-					break;
-				case map_gen::enoise:
-					hw_inst->q3mainprog->mapgen(4);
-					break;
-			}
+	hw_inst->q3mainprog->bind();
+	hw_inst->q3mainprog->time(parm.time);
+	hw_inst->q3mainprog->mvp(parm.mvp);
+	hw_inst->q3mainprog->uvm(uvm2);
+	hw_inst->q3mainprog->color(q3color);
+	hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
+	hw_inst->q3mainprog->turb(turb);
+	
+	if (turb) {
+		hw_inst->q3mainprog->turb_data(*turb_data);
+	}
+	
+	if (parm.bone_weights)
+		hw_inst->q3mainprog->bone_matricies(parm.bone_weights->data(), parm.bone_weights->size());
+	else
+		hw_inst->q3mainprog->bone_matricies(nullptr, 0);
+	
+	switch (gen_map) {
+		case map_gen::diffuse:
+			hw_inst->q3mainprog->mapgen(0);
 			break;
-		case shading_mode::lightmap:
-			hw_inst->q3lmprog->bind();
-			hw_inst->q3lmprog->mvp(parm.mvp);
-			hw_inst->q3lmprog->color(q3color);
-			if (parm.mesh_uniforms) {
-				hw_inst->q3lmprog->mode(parm.mesh_uniforms->mode);
-			}
+		case map_gen::lightmap:
+			hw_inst->q3mainprog->mapgen(1);
+			break;
+		default:
+		case map_gen::mnoise:
+			hw_inst->q3mainprog->mapgen(2);
+			break;
+		case map_gen::anoise:
+			hw_inst->q3mainprog->mapgen(3);
 			break;
 	}
+	
+	if (parm.mesh_uniforms)
+		hw_inst->q3mainprog->lm_mode(parm.mesh_uniforms->mode);
+	else
+		hw_inst->q3mainprog->lm_mode(0);
+			
 }

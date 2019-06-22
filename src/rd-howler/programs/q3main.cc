@@ -15,11 +15,14 @@ static std::string generate_vertex_shader() {
 	layout(location = )GLSL" << LAYOUT_COLOR << R"GLSL() in vec4 vertex_color;
 	
 	// GHOUl2
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP0 << R"GLSL() in uint vertex_bg0;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP1 << R"GLSL() in uint vertex_bg1;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP2 << R"GLSL() in uint vertex_bg2;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUP3 << R"GLSL() in uint vertex_bg3;
+	layout(location = )GLSL" << LAYOUT_BONE_GROUPS << R"GLSL() in ivec4 vertex_bg;
 	layout(location = )GLSL" << LAYOUT_BONE_WEIGHT << R"GLSL() in vec4 vertex_wgt;
+	
+	// LIGHTMAP
+	layout(location = )GLSL" << LAYOUT_LMUV01_COLOR0 << R"GLSL() in vec4 lm_uv01_color0;
+	layout(location = )GLSL" << LAYOUT_LMUV23_COLOR1 << R"GLSL() in vec4 lm_uv23_color1;
+	layout(location = )GLSL" << LAYOUT_LMCOLOR2 << R"GLSL() in vec4 lm_color2;
+	layout(location = )GLSL" << LAYOUT_LMCOLOR3 << R"GLSL() in vec4 lm_color3;
 
 	uniform float time;
 	uniform mat4 mvp;
@@ -27,39 +30,42 @@ static std::string generate_vertex_shader() {
 	uniform bool use_vertex_color;
 	uniform bool turb;
 	uniform vec4 turb_data;
+	uniform uint mapgen;
+	uniform uint lm_mode;
 	
 	uniform uint ghoul2;
 
 	out vec2 f_uv;
 	out vec4 vcolor;
+	out vec2 lm_uv[4];
 
 	void main() {
 	
 		if (ghoul2 != 0) {
 			
 			uint num_groups = 1;
-			if (vertex_bg1 != 255) num_groups++;
-			if (vertex_bg2 != 255) num_groups++;
-			if (vertex_bg3 != 255) num_groups++;
+			if (vertex_bg.y != 255) num_groups++;
+			if (vertex_bg.z != 255) num_groups++;
+			if (vertex_bg.w != 255) num_groups++;
 			
 			switch(num_groups) {
 				case 1:
-					gl_Position = mvp * vec4((bone[vertex_bg0] * vec4(vert, 1)).xyz, 1);
+					gl_Position = mvp * vec4((bone[vertex_bg.x] * vec4(vert, 1)).xyz, 1);
 					break;
 					
 				default:
 				case 2: {
-					vec3 v0 = (bone[vertex_bg0] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg1] * vec4(vert, 1)).xyz;
+					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
+					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
 					
 					gl_Position = mvp * vec4(vertex_wgt.x * (v0 - v1) + v1, 1);
 					break;
 				}
 				
 				case 3: {
-					vec3 v0 = (bone[vertex_bg0] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg1] * vec4(vert, 1)).xyz;
-					vec3 v2 = (bone[vertex_bg2] * vec4(vert, 1)).xyz;
+					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
+					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
+					vec3 v2 = (bone[vertex_bg.z] * vec4(vert, 1)).xyz;
 					
 					vec3 sum = vertex_wgt.x * v0;
 					sum     += vertex_wgt.y * v1;
@@ -70,10 +76,10 @@ static std::string generate_vertex_shader() {
 				}
 				
 				case 4: {
-					vec3 v0 = (bone[vertex_bg0] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg1] * vec4(vert, 1)).xyz;
-					vec3 v2 = (bone[vertex_bg2] * vec4(vert, 1)).xyz;
-					vec3 v3 = (bone[vertex_bg3] * vec4(vert, 1)).xyz;
+					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
+					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
+					vec3 v2 = (bone[vertex_bg.z] * vec4(vert, 1)).xyz;
+					vec3 v3 = (bone[vertex_bg.w] * vec4(vert, 1)).xyz;
 					
 					vec3 sum = vertex_wgt.x * v0;
 					sum     += vertex_wgt.y * v1;
@@ -89,10 +95,25 @@ static std::string generate_vertex_shader() {
 			gl_Position = mvp * vec4(vert, 1);
 		}
 		
-		if (use_vertex_color)
+		if (lm_mode != 0 && mapgen == 1) {
+			switch (lm_mode) {
+				case 1: {
+					vcolor = vec4(1, 1, 1, 1);
+					lm_uv[0] = lm_uv01_color0.xy;
+					lm_uv[1] = lm_uv01_color0.zw;
+					lm_uv[2] = lm_uv23_color1.xy;
+					lm_uv[3] = lm_uv23_color1.zw;
+				} break;
+				default:
+				case 2: {
+					vcolor = lm_uv01_color0;
+				} break;
+			}
+		} else if (use_vertex_color) {
 			vcolor = vertex_color;
-		else
+		} else {
 			vcolor = vec4(1, 1, 1, 1);
+		}
 		
 		f_uv = (uvm * vec3(uv, 1)).xy;
 		if (turb) {
@@ -114,12 +135,15 @@ static std::string generate_fragment_shader() {
 	uniform float time;
 	uniform vec4 q3color;
 	uniform uint mapgen;
+	uniform uint lm_mode;
 	
 	// TEXTURE BINDINGS
 	layout(binding = )GLSL" << BINDING_DIFFUSE << R"GLSL() uniform sampler2D tex;
+	layout(binding = )GLSL" << BINDING_LIGHTMAP << R"GLSL() uniform sampler2D lm;
 	
 	in vec2 f_uv;
 	in vec4 vcolor;
+	in vec2 lm_uv[4];
 	
 	layout(location = 0) out vec4 color;
 	
@@ -137,23 +161,27 @@ static std::string generate_fragment_shader() {
 		vec4 scolor;
 		
 		switch(mapgen) {
-			case 0: // diffuse
+			case 0: { // diffuse
 				scolor = texture(tex, f_uv);
-				break;
+			} break;
+			case 1: { // lightmap
+				switch (lm_mode) {
+					case 1:
+						scolor = texture(lm, lm_uv[0]);
+						break;
+					case 2:
+						scolor = vec4(1, 1, 1, 1);
+						break;
+				}
+			} break;
 			default:
-			case 1: { // mnoise
+			case 2: { // mnoise
 				float v = rand_value(time);
 				scolor = vec4(v, v, v, 1);
-			} break;
-			case 2: { // cnoise
-				scolor = vec4(rand_value(time), rand_value(time+1), rand_value(time+2), 1);
 			} break;
 			case 3: { // anoise
 				float v = rand_value(time);
 				scolor = vec4(1, 1, 1, v);
-			} break;
-			case 4: { // enoise
-				scolor = vec4(rand_value(time), rand_value(time+1), rand_value(time+2), rand_value(time+3));
 			} break;
 		}
 		color = scolor * q3color * vcolor;
@@ -171,6 +199,7 @@ struct programs::q3main::private_data {
 	uniform_bool m_use_vertex_colors = false;
 	uniform_bool m_turb = false;
 	uniform_vec4 m_turb_data = qm::vec4_t {0, 0, 0, 0};
+	uniform_uint m_lmmode = 0;
 	uniform_uint m_bones = 0;
 	uniform_uint m_mapgen = 0;
 	
@@ -185,6 +214,7 @@ struct programs::q3main::private_data {
 		m_use_vertex_colors.reset();
 		m_turb.reset();
 		m_turb_data.reset();
+		m_lmmode.reset();
 		m_bones.reset();
 		m_mapgen.reset();
 	}
@@ -197,6 +227,7 @@ struct programs::q3main::private_data {
 		m_use_vertex_colors.push();
 		m_turb.push();
 		m_turb_data.push();
+		m_lmmode.reset();
 		m_bones.push();
 		m_mapgen.push();
 	}
@@ -241,6 +272,8 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"turb\"");
 	if (m_data->m_turb_data.set_location(get_location("turb_data")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"turb_data\"");
+	if (m_data->m_lmmode.set_location(get_location("lm_mode")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"lm_mode\"");
 	if (m_data->m_bones.set_location(get_location("ghoul2")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"ghoul2\"");
 	if (m_data->m_mapgen.set_location(get_location("mapgen")) == -1)
@@ -300,6 +333,11 @@ void programs::q3main::turb(bool const & v) {
 void programs::q3main::turb_data(q3stage::tx_turb const & v) {
 	m_data->m_turb_data = { v.amplitude, v.base, v.frequency, v.phase };
 	if (is_bound()) m_data->m_turb_data.push();
+}
+
+void programs::q3main::lm_mode(GLuint const & v) {
+	m_data->m_lmmode = v;
+	if (is_bound()) m_data->m_lmmode.push();
 }
 
 void programs::q3main::mapgen(uint8_t v) {

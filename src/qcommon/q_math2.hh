@@ -887,6 +887,14 @@ struct qm::meta::mat4_t {
 		};
 	}
 	
+	static constexpr mat4_t<T> scale(T v) {
+		mat4_t<T> w = identity();
+		w[0][0] = v;
+		w[1][1] = v;
+		w[2][2] = v;
+		return w;
+	}
+	
 	static constexpr mat4_t<T> scale(T x, T y, T z) {
 		mat4_t<T> w = identity();
 		w[0][0] = x;

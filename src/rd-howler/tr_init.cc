@@ -134,10 +134,10 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 		case RT_MODEL: {
 			
 			if (re->ghoul2) {
-				auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::ghoul2_object>();
+				auto & obj = hw_inst->frame().scene().ghoul2_objects.emplace_back();
 				obj.ref = *re;
 			} else {
-				auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::basic_object>();
+				auto & obj = hw_inst->frame().scene().basic_objects.emplace_back();
 				obj.basemodel = hw_inst->models.get(re->hModel);
 				qm::vec3_t origin = {re->origin[1], -re->origin[2], re->origin[0]};
 				
@@ -161,10 +161,9 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 		} break;
 		
 		case RT_SPRITE: {
-			auto & obj = hw_inst->frame().emplace_3d<howler::cmd3d::primitive_object>();
+			auto & obj = hw_inst->frame().scene().sprites.emplace_back();
 			obj.ref = *re;
 		}
-		
 	}
 }
 
@@ -194,6 +193,15 @@ void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, flo
 
 void RE_RenderScene (const refdef_t *fd) {
 	hw_inst->frame().scene().ref = *fd;
+	
+	if (!(fd->rdflags & RDF_NOWORLDMODEL))
+		for (size_t i = 0; i < 512; i++) {
+			auto & obj = hw_inst->frame().scene().sprites.emplace_back();
+			obj.ref = {};
+			VectorSet(obj.ref.origin, Q_flrand(-512, 512), Q_flrand(-512, 512), Q_flrand(-512, 512));
+			obj.ref.radius = 10;
+		}
+	
 	hw_inst->frame().new_scene();
 }
 
@@ -205,7 +213,7 @@ void RE_SetColor (const float *rgba) {
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
 	if (!hShader) return;
-	hw_inst->frame().c2ds.emplace_back( howler::cmd2d::stretchpic { x, y, w, h, s1 ,t1, s2, t2, hw_inst->shaders.get(hShader), ui_color });
+	hw_inst->frame().ui_stretchpics.emplace_back( howler::cmd2d::stretchpic { x, y, w, h, s1 ,t1, s2, t2, hw_inst->shaders.get(hShader), ui_color });
 }
 
 void RE_RotatePic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, float a1, qhandle_t hShader) {

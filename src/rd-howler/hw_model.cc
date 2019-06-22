@@ -222,28 +222,19 @@ struct mdxm_animated_mesh : public q3mesh {
 		glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
 		glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
 		glEnableVertexArrayAttrib(m_handle, LAYOUT_NORMAL);
-		glEnableVertexArrayAttrib(m_handle, LAYOUT_BONE_GROUP0);
-		glEnableVertexArrayAttrib(m_handle, LAYOUT_BONE_GROUP1);
-		glEnableVertexArrayAttrib(m_handle, LAYOUT_BONE_GROUP2);
-		glEnableVertexArrayAttrib(m_handle, LAYOUT_BONE_GROUP3);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_BONE_GROUPS);
 		glEnableVertexArrayAttrib(m_handle, LAYOUT_BONE_WEIGHT);
 		
 		glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
 		glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
 		glVertexArrayAttribBinding(m_handle, LAYOUT_NORMAL, 0);
-		glVertexArrayAttribBinding(m_handle, LAYOUT_BONE_GROUP0, 0);
-		glVertexArrayAttribBinding(m_handle, LAYOUT_BONE_GROUP1, 0);
-		glVertexArrayAttribBinding(m_handle, LAYOUT_BONE_GROUP2, 0);
-		glVertexArrayAttribBinding(m_handle, LAYOUT_BONE_GROUP3, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_BONE_GROUPS, 0);
 		glVertexArrayAttribBinding(m_handle, LAYOUT_BONE_WEIGHT, 0);
 		
 		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, 3, GL_FLOAT, GL_FALSE, offsetof_verts);
 		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, 2, GL_FLOAT, GL_FALSE, offsetof_uv);
 		glVertexArrayAttribFormat(m_handle, LAYOUT_NORMAL, 3, GL_FLOAT, GL_FALSE, offsetof_normal);
-		glVertexArrayAttribIFormat(m_handle, LAYOUT_BONE_GROUP0, 1, GL_UNSIGNED_BYTE, offsetof_boneg+0);
-		glVertexArrayAttribIFormat(m_handle, LAYOUT_BONE_GROUP1, 1, GL_UNSIGNED_BYTE, offsetof_boneg+1);
-		glVertexArrayAttribIFormat(m_handle, LAYOUT_BONE_GROUP2, 1, GL_UNSIGNED_BYTE, offsetof_boneg+2);
-		glVertexArrayAttribIFormat(m_handle, LAYOUT_BONE_GROUP3, 1, GL_UNSIGNED_BYTE, offsetof_boneg+3);
+		glVertexArrayAttribIFormat(m_handle, LAYOUT_BONE_GROUPS, 4, GL_UNSIGNED_BYTE, offsetof_boneg);
 		glVertexArrayAttribFormat(m_handle, LAYOUT_BONE_WEIGHT, 4, GL_FLOAT, GL_FALSE, offsetof_bonew);
 		
 		if (glGetError() != GL_NO_ERROR) {

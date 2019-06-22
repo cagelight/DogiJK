@@ -8,13 +8,8 @@ static std::string generate_vertex_shader() {
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
 	
-	layout(location = )GLSL" << LAYOUT_LMUV0 << R"GLSL() in vec2 lm_uv0;
-	layout(location = )GLSL" << LAYOUT_LMUV1 << R"GLSL() in vec2 lm_uv1;
-	layout(location = )GLSL" << LAYOUT_LMUV2 << R"GLSL() in vec2 lm_uv2;
-	layout(location = )GLSL" << LAYOUT_LMUV3 << R"GLSL() in vec2 lm_uv3;
-	
-	layout(location = )GLSL" << LAYOUT_LMCOLOR0 << R"GLSL() in vec4 lm_color0;
-	layout(location = )GLSL" << LAYOUT_LMCOLOR1 << R"GLSL() in vec4 lm_color1;
+	layout(location = )GLSL" << LAYOUT_LMUV01_COLOR0 << R"GLSL() in vec4 lm_uv01_color0;
+	layout(location = )GLSL" << LAYOUT_LMUV23_COLOR1 << R"GLSL() in vec4 lm_uv23_color1;
 	layout(location = )GLSL" << LAYOUT_LMCOLOR2 << R"GLSL() in vec4 lm_color2;
 	layout(location = )GLSL" << LAYOUT_LMCOLOR3 << R"GLSL() in vec4 lm_color3;
 
@@ -31,14 +26,14 @@ static std::string generate_vertex_shader() {
 		switch (lm_mode) {
 			case 1:
 				vertex_color = vec4(1, 1, 1, 1);
-				vertex_uv[0] = lm_uv0;
-				vertex_uv[1] = lm_uv1;
-				vertex_uv[2] = lm_uv2;
-				vertex_uv[3] = lm_uv3;
+				vertex_uv[0] = lm_uv01_color0.xy;
+				vertex_uv[1] = lm_uv01_color0.zw;
+				vertex_uv[2] = lm_uv23_color1.xy;
+				vertex_uv[3] = lm_uv23_color1.zw;
 				factor = 1;
 				break;
 			case 2:
-				vertex_color = lm_color0;
+				vertex_color = lm_uv01_color0;
 				factor = 0;
 				break;
 			default:
