@@ -238,7 +238,7 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 			vertfunc(ctrl[y][x]);
 		}
 		
-		for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
+		for (int_t x = 0; x < width - 1; x++) for (int_t y = 0; y < height - 1; y++) {
 			idxfunc(x + 0, y + 0);
 			idxfunc(x + 0, y + 1);
 			idxfunc(x + 1, y + 0);

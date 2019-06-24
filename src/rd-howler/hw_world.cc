@@ -22,7 +22,7 @@ struct q3world::q3worldrendermesh : public q3mesh {
 		glDeleteBuffers(1, &idx_ary);
 	}
 	
-	void upload_indicies(GLuint * ptr, size_t num) {
+	void upload_indicies(GLuint const * ptr, size_t num) {
 		assert(num % 3 == 0);
 		if (!ptr || !num) return;
 		idx_num = num;
@@ -711,10 +711,18 @@ void q3world::load_submodels() {
 		for (int32_t m = 0; m < bmod.surf_num; m++) {
 			q3worldsurface const & surf = m_surfaces[bmod.surf_idx + m];
 			
-			model.meshes.emplace_back(surf.shader, std::visit( lambda_visit {
-				[&](q3worldmesh_maplit_proto const & proto) -> q3mesh_ptr { return proto.generate(); },
-				[&](q3worldmesh_vertexlit_proto const & proto) -> q3mesh_ptr { return proto.generate(); },
-			}, surf.proto));
+			auto rend = std::make_shared<q3worldrendermesh>();
+			std::visit( lambda_visit {
+				[&](q3worldmesh_maplit_proto const & proto) { 
+					rend->world_mesh = proto.generate(); 
+					rend->upload_indicies(proto.indicies.data(), proto.indicies.size());
+				},
+				[&](q3worldmesh_vertexlit_proto const & proto) { 
+					rend->world_mesh = proto.generate(); 
+					rend->upload_indicies(proto.indicies.data(), proto.indicies.size());
+				},
+			}, surf.proto);
+			model.meshes.emplace_back(surf.shader, rend);
 		}
 		
 		hw_inst->models.reg(mod);
