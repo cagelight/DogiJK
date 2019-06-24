@@ -343,15 +343,22 @@ qboolean R_inPVS (const vec3_t p1, const vec3_t p2, byte *mask) {
 }
 
 void RE_GetLightStyle (int style, color4ub_t color) {
-
+	color[0] = static_cast<byte>(qm::clamp<float>(hw_inst->lightstyles[style][0] * 255.0f, 0.0f, 255.0f));
+	color[1] = static_cast<byte>(qm::clamp<float>(hw_inst->lightstyles[style][1] * 255.0f, 0.0f, 255.0f));
+	color[2] = static_cast<byte>(qm::clamp<float>(hw_inst->lightstyles[style][2] * 255.0f, 0.0f, 255.0f));
+	color[3] = static_cast<byte>(qm::clamp<float>(hw_inst->lightstyles[style][3] * 255.0f, 0.0f, 255.0f));
 }
 
 void RE_SetLightStyle (int style, int color) {
-
+	byteAlias_t col; col.i = color;
+	hw_inst->lightstyles[style][0] = col.b[0] / 255.0f;
+	hw_inst->lightstyles[style][1] = col.b[1] / 255.0f;
+	hw_inst->lightstyles[style][2] = col.b[2] / 255.0f;
+	hw_inst->lightstyles[style][3] = col.b[3] / 255.0f;
 }
 
 void RE_GetBModelVerts (int bmodelIndex, vec3_t *vec, vec3_t normal) {
-
+	
 }
 
 void SetRangedFog (float range) {
@@ -363,7 +370,7 @@ void SetRefractionProperties (float distortionAlpha, float distortionStretch, qb
 }
 
 float GetDistanceCull (void) {
-	return 120000;
+	return hw_inst->m_cull * 2;
 }
 
 void GetRealRes (int *w, int *h) {

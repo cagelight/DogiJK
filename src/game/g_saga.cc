@@ -1159,7 +1159,7 @@ STARTOFFRADAR - start not displaying on radar, don't display until used.
 */
 void SP_info_siege_objective (gentity_t *ent)
 {
-	char* s;
+	char const* s;
 
 	if (!siege_valid || level.gametype != GT_SIEGE)
 	{
@@ -1225,7 +1225,7 @@ to toggle on and off.
 */
 void SP_info_siege_radaricon (gentity_t *ent)
 {
-	char* s;
+	char const* s;
 	int i;
 
 	if (!siege_valid || level.gametype != GT_SIEGE)
@@ -1770,7 +1770,7 @@ void SP_misc_siege_item (gentity_t *ent)
 {
 	int		canpickup;
 	int		noradar;
-	char	*s;
+	char	const *s;
 
 	if (!siege_valid || level.gametype != GT_SIEGE)
 	{

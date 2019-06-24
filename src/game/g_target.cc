@@ -272,7 +272,7 @@ void Use_Target_Speaker (gentity_t *ent, gentity_t *other, gentity_t *activator)
 
 void SP_target_speaker( gentity_t *ent ) {
 	char	buffer[MAX_QPATH];
-	char	*s;
+	char const	*s;
 
 	G_SpawnFloat( "wait", "0", &ent->wait );
 	G_SpawnFloat( "random", "0", &ent->random );
@@ -936,7 +936,7 @@ void target_level_change_use(gentity_t *self, gentity_t *other, gentity_t *activ
 */
 void SP_target_level_change( gentity_t *self )
 {
-	char *s;
+	char const *s;
 
 	G_SpawnString( "mapname", "", &s );
 	self->message = G_NewString(s);
@@ -970,7 +970,7 @@ will play.
 */
 void SP_target_play_music( gentity_t *self )
 {
-	char *s;
+	char const *s;
 
 	G_SetOrigin( self, self->s.origin );
 	if (!G_SpawnString( "music", "", &s ))

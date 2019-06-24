@@ -79,12 +79,16 @@ void instance::end_frame(float time) {
 	std::vector<q3drawmesh> debug_meshes;
 	bool debug_enabled = r_showtris->integer || r_showedges->integer;
 	
+	bool skyportal_drawn = false;
+	
 	for (q3scene const & scene : drawframe->scenes) {
 		
 		if (!scene.finalized) continue;
 		
+		qm::vec3_t view_origin {scene.ref.vieworg[1], -scene.ref.vieworg[2], scene.ref.vieworg[0]};
+		
 		qm::mat4_t p = qm::mat4_t::perspective(qm::deg2rad(scene.ref.fov_y), scene.ref.width, scene.ref.height, 4, m_cull * 2);
-		qm::mat4_t v = qm::mat4_t::translate(-scene.ref.vieworg[1], scene.ref.vieworg[2], -scene.ref.vieworg[0]);
+		qm::mat4_t v = qm::mat4_t::translate(-view_origin);
 		qm::quat_t rq = qm::quat_t::identity();
 		rq *= qm::quat_t { {1, 0, 0}, qm::deg2rad(scene.ref.viewangles[PITCH]) };
 		rq *= qm::quat_t { {0, 0, 1}, qm::deg2rad(scene.ref.viewangles[ROLL]) + qm::pi };
@@ -245,7 +249,7 @@ void instance::end_frame(float time) {
 		// SKYBOXES
 		// ================================
 		
-		if (scene.ref.rdflags & RDF_DRAWSKYBOX) {
+		if (!skyportal_drawn) {
 		
 			gl::initialize();
 			gl::polygon_mode(GL_FRONT_AND_BACK, GL_FILL);
@@ -290,6 +294,9 @@ void instance::end_frame(float time) {
 		
 		}
 		
+		if (scene.ref.rdflags & RDF_SKYBOXPORTAL && scene.ref.rdflags & RDF_DRAWSKYBOX)
+			skyportal_drawn = true;
+		
 		// ================================
 		// REGULAR GEOMETRY
 		// ================================
@@ -301,6 +308,9 @@ void instance::end_frame(float time) {
 		gl::depth_write(true);
 		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		
+		q3mainprog->bind();
+		q3mainprog->lightstyles(lightstyles);
+		
 		if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
 		
 		for (q3drawset const & draw : draw_set) {
@@ -308,12 +318,13 @@ void instance::end_frame(float time) {
 			for (auto const & stg : draw.shader->stages)
 				for (auto const & mesh : draw.meshes) {
 					if (!mesh.mesh) continue;
-					q3stage::setup_draw_parameters_t params;
+					q3stage::setup_draw_parameters_t params {};
 					params.time = time;
 					params.mvp = mesh.mvp;
 					params.mesh_uniforms = mesh.mesh->uniform_info();
 					params.shader_color = mesh.shader_color;
 					params.bone_weights = mesh.weights.size() ? &mesh.weights : nullptr;
+					params.view_origin = view_origin;
 					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}
@@ -346,10 +357,11 @@ void instance::end_frame(float time) {
 		qm::mat4_t mvp = m * ui_ortho;
 		if (debug_enabled) debug_meshes.emplace_back(unitquad, mvp);
 		for (auto const & stg : cmd.shader->stages) {
-			q3stage::setup_draw_parameters_t params;
+			q3stage::setup_draw_parameters_t params {};
 			params.time = time;
 			params.mvp = mvp;
 			params.uvm = uv;
+			params.is_2d = true;
 			stg.setup_draw(params);
 			unitquad->draw();
 		}

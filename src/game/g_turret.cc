@@ -693,7 +693,7 @@ Large 2-piece turbolaser turret
 void SP_misc_turret( gentity_t *base )
 //-----------------------------------------------------
 {
-	char* s;
+	char const* s;
 
 	base->s.modelindex2 = G_ModelIndex( "models/map_objects/hoth/turret_bottom.md3" );
 	base->s.modelindex = G_ModelIndex( "models/map_objects/hoth/turret_base.md3" );

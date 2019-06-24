@@ -417,11 +417,11 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 		if (!token[0]) {
 			
 			Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") ends abruptly.\n", name.c_str());
-			return false;
+			goto fail;
 			
 		} else if (token[0] == '}')
 			
-			break;
+			goto end;
 		
 		//================================
 		// MAP
@@ -441,7 +441,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				stg.diffuse = hw_inst->textures.reg(token, mips);
 				if (!stg.has_diffuse()) {
 					Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid map (\"%s\"), could not find this image.\n", name.c_str(), token);
-					return false;
+					goto fail;
 				}
 			}
 			
@@ -459,7 +459,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			auto iter = alphafunc_map.find(token);
 			if (iter == alphafunc_map.end()) {
 				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid alphaFunc (\"%s\"), could not find this image.\n", name.c_str(), token);
-				return false;
+				goto fail;
 			}
 			stg.alpha_test = iter->second;
 			
@@ -519,39 +519,47 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			} else if (!Q_stricmp("wave", token)) {
 				gen = q3stage::gen_type::wave;
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"genfunc\" in shader (\"%s\")\n", name.c_str());
-					SkipRestOfLine(&sptr);
-					continue;
+					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"genfunc\" in shader (\"%s\")\n", name.c_str());
+					goto next;
 				}
 				wave.func = genfunc_str2enum(token);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"base\" in shader (\"%s\")\n", name.c_str());
-					SkipRestOfLine(&sptr);
-					continue;
+					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"base\" in shader (\"%s\")\n", name.c_str());
+					goto next;
 				}
 				wave.base = strtof(token, nullptr);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"amplitude\" in shader (\"%s\")\n", name.c_str());
-					SkipRestOfLine(&sptr);
-					continue;
+					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"amplitude\" in shader (\"%s\")\n", name.c_str());
+					goto next;
 				}
 				wave.amplitude = strtof(token, nullptr);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"phase\" in shader (\"%s\")\n", name.c_str());
-					SkipRestOfLine(&sptr);
-					continue;
+					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"phase\" in shader (\"%s\")\n", name.c_str());
+					goto next;
 				}
 				wave.phase= strtof(token, nullptr);
 				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing tcMod stretch parm \"frequency\" in shader (\"%s\")\n", name.c_str());
-					SkipRestOfLine(&sptr);
-					continue;
+					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"frequency\" in shader (\"%s\")\n", name.c_str());
+					goto next;
 				}
 				wave.frequency = strtof(token, nullptr);
 			} else {
 				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid %s (\"%s\").\n", name.c_str(), alpha ? "alphaGen" : "rgbGen", token);
-				SkipRestOfLine(&sptr);
-				continue;
+				goto next;
+			}
+			
+		} else if (!Q_stricmp(token, "tcGen")) {
+			
+			token = COM_ParseExt(&sptr, qfalse);
+			if (!Q_stricmp("environment", token)) {
+				stg.gen_tc = q3stage::tcgen::environment;
+				goto next;
+			} else if (!Q_stricmp("lightmap", token)) {
+				stg.gen_tc = q3stage::tcgen::lightmap;
+				goto next;
+			} else {
+				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid tcGen (\"%s\").\n", name.c_str(), token);
+				goto next;
 			}
 			
 		} else if (!Q_stricmp(token, "tcMod")) {
@@ -591,7 +599,6 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			auto iter = depth_func_map.find(token);
 			if (iter == depth_func_map.end()) {
 				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid depthFunc (\"%s\").\n", name.c_str(), token);
-				continue;
 			}
 			
 			stg.depth_func = iter->second;
@@ -599,11 +606,18 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 		} else {
 			
 			Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid key (\"%s\").\n", name.c_str(), token);
-			SkipRestOfLine(&sptr);
-			continue;
+			goto next;
 			
 		}
 		
+		continue;
+		next:
+		SkipRestOfLine(&sptr);
+		continue;
+		end:
+		break;
+		fail:
+		return false;
 	}
 	
 	return true;
@@ -941,10 +955,13 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	}
 	
 	if (has_diffuse() && gen_map == map_gen::diffuse)
-		std::visit( lambda_visit {
-			[&](q3texture_ptr const & tex) { tex->bind(BINDING_DIFFUSE); },
-			[&](diffuse_anim_ptr const & anim) {  }
-		}, diffuse);
+		if ((r_shownormals->integer || r_whiteimage->integer) && !parm.is_2d) {
+			hw_inst->textures.whiteimage->bind(BINDING_DIFFUSE);
+		} else
+			std::visit( lambda_visit {
+				[&](q3texture_ptr const & tex) { tex->bind(BINDING_DIFFUSE); },
+				[&](diffuse_anim_ptr const & anim) {  }
+			}, diffuse);
 	else
 		q3texture::unbind(BINDING_DIFFUSE);
 	
@@ -955,6 +972,9 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->q3mainprog->color(q3color);
 	hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
 	hw_inst->q3mainprog->turb(turb);
+	hw_inst->q3mainprog->tcgen(gen_tc);
+	hw_inst->q3mainprog->mapgen((r_shownormals->integer && !parm.is_2d) ? map_gen::normals : gen_map);
+	hw_inst->q3mainprog->viewpos(parm.view_origin);
 	
 	if (turb) {
 		hw_inst->q3mainprog->turb_data(*turb_data);
@@ -964,22 +984,6 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 		hw_inst->q3mainprog->bone_matricies(parm.bone_weights->data(), parm.bone_weights->size());
 	else
 		hw_inst->q3mainprog->bone_matricies(nullptr, 0);
-	
-	switch (gen_map) {
-		case map_gen::diffuse:
-			hw_inst->q3mainprog->mapgen(0);
-			break;
-		case map_gen::lightmap:
-			hw_inst->q3mainprog->mapgen(1);
-			break;
-		default:
-		case map_gen::mnoise:
-			hw_inst->q3mainprog->mapgen(2);
-			break;
-		case map_gen::anoise:
-			hw_inst->q3mainprog->mapgen(3);
-			break;
-	}
 	
 	if (parm.mesh_uniforms)
 		hw_inst->q3mainprog->lm_mode(parm.mesh_uniforms->mode);

@@ -36,12 +36,14 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#define XCVAR_DEF( name, defVal, flags, desc ) name = ri.Cvar_Get ( #name , defVal , flags , desc );
 #endif
 
+XCVAR_DEF( r_debug,						"0",				CVAR_ARCHIVE,									"" )
 XCVAR_DEF( r_lockpvs,					"0",				0,												"" )
 XCVAR_DEF( r_showedges,					"0",				CVAR_CHEAT,										"" )
+XCVAR_DEF( r_shownormals,				"0",				0,												"" )
 XCVAR_DEF( r_showtris,					"0",				CVAR_CHEAT,										"" )
 XCVAR_DEF( r_vis,						"1",				0,												"" )
 XCVAR_DEF( r_viscachesize,				"20",				CVAR_ARCHIVE,									"" )
-XCVAR_DEF (r_debug,						"0",				CVAR_ARCHIVE,									"" )
+XCVAR_DEF( r_whiteimage,				"0",				0,												"" )
 
 #ifdef _DEBUG
 XCVAR_DEF( r_drawcalls,					"0",				0,												"" )

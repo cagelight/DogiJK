@@ -36,6 +36,8 @@ private:
 			C.lm_uvs[i] = qm::lerp(A.lm_uvs[i], B.lm_uvs[i], 0.5f);
 			C.lm_colors[i] = qm::lerp(A.lm_colors[i], B.lm_colors[i], 0.5f);
 		}
+		assert(A.styles == B.styles);
+		C.styles = A.styles;
 		return C;
 	}
 	
@@ -185,12 +187,14 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 			proto.verticies.emplace_back( q3worldmesh_vertexlit::vertex_t {
 				v.xyz,
 				v.uv,
+				v.normal,
 				lightmap_color_t {
 					protocolor(v.lm_colors[0]),
 					protocolor(v.lm_colors[1]),
 					protocolor(v.lm_colors[2]),
 					protocolor(v.lm_colors[3])
-				}
+				},
+				v.styles
 			});
 		};
 		
@@ -210,13 +214,15 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 			proto.verticies.emplace_back( q3worldmesh_maplit::vertex_t {
 				v.xyz,
 				v.uv,
+				v.normal,
 				protocolor(v.lm_colors[0]),
 				lightmap_uv_t {
 					protouv(v.lm_uvs[0]),
 					protouv(v.lm_uvs[1]),
 					protouv(v.lm_uvs[2]),
 					protouv(v.lm_uvs[3])
-				}
+				},
+				v.styles
 			});
 		};
 		

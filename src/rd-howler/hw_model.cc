@@ -117,6 +117,7 @@ struct q3md3mesh : public q3mesh {
 	struct vertex_t {
 		qm::vec3_t vert;
 		qm::vec2_t uv;
+		qm::vec3_t normal;
 	};
 	
 	q3md3mesh(vertex_t const * data, size_t num) : q3mesh(mode::triangles) {
@@ -125,7 +126,9 @@ struct q3md3mesh : public q3mesh {
 		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
 		static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
 		static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
-		static constexpr uint_fast16_t sizeof_all = offsetof_uv + sizeof_uv;
+		static constexpr uint_fast16_t offsetof_normal = offsetof_uv + sizeof_uv;
+		static constexpr uint_fast16_t sizeof_normal = sizeof(vertex_t::normal);
+		static constexpr uint_fast16_t sizeof_all = offsetof_normal + sizeof_normal;
 		static_assert(sizeof_all == sizeof(vertex_t));
 		
 		m_size = num;
@@ -136,11 +139,14 @@ struct q3md3mesh : public q3mesh {
 		
 		glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
 		glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_NORMAL);
 		glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
 		glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_NORMAL, 0);
 		
-		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, sizeof_verts / 4, GL_FLOAT, GL_FALSE, offsetof_verts);
-		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, sizeof_uv / 4, GL_FLOAT, GL_FALSE, offsetof_uv);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, 3, GL_FLOAT, GL_FALSE, offsetof_verts);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, 2, GL_FLOAT, GL_FALSE, offsetof_uv);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_NORMAL, 3, GL_FLOAT, GL_FALSE, offsetof_normal);
 		
 	}
 	
@@ -169,9 +175,14 @@ void q3basemodel::setup_render_md3() {
 			for (size_t j = 0; j < 3; j++) {
 				auto const & v = verts[triangles[i].indexes[j]];
 				auto const & u = uvs[triangles[i].indexes[j]];
+				
+				float lat = ((v.normal >> 8) & 0xFF) * (2 * qm::pi) / 255.0f;
+				float lng = (v.normal & 0xFF) * (2 * qm::pi) / 255.0f;
+				
 				vert_data.emplace_back( q3md3mesh::vertex_t {
 					qm::vec3_t { (float)v.xyz[1], (float)v.xyz[2], (float)v.xyz[0] } / 64.0,
-					qm::vec2_t { u.st[0], u.st[1] }
+					qm::vec2_t { u.st[0], u.st[1] },
+					qm::vec3_t { std::sin(lat) * std::sin(lng), std::cos(lng), std::cos(lat) * std::sin(lng) },
 				});
 			}
 		}
@@ -301,7 +312,7 @@ void q3basemodel::setup_render_mdxm() {
 				verticies.emplace_back( mdxm_animated_mesh::vertex_t {
 					qm::vec3_t { vtx.vertCoords[0], vtx.vertCoords[2], -vtx.vertCoords[1], },
 					qm::vec2_t { uv.texCoords[0], uv.texCoords[1] },
-					qm::vec3_t { vtx.normal[0], vtx.normal[1], vtx.normal[2], },
+					qm::vec3_t { vtx.normal[0], vtx.normal[2], -vtx.normal[1], },
 					bone_idx,
 					bone_wgt
 				});
@@ -422,8 +433,6 @@ void q3basemodel::load_mdxm(bool server) {
 			surfi->name[strlen(surfi->name) - 4] = 0; //remove "_off" from name
 		if (surfi->shader[0]) {
 			surfi->shaderIndex = hw_inst->shaders.reg(surfi->shader)->index;
-			if (r_debug->integer)
-				Com_Printf( S_COLOR_MAGENTA "DEBUG: Loaded MDXM shader: %s\n", surfi->shader);
 		}
 		surfi = (mdxmSurfHierarchy_t *)( (byte *)surfi + (size_t)( &((mdxmSurfHierarchy_t *)0)->childIndexes[ surfi->numChildren ] ));
 	}

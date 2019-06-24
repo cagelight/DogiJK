@@ -23,8 +23,10 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "g_local.hh"
 
-qboolean	G_SpawnString( const char *key, const char *defaultString, char **out ) {
+qboolean	G_SpawnString( const char *key, const char *defaultString, char const * *out ) {
 	int		i;
+	
+	if (!defaultString) defaultString = "";
 
 	if ( !level.spawning ) {
 		*out = (char *)defaultString;
@@ -43,7 +45,7 @@ qboolean	G_SpawnString( const char *key, const char *defaultString, char **out )
 }
 
 qboolean	G_SpawnFloat( const char *key, const char *defaultString, float *out ) {
-	char		*s;
+	char const		*s;
 	qboolean	present;
 
 	present = G_SpawnString( key, defaultString, &s );
@@ -52,7 +54,7 @@ qboolean	G_SpawnFloat( const char *key, const char *defaultString, float *out ) 
 }
 
 qboolean	G_SpawnInt( const char *key, const char *defaultString, int *out ) {
-	char		*s;
+	char const		*s;
 	qboolean	present;
 
 	present = G_SpawnString( key, defaultString, &s );
@@ -61,7 +63,7 @@ qboolean	G_SpawnInt( const char *key, const char *defaultString, int *out ) {
 }
 
 qboolean	G_SpawnVector( const char *key, const char *defaultString, float *out ) {
-	char		*s;
+	char const		*s;
 	qboolean	present;
 
 	present = G_SpawnString( key, defaultString, &s );
@@ -74,7 +76,7 @@ qboolean	G_SpawnVector( const char *key, const char *defaultString, float *out )
 }
 
 qboolean	G_SpawnBoolean( const char *key, const char *defaultString, qboolean *out ) {
-	char		*s;
+	char const		*s;
 	qboolean	present;
 
 	present = G_SpawnString( key, defaultString, &s );
@@ -419,7 +421,7 @@ void SP_item_botroam( gentity_t *ent ) { }
 void SP_gametype_item ( gentity_t* ent )
 {
 	gitem_t *item = NULL;
-	char *value;
+	char const *value;
 	int team = -1;
 
 	G_SpawnString("teamfilter", "", &value);
@@ -815,7 +817,7 @@ level.spawnVars[], then call the class specfic spawn function
 void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	int			i;
 	gentity_t	*ent;
-	char		*s, *value, *gametypeName;
+	char const		*s, *value, *gametypeName;
 	static char *gametypeNames[] = {"ffa", "holocron", "jedimaster", "duel", "powerduel", "single", "team", "siege", "ctf", "cty"};
 
 	// get the next free entity
@@ -910,7 +912,7 @@ char *G_AddSpawnVarToken( const char *string ) {
 	return dest;
 }
 
-void AddSpawnField(char *field, char *value)
+void AddSpawnField(char const *field, char const *value)
 {
 	int	i;
 
@@ -932,7 +934,7 @@ void AddSpawnField(char *field, char *value)
 
 static void HandleEntityAdjustment(void)
 {
-	char		*value;
+	char		const *value;
 	vec3_t		origin, newOrigin, angles;
 	char		temp[MAX_QPATH];
 	float		rotation;
@@ -1121,7 +1123,7 @@ qboolean G_ParseSpawnVars( qboolean inSubBSP ) {
 }
 
 
-static	char *defaultStyles[32][3] =
+static char const * defaultStyles[32][3] =
 {
 	{	// 0 normal
 		"z",
@@ -1312,7 +1314,8 @@ extern void EWebPrecache(void); //g_items.c
 float g_cullDistance;
 void SP_worldspawn( void )
 {
-	char		*text, temp[32];
+	char		const *text;
+	char 		temp[32];
 	int			i;
 	int			lengthRed, lengthBlue, lengthGreen;
 

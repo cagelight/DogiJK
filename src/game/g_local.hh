@@ -995,7 +995,7 @@ typedef struct level_locals_s {
 //
 // g_spawn.c
 //
-qboolean	G_SpawnString( const char *key, const char *defaultString, char **out );
+qboolean	G_SpawnString( const char *key, const char *defaultString, char const **out );
 // spawn string returns a temporary reference, you must CopyString() if you want to keep it
 qboolean	G_SpawnFloat( const char *key, const char *defaultString, float *out );
 qboolean	G_SpawnInt( const char *key, const char *defaultString, int *out );

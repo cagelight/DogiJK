@@ -1047,7 +1047,7 @@ void SP_misc_turretG2( gentity_t *base )
 //-----------------------------------------------------
 {
 	int customscaleVal;
-	char* s;
+	char const * s;
 
 	turretG2_set_models( base, qfalse );
 

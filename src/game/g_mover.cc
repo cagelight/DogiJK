@@ -2860,7 +2860,7 @@ teamnodmg - if 1, team 1 can't damage this. If 2, team 2 can't damage this.
 void SP_func_breakable( gentity_t *self )
 {
 	int t;
-	char *s = NULL;
+	char const *s = NULL;
 
 	G_SpawnString("playfx", "", &s);
 

@@ -627,7 +627,7 @@ idealclass	-	Can only be used by this class/these classes. You can specify use b
 */
 void SP_trigger_multiple( gentity_t *ent )
 {
-	char	*s;
+	char const	*s;
 	if ( G_SpawnString( "noise", "", &s ) )
 	{
 		if (s && s[0])
@@ -714,7 +714,7 @@ idealclass	-	Can only be used by this class/these classes. You can specify use b
 */
 void SP_trigger_once( gentity_t *ent )
 {
-	char	*s;
+	char const	*s;
 	if ( G_SpawnString( "noise", "", &s ) )
 	{
 		if (s && s[0])
@@ -844,7 +844,7 @@ use to toggle on and off
 */
 void SP_trigger_lightningstrike( gentity_t *ent )
 {
-	char *s;
+	char const *s;
 
 	ent->use = Use_Strike;
 	ent->think = Think_Strike;

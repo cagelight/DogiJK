@@ -596,7 +596,7 @@ void SP_misc_portal_camera(gentity_t *ent) {
 void SP_misc_bsp(gentity_t *ent)
 {
 	char	temp[MAX_QPATH];
-	char	*out;
+	char	const *out;
 	float	newAngle;
 	int		tempint;
 
@@ -685,7 +685,7 @@ miscentDef - defines which client models spawn on the terrain (file is base/ext_
 densityMap - how dense the client models are packed
 
 */
-void AddSpawnField(char *field, char *value);
+void AddSpawnField(char const *field, char const *value);
 #define MAX_INSTANCE_TYPES		16
 void SP_terrain(gentity_t *ent)
 {
@@ -755,7 +755,7 @@ will explode.
 */
 void SP_misc_skyportal (gentity_t *ent)
 {
-	char	*fov;
+	char	const *fov;
 	vec3_t	fogv;	//----(SA)
 	int		fogn;	//----(SA)
 	int		fogf;	//----(SA)
@@ -2514,7 +2514,7 @@ void fx_runner_link( gentity_t *ent )
 //----------------------------------------------------------
 void SP_fx_runner( gentity_t *ent )
 {
-	char *fxFile;
+	char const *fxFile;
 
 	G_SpawnString( "fxFile", "", &fxFile );
 	// Get our defaults
@@ -3603,7 +3603,7 @@ extern stringID_table_t WPTable[];
 
 void SP_misc_weapon_shooter( gentity_t *self )
 {
-	char *s;
+	char const *s;
 
 	//alloc a client just for the weapon code to use
 	self->client = G_ClientForShooter();//(gclient_s *)trap->Malloc(sizeof(gclient_s), TAG_G_ALLOC, qtrue);

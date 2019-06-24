@@ -22,7 +22,7 @@ void q3texture::generate_mipmaps() {
 	if (m_mips) glGenerateTextureMipmap(m_handle);
 }
 
-void q3texture::bind(GLuint binding) {
+void q3texture::bind(GLuint binding) const {
 	glBindTextureUnit(binding, m_handle);
 }
 
@@ -75,9 +75,7 @@ void instance::texture_registry::generate_named_defaults() {
 	q3texture_ptr whiteimage = make_q3texture(1, 1, false);
 	whiteimage->upload(1, 1, "\xFF\xFF\xFF\xFF");
 	
-	lookup["*white"] = whiteimage;
-	lookup["$whiteimage"] = whiteimage;
-	lookup["$lightmap"] = whiteimage;
+	this->whiteimage = lookup["$whiteimage"] = lookup["*white"] = whiteimage;
 	lookup["*invalid"] = nullptr;
 }
 

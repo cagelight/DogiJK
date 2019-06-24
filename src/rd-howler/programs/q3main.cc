@@ -9,35 +9,41 @@ static std::string generate_vertex_shader() {
 	layout (std140) uniform BoneMatricies {
 		mat4 bone[72];
 	};
+	
+	layout (std140) uniform LightStyles {
+		vec4 lightstyles[64];
+	};
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
 	layout(location = )GLSL" << LAYOUT_UV << R"GLSL() in vec2 uv;
-	layout(location = )GLSL" << LAYOUT_COLOR << R"GLSL() in vec4 vertex_color;
-	
-	// GHOUl2
+	layout(location = )GLSL" << LAYOUT_NORMAL << R"GLSL() in vec3 normal;
 	layout(location = )GLSL" << LAYOUT_BONE_GROUPS << R"GLSL() in ivec4 vertex_bg;
 	layout(location = )GLSL" << LAYOUT_BONE_WEIGHT << R"GLSL() in vec4 vertex_wgt;
-	
-	// LIGHTMAP
-	layout(location = )GLSL" << LAYOUT_LMUV01_COLOR0 << R"GLSL() in vec4 lm_uv01_color0;
-	layout(location = )GLSL" << LAYOUT_LMUV23_COLOR1 << R"GLSL() in vec4 lm_uv23_color1;
-	layout(location = )GLSL" << LAYOUT_LMCOLOR2 << R"GLSL() in vec4 lm_color2;
-	layout(location = )GLSL" << LAYOUT_LMCOLOR3 << R"GLSL() in vec4 lm_color3;
+	layout(location = )GLSL" << LAYOUT_COLOR0 << R"GLSL() in vec4 color0;
+	layout(location = )GLSL" << LAYOUT_COLOR1 << R"GLSL() in vec4 color1;
+	layout(location = )GLSL" << LAYOUT_LMUV01_COLOR2 << R"GLSL() in vec4 lm_color2_uv01;
+	layout(location = )GLSL" << LAYOUT_LMUV23_COLOR3 << R"GLSL() in vec4 lm_color3_uv23;
+	layout(location = )GLSL" << LAYOUT_LMSTYLES << R"GLSL() in ivec4 lm_styles;
 
 	uniform float time;
 	uniform mat4 mvp;
 	uniform mat3 uvm;
+	
+	uniform vec3 view_origin;
+	
 	uniform bool use_vertex_color;
 	uniform bool turb;
 	uniform vec4 turb_data;
 	uniform uint mapgen;
 	uniform uint lm_mode;
+	uniform uint tcgen;
 	
 	uniform uint ghoul2;
 
 	out vec2 f_uv;
 	out vec4 vcolor;
 	out vec2 lm_uv[4];
+	flat out ivec4 lm_styles_frag;
 
 	void main() {
 	
@@ -95,31 +101,72 @@ static std::string generate_vertex_shader() {
 			gl_Position = mvp * vec4(vert, 1);
 		}
 		
-		if (lm_mode != 0 && mapgen == 1) {
+		if (mapgen == 2) {
+			vcolor = vec4(normal / 2 + 0.5, 1);
+		} else if (lm_mode != 0 && mapgen == 1) {
+			lm_styles_frag = lm_styles;
 			switch (lm_mode) {
 				case 1: {
 					vcolor = vec4(1, 1, 1, 1);
-					lm_uv[0] = lm_uv01_color0.xy;
-					lm_uv[1] = lm_uv01_color0.zw;
-					lm_uv[2] = lm_uv23_color1.xy;
-					lm_uv[3] = lm_uv23_color1.zw;
+					lm_uv[0] = lm_color2_uv01.xy;
+					lm_uv[1] = lm_color2_uv01.zw;
+					lm_uv[2] = lm_color3_uv23.xy;
+					lm_uv[3] = lm_color3_uv23.zw;
 				} break;
 				default:
-				case 2: {
-					vcolor = lm_uv01_color0;
+				case 2: { // VERTEX LIGHTING
+					
+					if (lm_styles.x == 0) {
+						vcolor = color0;
+					} else if (lm_styles.x < 0xFE) {
+						vcolor = color0 * lightstyles[lm_styles.x];
+					} else break;
+					
+					if (lm_styles.y == 0) {
+						vcolor += color1;
+					} else if (lm_styles.y < 0xFE) {
+						vcolor += color1 * lightstyles[lm_styles.y];
+					} else break;
+					
+					if (lm_styles.z == 0) {
+						vcolor += lm_color2_uv01;
+					} else if (lm_styles.z < 0xFE) {
+						vcolor += lm_color2_uv01 * lightstyles[lm_styles.z];
+					} else break;
+					
+					if (lm_styles.w == 0) {
+						vcolor += lm_color3_uv23;
+					} else if (lm_styles.w < 0xFE) {
+						vcolor += lm_color3_uv23 * lightstyles[lm_styles.w];
+					} else break;
+					
 				} break;
 			}
 		} else if (use_vertex_color) {
-			vcolor = vertex_color;
+			vcolor = color0;
 		} else {
 			vcolor = vec4(1, 1, 1, 1);
 		}
 		
-		f_uv = (uvm * vec3(uv, 1)).xy;
+		if (tcgen == 0)
+			f_uv = uv;
+		else if (tcgen == 1) { // environment
+			vec3 dir = normalize(view_origin - vert);
+			float d = dot(normal, dir);
+			f_uv.x = 0.5 + (normal.y * 2 * d - dir.y) * 0.5;
+			f_uv.y = 0.5 - (normal.z * 2 * d - dir.z) * 0.5;
+		}
+		else if (tcgen == 2 && lm_mode != 2) { // lightmap
+			f_uv = lm_color2_uv01.xy;
+		}
+		
+		f_uv = (uvm * vec3(f_uv, 1)).xy;
+		
 		if (turb) {
 			f_uv.x += sin((vert[0] + vert[2]) * (turb_data.w + time * turb_data.z) / 1024.0f) * turb_data.x;
 			f_uv.y += sin((vert[1]) * (turb_data.w + time * turb_data.z) / 1024.0f) * turb_data.x;
 		}
+		
 	}
 	)GLSL";
 
@@ -130,6 +177,10 @@ static std::string generate_fragment_shader() {
 	std::stringstream ss;
 	ss << R"GLSL(
 	#version 450
+		
+	layout (std140) uniform LightStyles {
+		vec4 lightstyles[64];
+	};
 	
 	// UNIFORMS
 	uniform float time;
@@ -144,6 +195,7 @@ static std::string generate_fragment_shader() {
 	in vec2 f_uv;
 	in vec4 vcolor;
 	in vec2 lm_uv[4];
+	flat in ivec4 lm_styles_frag;
 	
 	layout(location = 0) out vec4 color;
 	
@@ -160,30 +212,58 @@ static std::string generate_fragment_shader() {
 	
 		vec4 scolor;
 		
-		switch(mapgen) {
-			case 0: { // diffuse
-				scolor = texture(tex, f_uv);
-			} break;
-			case 1: { // lightmap
-				switch (lm_mode) {
-					case 1:
-						scolor = texture(lm, lm_uv[0]);
-						break;
-					case 2:
-						scolor = vec4(1, 1, 1, 1);
-						break;
-				}
-			} break;
-			default:
-			case 2: { // mnoise
-				float v = rand_value(time);
-				scolor = vec4(v, v, v, 1);
-			} break;
-			case 3: { // anoise
-				float v = rand_value(time);
-				scolor = vec4(1, 1, 1, v);
-			} break;
-		}
+		if (mapgen != 0) {
+			switch(mapgen) {
+				case 1: { // lightmap
+					switch (lm_mode) {
+						case 1: {
+							
+							if (lm_styles_frag.x == 0) {
+								scolor = texture(lm, lm_uv[0]);
+							} else if (lm_styles_frag.x < 0xFE) {
+								scolor = texture(lm, lm_uv[0]) * lightstyles[lm_styles_frag.x];
+							} else break;
+							
+							if (lm_styles_frag.y == 0) {
+								scolor += texture(lm, lm_uv[1]);
+							} else if (lm_styles_frag.y < 0xFE) {
+								scolor += texture(lm, lm_uv[1]) * lightstyles[lm_styles_frag.y];
+							} else break;
+							
+							if (lm_styles_frag.z == 0) {
+								scolor += texture(lm, lm_uv[2]);
+							} else if (lm_styles_frag.z < 0xFE) {
+								scolor += texture(lm, lm_uv[2]) * lightstyles[lm_styles_frag.z];
+							} else break;
+							
+							if (lm_styles_frag.w == 0) {
+								scolor += texture(lm, lm_uv[3]);
+							} else if (lm_styles_frag.w < 0xFE) {
+								scolor += texture(lm, lm_uv[3]) * lightstyles[lm_styles_frag.w];
+							} else break;
+							
+						} break;
+						case 2:
+							scolor = vec4(1, 1, 1, 1);
+							break;
+					}
+				} break;
+				case 2: // normals
+					scolor = vec4(1, 1, 1, 1);
+					break; // do nothing because vertex color is used
+				default:
+				case 3: { // mnoise
+					float v = rand_value(time);
+					scolor = vec4(v, v, v, 1);
+				} break;
+				case 4: { // anoise
+					float v = rand_value(time);
+					scolor = vec4(1, 1, 1, v);
+				} break;
+			}
+		} else
+			scolor = texture(tex, f_uv);
+		
 		color = scolor * q3color * vcolor;
 	}
 	)GLSL";
@@ -202,9 +282,14 @@ struct programs::q3main::private_data {
 	uniform_uint m_lmmode = 0;
 	uniform_uint m_bones = 0;
 	uniform_uint m_mapgen = 0;
+	uniform_vec3 m_viewpos = qm::vec3_t {0, 0, 0};
+	uniform_uint m_tcgen = 0;
 	
 	GLint bone_matricies_binding;
 	GLuint bone_matricies_buffer = 0;
+	
+	GLint lightstyles_binding;
+	GLuint lightstyles_buffer = 0;
 	
 	void reset() {
 		m_time.reset();
@@ -217,6 +302,8 @@ struct programs::q3main::private_data {
 		m_lmmode.reset();
 		m_bones.reset();
 		m_mapgen.reset();
+		m_viewpos.reset();
+		m_tcgen.reset();
 	}
 	
 	void push() {
@@ -230,6 +317,8 @@ struct programs::q3main::private_data {
 		m_lmmode.reset();
 		m_bones.push();
 		m_mapgen.push();
+		m_viewpos.push();
+		m_tcgen.push();
 	}
 };
 
@@ -278,13 +367,24 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"ghoul2\"");
 	if (m_data->m_mapgen.set_location(get_location("mapgen")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"mapgen\"");
+	if (m_data->m_viewpos.set_location(get_location("view_origin")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"view_origin\"");
+	if (m_data->m_tcgen.set_location(get_location("tcgen")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"tcgen\"");
 		
 	m_data->bone_matricies_binding = glGetUniformBlockIndex(get_handle(), "BoneMatricies");
 	if (m_data->bone_matricies_binding == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform buffer binding for \"BoneMatricies\"");
 	
+	m_data->lightstyles_binding = glGetUniformBlockIndex(get_handle(), "LightStyles");
+	if (m_data->lightstyles_binding == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform buffer binding for \"LightStyles\"");
+	
 	glCreateBuffers(1, &m_data->bone_matricies_buffer);
 	glUniformBlockBinding(get_handle(), m_data->bone_matricies_binding, BINDING_BONE_MATRICIES);
+	
+	glCreateBuffers(1, &m_data->lightstyles_buffer);
+	glUniformBlockBinding(get_handle(), m_data->lightstyles_binding, BINDING_LIGHTSTYLES);
 }
 
 programs::q3main::~q3main() {
@@ -340,9 +440,19 @@ void programs::q3main::lm_mode(GLuint const & v) {
 	if (is_bound()) m_data->m_lmmode.push();
 }
 
-void programs::q3main::mapgen(uint8_t v) {
-	m_data->m_mapgen = v;
+void programs::q3main::mapgen(q3stage::map_gen v) {
+	m_data->m_mapgen = static_cast<uint8_t>(v);
 	if (is_bound()) m_data->m_mapgen.push();
+}
+
+void programs::q3main::viewpos(qm::vec3_t const & v) {
+	m_data->m_viewpos = v;
+	if (is_bound()) m_data->m_viewpos.push();
+}
+
+void programs::q3main::tcgen(q3stage::tcgen v) {
+	m_data->m_tcgen = static_cast<uint8_t>(v);
+	if (is_bound()) m_data->m_tcgen.push();
 }
 
 void programs::q3main::bone_matricies(qm::mat4_t const * ptr, size_t num) {
@@ -359,4 +469,11 @@ void programs::q3main::bone_matricies(qm::mat4_t const * ptr, size_t num) {
 		m_data->m_bones = 0;
 		m_data->m_bones.push();
 	}
+}
+
+void programs::q3main::lightstyles(lightstyles_t const & ls) {
+	assert(is_bound());
+	
+	glBindBufferBase(GL_UNIFORM_BUFFER, BINDING_LIGHTSTYLES, m_data->lightstyles_buffer);
+	glNamedBufferData(m_data->lightstyles_buffer, sizeof(lightstyles_t), &ls, GL_STATIC_DRAW);
 }

@@ -203,6 +203,8 @@ struct qm::meta::vec2_t {
 	constexpr bool operator == (vec2_t const & other) const noexcept { return data == other.data; }
 	constexpr bool operator != (vec2_t const & other) const noexcept { return ! operator == (other); }
 	
+	constexpr vec2_t operator - () const noexcept { return { -data[0], -data[1] }; }
+	
 	constexpr vec2_t operator + (T const & v) const noexcept { return { data[0] + v, data[1] + v }; }
 	constexpr vec2_t operator + (vec2_t const & other) const noexcept { return { data[0] + other[0], data[1] + other[1] }; }
 	constexpr vec2_t & operator += (T const & v) noexcept { data[0] += v; data[1] += v; return *this; }
@@ -334,6 +336,8 @@ struct qm::meta::vec3_t {
 	constexpr bool operator == (vec3_t const & other) const noexcept { return data == other.data; }
 	constexpr bool operator != (vec3_t const & other) const noexcept { return ! operator == (other); }
 	
+	constexpr vec3_t operator - () const noexcept { return { -data[0], -data[1], -data[2] }; }
+	
 	constexpr vec3_t operator + (T const & v) const noexcept { return { data[0] + v, data[1] + v, data[2] + v }; }
 	constexpr vec3_t operator + (vec3_t const & other) const noexcept { return { data[0] + other[0], data[1] + other[1], data[2] + other[2] }; }
 	constexpr vec3_t & operator += (T const & v) noexcept { data[0] += v; data[1] += v; data[2] += v; return *this; }
@@ -451,6 +455,8 @@ struct qm::meta::vec4_t {
 	
 	constexpr bool operator == (vec4_t const & other) const noexcept { return data == other.data; }
 	constexpr bool operator != (vec4_t const & other) const noexcept { return ! operator == (other); }
+	
+	constexpr vec4_t operator - () const noexcept { return { -data[0], -data[1], -data[2], -data[3] }; }
 	
 	constexpr vec4_t operator + (T const & v) const noexcept { return { data[0] + v, data[1] + v, data[2] + v, data[3] + v }; }
 	constexpr vec4_t operator + (vec4_t const & other) const noexcept { return { data[0] + other[0], data[1] + other[1], data[2] + other[2], data[3] + other[3] }; }

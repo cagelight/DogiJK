@@ -26,61 +26,25 @@ namespace howler {
 	
 	#undef FUNDAMENTAL
 	
-	/*
-	//================================
-	// GROUP 1
-	static constexpr GLint LAYOUT_VERTEX = 0;
-	static constexpr GLint LAYOUT_UV = LAYOUT_VERTEX + 1;
-	
-	// GROUP 2 EXTENDS GROUP 1
-	static constexpr GLint LAYOUT_NORMAL = LAYOUT_UV + 1;
-	static constexpr GLint LAYOUT_COLOR = LAYOUT_NORMAL + 1;
-	
-	// GROUP 3 EXTENDS GROUP 1
-	static constexpr GLint LAYOUT_TEXBIND = LAYOUT_UV + 1;
-	
-	// GROUP 4 EXTENDS GROUP 2
-	static constexpr GLint LAYOUT_BONE_GROUP0 = LAYOUT_COLOR + 1;
-	static constexpr GLint LAYOUT_BONE_GROUP1 = LAYOUT_BONE_GROUP0 + 1;
-	static constexpr GLint LAYOUT_BONE_GROUP2 = LAYOUT_BONE_GROUP1 + 1;
-	static constexpr GLint LAYOUT_BONE_GROUP3 = LAYOUT_BONE_GROUP2 + 1;
-	static constexpr GLint LAYOUT_BONE_WEIGHT = LAYOUT_BONE_GROUP3 + 1;
-	static_assert(LAYOUT_BONE_WEIGHT < 16);
-	
-	// GROUP 5 EXTENDS GROUP 2
-	static constexpr GLint LAYOUT_LMUV0 = LAYOUT_COLOR + 1;
-	static constexpr GLint LAYOUT_LMUV1 = LAYOUT_LMUV0 + 1;
-	static constexpr GLint LAYOUT_LMUV2 = LAYOUT_LMUV1 + 1;
-	static constexpr GLint LAYOUT_LMUV3 = LAYOUT_LMUV2 + 1;
-	static_assert(LAYOUT_LMUV3 < 16);
-	
-	// GROUP 6 EXTENDS GROUP 2
-	static constexpr GLint LAYOUT_LMCOLOR0 = LAYOUT_COLOR + 1;
-	static constexpr GLint LAYOUT_LMCOLOR1 = LAYOUT_LMCOLOR0 + 1;
-	static constexpr GLint LAYOUT_LMCOLOR2 = LAYOUT_LMCOLOR1 + 1;
-	static constexpr GLint LAYOUT_LMCOLOR3 = LAYOUT_LMCOLOR2 + 1;
-	static_assert(LAYOUT_LMCOLOR3 < 16);
-	//================================
-	*/
-	
 	//================================
 	static constexpr GLint LAYOUT_VERTEX = 0; // VEC3
 	static constexpr GLint LAYOUT_UV = 1; // VEC2
 	static constexpr GLint LAYOUT_NORMAL = 2; // VEC3
-	static constexpr GLint LAYOUT_COLOR = 3; // VEC4
-	static constexpr GLint LAYOUT_TEXBIND = 4; // UINT -- NEEDS TO BE OPTIMIZED OUT!!! 
-	static constexpr GLint LAYOUT_BONE_GROUPS = 5; // IVEC4
-	static constexpr GLint LAYOUT_BONE_WEIGHT = 6; // VEC4
-	static constexpr GLint LAYOUT_LMUV01_COLOR0 = 7; // UV VEC4 (2 VEC2) OR COLOR VEC4
-	static constexpr GLint LAYOUT_LMUV23_COLOR1 = 8; // UV VEC4 (2 VEC2) OR COLOR VEC4
-	static constexpr GLint LAYOUT_LMCOLOR2 = 9; // VEC4
-	static constexpr GLint LAYOUT_LMCOLOR3 = 10; // VEC4
+	static constexpr GLint LAYOUT_TEXBIND = 3; // UINT -- NEEDS TO BE OPTIMIZED OUT!!! 
+	static constexpr GLint LAYOUT_BONE_GROUPS = 4; // 4 GROUPS IDX AS IVEC4
+	static constexpr GLint LAYOUT_BONE_WEIGHT = 5; // VEC4
+	static constexpr GLint LAYOUT_COLOR0 = 6; // VEC4
+	static constexpr GLint LAYOUT_COLOR1 = 7; // VEC4
+	static constexpr GLint LAYOUT_LMUV01_COLOR2 = 8; // UV VEC4 (2 VEC2) OR COLOR VEC4
+	static constexpr GLint LAYOUT_LMUV23_COLOR3 = 9; // VUV VEC4 (2 VEC2) OR COLOR VEC4
+	static constexpr GLint LAYOUT_LMSTYLES = 10; // 4 STYLE IDX AS IVEC4
 	//================================
 	
 	static constexpr GLint BINDING_DIFFUSE = 0;
 	static constexpr GLint BINDING_LIGHTMAP = 1;
 	static constexpr GLint BINDING_SKYBOX = 2; // TO 7
 	static constexpr GLint BINDING_BONE_MATRICIES = 8;
+	static constexpr GLint BINDING_LIGHTSTYLES = 9;
 	
 	static constexpr uint_fast16_t LIGHTMAP_NUM = 4;
 	static constexpr uint_fast16_t LIGHTMAP_DIM = 128;
@@ -94,9 +58,14 @@ namespace howler {
 	
 	using vertex_colors_t = qm::vec3_t;
 	
-	using lightmap_styles_t = std::array<uint8_t, LIGHTMAP_NUM>;
 	using lightmap_uv_t = std::array<qm::vec2_t, LIGHTMAP_NUM>;
 	using lightmap_color_t = std::array<qm::vec4_t, LIGHTMAP_NUM>;
+	
+	using lightstyles_t = std::array<qm::vec4_t, 64>;
+	using lightstylesidx_t = std::array<uint8_t, LIGHTMAP_NUM>;
+	
+	static_assert(sizeof(lightstyles_t) == sizeof(GLfloat) * 256);
+	static_assert(sizeof(lightstylesidx_t) == LIGHTMAP_NUM);
 	
 //================================================================
 // MODELS & MESHES
@@ -241,7 +210,7 @@ namespace howler {
 		void clear();
 		void generate_mipmaps();
 		
-		void bind(GLuint binding);
+		void bind(GLuint binding) const;
 		static void unbind(GLuint binding);
 		
 		void save(char const * path);
@@ -333,6 +302,7 @@ namespace howler {
 		enum struct map_gen {
 			diffuse,
 			lightmap,
+			normals,
 			mnoise,
 			anoise,
 		} gen_map = map_gen::diffuse;
@@ -357,6 +327,12 @@ namespace howler {
 			diffuse_lighting,
 			entity,
 		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
+		
+		enum struct tcgen {
+			none,
+			environment,
+			lightmap
+		} gen_tc = tcgen::none;
 		
 		struct wave_func_t {
 			gen_func func;
@@ -410,11 +386,13 @@ namespace howler {
 		
 		struct setup_draw_parameters_t {
 			float time;
+			bool is_2d = false;
 			qm::mat4_t mvp = qm::mat4_t::identity();
 			qm::mat3_t uvm = qm::mat3_t::identity();
 			q3mesh::uniform_info_t const * mesh_uniforms = nullptr;
 			qm::vec4_t shader_color {1, 1, 1, 1};
 			std::vector<qm::mat4_t> const * bone_weights = nullptr;
+			qm::vec3_t view_origin;
 		};
 		void setup_draw(setup_draw_parameters_t const &) const;
 	};
@@ -490,6 +468,8 @@ namespace howler {
 	using uniform_bool = uniform<bool, upload_bool>;
 	inline void upload_float(GLint location, float const & value) { glUniform1f(location, value); }
 	using uniform_float = uniform<float, upload_float>;
+	inline void upload_vec3(GLint location, qm::vec3_t const & value) { glUniform3fv(location, 1, value); }
+	using uniform_vec3 = uniform<qm::vec3_t, upload_vec3>;
 	inline void upload_vec4(GLint location, qm::vec4_t const & value) { glUniform4fv(location, 1, value); }
 	using uniform_vec4 = uniform<qm::vec4_t, upload_vec4>;
 	inline void upload_mat3(GLint location, qm::mat3_t const & value) { glUniformMatrix3fv(location, 1, GL_FALSE, value); }
@@ -497,8 +477,6 @@ namespace howler {
 	inline void upload_mat4(GLint location, qm::mat4_t const & value) { glUniformMatrix4fv(location, 1, GL_FALSE, value); }
 	using uniform_mat4 = uniform<qm::mat4_t, upload_mat4>;
 	
-	inline void upload_lmstyles(GLint location, lightmap_styles_t const & value) { glUniform4ui(location, value[0], value[1], value[2], value[3]); }
-	using uniform_lmstyles = uniform<lightmap_styles_t, upload_lmstyles>;
 	inline void upload_lmmode(GLint location, GLuint const & value) { glUniform1ui(location, value); }
 	using uniform_lmmode = uniform<GLuint, upload_lmmode>;
 	
@@ -517,9 +495,12 @@ namespace howler {
 			void turb(bool const &);
 			void turb_data(q3stage::tx_turb const &);
 			void lm_mode(GLuint const &);
-			void mapgen(uint8_t);
+			void mapgen(q3stage::map_gen);
+			void viewpos(qm::vec3_t const &);
+			void tcgen(q3stage::tcgen);
 			
 			void bone_matricies(qm::mat4_t const *, size_t num);
+			void lightstyles(lightstyles_t const &);
 		protected:
 			virtual void on_bind() override;
 		private:
@@ -664,7 +645,6 @@ namespace howler {
 		istring m_name;
 		istring m_basename;
 		istring m_entity_string;
-		qm::vec3_t m_light_grid_size;
 		char const * m_entity_parse_point = nullptr;
 		
 		bool m_base_allocated = false;
@@ -683,8 +663,10 @@ namespace howler {
 			struct vertex_t {
 				qm::vec3_t vert;
 				qm::vec2_t uv;
+				qm::vec3_t normal;
 				qm::vec4_t color;
 				lightmap_uv_t lm_uv;
+				lightstylesidx_t styles;
 			};
 			
 			q3worldmesh_maplit(vertex_t const * , size_t num, mode m = mode::triangles);
@@ -706,7 +688,9 @@ namespace howler {
 			struct vertex_t {
 				qm::vec3_t vert;
 				qm::vec2_t uv;
+				qm::vec3_t normal;
 				lightmap_color_t lm_color;
+				lightstylesidx_t styles;
 			};
 			
 			q3worldmesh_vertexlit(vertex_t const * , size_t num, mode m = mode::triangles);
@@ -738,6 +722,7 @@ namespace howler {
 			qm::vec3_t normal;
 			qm::vec2_t lm_uvs[4];
 			qm::vec4_t lm_colors[4];
+			lightstylesidx_t styles;
 		};
 		
 		struct q3patchsurface {
@@ -745,7 +730,7 @@ namespace howler {
 			std::vector<q3patchvert> verts;
 			
 			bool vertex_lit;
-			lightmap_styles_t styles;
+			lightstylesidx_t styles;
 			GLuint mode;
 			
 			q3worldmesh_proto_variant process();
@@ -792,14 +777,34 @@ namespace howler {
 		
 		//================================
 		
+		struct lightgrid_t {
+			byte		ambientLight[MAXLIGHTMAPS][3];
+			byte		directLight[MAXLIGHTMAPS][3];
+			byte		styles[MAXLIGHTMAPS];
+			byte		latLong[2];
+		};
+
+		//================================
+		
 		// MAP DATA POINTERS
 		dshader_t const * m_shaders;
 		int32_t m_shaders_count;
+		
+		dmodel_t const * dmodels;
+		
+		lightgrid_t const * m_lightgrid;
+		int32_t m_lightgrid_num;
+		uint16_t const * m_lightgrid_array;
+		int32_t m_lightgrid_array_num;
+		qm::vec3_t m_lightgrid_size;
+		qm::vec3_t m_lightgrid_origin;
+		int32_t m_lightgrid_bounds [3];
 		
 		// PARSED MAP DATA
 		std::vector<cplane_t> planes;
 		std::vector<q3worldsurface> m_surfaces;
 		std::vector<q3worldnode> m_nodes;
+		size_t m_nodes_leafs_offset;
 		
 		int32_t m_lightmap_span = -1;
 		q3texture_ptr m_lightmap = nullptr;
@@ -903,11 +908,14 @@ namespace howler {
 			void generate_named_defaults();
 			
 			q3texture_ptr reg(istring const & name, bool mips);
+			q3texture_cptr whiteimage;
 		private:
 			std::unordered_map<istring, q3texture_ptr> lookup;
 		} textures;
 		
 		float m_cull = 6000;
+		
+		lightstyles_t lightstyles;
 		
 		void begin_frame();
 		void end_frame(float time);
