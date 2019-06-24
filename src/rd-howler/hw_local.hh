@@ -90,40 +90,49 @@ namespace howler {
 	
 	// MESH
 	struct q3mesh {
-		enum struct mode : GLenum {
-			triangles = GL_TRIANGLES,
-			triangle_strip = GL_TRIANGLE_STRIP,
-		};
-		
 		struct uniform_info_t {
-			GLuint mode;
+			GLuint lm_mode;
 		};
 		
-		virtual ~q3mesh();
-		void bind();
-		void draw();
-		
-		inline bool is_bound() const { return m_handle == bound_handle; }
-		inline uniform_info_t const * uniform_info() const { return m_uniform_info.get(); }
-		
-		static q3mesh_ptr generate_fullquad();
-		static q3mesh_ptr generate_unitquad();
-		static q3mesh_ptr generate_skybox_mesh();
+		virtual ~q3mesh() = default;
+		virtual void bind() = 0;
+		virtual void draw() = 0;
+		virtual bool is_bound() const = 0;
+		virtual uniform_info_t const * uniform_info() const { return nullptr; }
 		
 		#ifdef _DEBUG
 		static size_t m_debug_draw_count;
 		#endif
 	protected:
+		static GLuint bound_handle;
+	};
+	
+	struct q3mesh_basic : public q3mesh {
+		enum struct mode : GLenum {
+			triangles = GL_TRIANGLES,
+			triangle_strip = GL_TRIANGLE_STRIP,
+		};
+		
+		virtual ~q3mesh_basic();
+		virtual void bind() override;
+		virtual void draw() override;
+		
+		inline bool is_bound() const override { return m_handle == bound_handle; }
+		inline uniform_info_t const * uniform_info() const override { return m_uniform_info.get(); }
+		
+		static q3mesh_ptr generate_fullquad();
+		static q3mesh_ptr generate_unitquad();
+		static q3mesh_ptr generate_skybox_mesh();
+
+	protected:
 		GLuint m_handle = 0;
 		GLsizei m_size = 0; // NOTICE -- inheritors must set this!
 		std::unique_ptr<uniform_info_t> m_uniform_info;
 		
-		q3mesh(mode m);
+		q3mesh_basic(mode m);
 		inline uniform_info_t & create_uniform_info() { m_uniform_info = std::make_unique<uniform_info_t>(); return *m_uniform_info; }
 	private:
 		mode m_mode;
-		
-		static GLuint bound_handle;
 	};
 	
 	// MODEL
@@ -631,7 +640,7 @@ namespace howler {
 	struct q3world {
 		friend instance;
 		
-		q3world() = default;
+		q3world();
 		q3world(q3world const &) = delete;
 		q3world(q3world &&) = delete;
 		~q3world();
@@ -659,7 +668,8 @@ namespace howler {
 		//================================
 		
 		// LIT BY LIGHTMAP
-		struct q3worldmesh_maplit : public q3mesh {
+		
+		struct q3worldmesh_maplit : public q3mesh_basic {
 			struct vertex_t {
 				qm::vec3_t vert;
 				qm::vec2_t uv;
@@ -676,15 +686,16 @@ namespace howler {
 		};
 		
 		struct q3worldmesh_maplit_proto {
-			q3mesh::mode mode;
 			std::vector<q3worldmesh_maplit::vertex_t> verticies;
+			std::vector<GLuint> indicies;
 			
-			inline q3mesh_ptr generate() const { return std::make_shared<q3worldmesh_maplit>(verticies.data(), verticies.size(), mode); }
-			inline void append(q3worldmesh_maplit_proto const & other) { verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end()); }
+			inline q3mesh_ptr generate() const { return std::make_shared<q3worldmesh_maplit>(verticies.data(), verticies.size()); }
+			inline void append_verticies(q3worldmesh_maplit_proto const & other) { verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end()); }
+			inline void append_indicies(q3worldmesh_maplit_proto const & other) { indicies.insert(indicies.end(), other.indicies.begin(), other.indicies.end()); }
 		};
 		
 		// LIT BY VERTEX COLORS
-		struct q3worldmesh_vertexlit : public q3mesh {
+		struct q3worldmesh_vertexlit : public q3mesh_basic {
 			struct vertex_t {
 				qm::vec3_t vert;
 				qm::vec2_t uv;
@@ -700,11 +711,12 @@ namespace howler {
 		};
 		
 		struct q3worldmesh_vertexlit_proto {
-			q3mesh::mode mode;
 			std::vector<q3worldmesh_vertexlit::vertex_t> verticies;
+			std::vector<GLuint> indicies;
 			
-			inline q3mesh_ptr generate() const { return std::make_shared<q3worldmesh_vertexlit>(verticies.data(), verticies.size(), mode); }
-			inline void append(q3worldmesh_vertexlit_proto const & other) { verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end()); }
+			inline q3mesh_ptr generate() const { return std::make_shared<q3worldmesh_vertexlit>(verticies.data(), verticies.size()); }
+			inline void append_verticies(q3worldmesh_vertexlit_proto const & other) { verticies.insert(verticies.end(), other.verticies.begin(), other.verticies.end()); }
+			inline void append_indicies(q3worldmesh_vertexlit_proto const & other) { indicies.insert(indicies.end(), other.indicies.begin(), other.indicies.end()); }
 		};
 		
 		using q3worldmesh_proto_variant = std::variant<q3worldmesh_maplit_proto, q3worldmesh_vertexlit_proto>;
@@ -744,6 +756,8 @@ namespace howler {
 			dsurface_t const * info;
 			q3shader_ptr shader;
 			q3worldmesh_proto_variant proto;
+			uint32_t index_start = 0;
+			uint32_t index_num = 0;
 		};
 		
 		//================================
@@ -833,6 +847,15 @@ namespace howler {
 		void load_entities();
 		void load_lightgrid();
 		void load_lightgridarray();
+		
+		//================================
+		struct q3worldrendermesh;
+		struct world_mesh_pair {
+			q3mesh_ptr maplit;
+			q3mesh_ptr vertexlit;
+		};
+		std::unordered_map<q3shader_ptr, world_mesh_pair> m_world_meshes;
+		void build_world_meshes();
 	};
 	
 //================================================================

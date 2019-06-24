@@ -56,9 +56,9 @@ void instance::initialize_renderer() {
 	q3skyboxstencilprog.reset( new programs::q3skyboxstencil );
 	q3skyboxprog.reset( new programs::q3skybox );
 	
-	fullquad = q3mesh::generate_fullquad();
-	unitquad = q3mesh::generate_unitquad();
-	skybox = q3mesh::generate_skybox_mesh();
+	fullquad = q3mesh_basic::generate_fullquad();
+	unitquad = q3mesh_basic::generate_unitquad();
+	skybox = q3mesh_basic::generate_skybox_mesh();
 	
 	textures.generate_named_defaults();
 	

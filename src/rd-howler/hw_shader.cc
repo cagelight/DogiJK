@@ -986,7 +986,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 		hw_inst->q3mainprog->bone_matricies(nullptr, 0);
 	
 	if (parm.mesh_uniforms)
-		hw_inst->q3mainprog->lm_mode(parm.mesh_uniforms->mode);
+		hw_inst->q3mainprog->lm_mode(parm.mesh_uniforms->lm_mode);
 	else
 		hw_inst->q3mainprog->lm_mode(0);
 			

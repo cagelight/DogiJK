@@ -113,14 +113,14 @@ void q3basemodel::setup_render() {
 // MD3
 //================================================================
 
-struct q3md3mesh : public q3mesh {
+struct q3md3mesh : public q3mesh_basic {
 	struct vertex_t {
 		qm::vec3_t vert;
 		qm::vec2_t uv;
 		qm::vec3_t normal;
 	};
 	
-	q3md3mesh(vertex_t const * data, size_t num) : q3mesh(mode::triangles) {
+	q3md3mesh(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
 		
 		static constexpr uint_fast16_t offsetof_verts = 0;
 		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
@@ -197,7 +197,7 @@ void q3basemodel::setup_render_md3() {
 	}
 }
 
-struct mdxm_animated_mesh : public q3mesh {
+struct mdxm_animated_mesh : public q3mesh_basic {
 	
 	struct vertex_t {
 		qm::vec3_t vert;
@@ -207,7 +207,7 @@ struct mdxm_animated_mesh : public q3mesh {
 		qm::vec4_t bone_weights;
 	};
 	
-	mdxm_animated_mesh(vertex_t const * data, size_t num) : q3mesh(mode::triangles) {
+	mdxm_animated_mesh(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
 		
 		static constexpr uint_fast16_t offsetof_verts = 0;
 		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);

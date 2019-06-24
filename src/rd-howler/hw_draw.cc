@@ -193,6 +193,8 @@ void instance::end_frame(float time) {
 						shader = shaders.get(g2.mCustomShader);
 					}
 					
+					if (!shader->valid) continue;
+					
 					std::vector<qm::mat4_t> bone_array;
 					
 					int const * refs = reinterpret_cast<int const *>(reinterpret_cast<byte const *>(surf) + surf->ofsBoneReferences);

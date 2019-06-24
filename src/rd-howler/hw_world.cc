@@ -4,6 +4,57 @@ using namespace howler;
 #include <stack>
 #include <unordered_set>
 
+//================================================================
+// WORLD MESH TYPE
+//================================================================
+
+struct q3world::q3worldrendermesh : public q3mesh {
+	
+	q3mesh_ptr world_mesh;
+	GLuint idx_ary;
+	GLsizei idx_num;
+	
+	q3worldrendermesh() : q3mesh() {
+		glCreateBuffers(1, &idx_ary);
+	}
+	
+	~q3worldrendermesh() {
+		glDeleteBuffers(1, &idx_ary);
+	}
+	
+	void upload_indicies(GLuint * ptr, size_t num) {
+		assert(num % 3 == 0);
+		if (!ptr || !num) return;
+		idx_num = num;
+		glNamedBufferData(idx_ary, num * sizeof(GLuint), ptr, GL_STATIC_DRAW);
+	}
+	
+	void bind() override {
+		world_mesh->bind();
+	}
+	
+	void draw() override {
+		world_mesh->bind();
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx_ary);
+		glDrawElements(GL_TRIANGLES, idx_num, GL_UNSIGNED_INT, nullptr);
+	}
+	
+	bool is_bound() const override {
+		return world_mesh->is_bound();
+	}
+	
+	uniform_info_t const * uniform_info() const override { 
+		return world_mesh->uniform_info();
+	}
+	
+};
+
+//================================================================
+
+q3world::q3world() {
+	
+}
+
 q3world::~q3world() {
 	if (m_base_allocated && m_base) ri.FS_FreeFile(m_base);
 }
@@ -35,7 +86,13 @@ void q3world::load(char const * name) {
 	load_entities();
 	load_lightgrid();
 	load_lightgridarray();
+	
+	build_world_meshes();
 }
+
+//================================================================
+// RENDERABLE MODEL CALCULATION
+//================================================================
 
 q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	
@@ -61,8 +118,6 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	
 	auto iter = std::find_if(m_vis_cache.begin(), m_vis_cache.end(), [&](vis_cache_t const & i){return std::get<0>(i) == cluster && std::get<2>(i) == areamask;});
 	if (iter != m_vis_cache.end()) return std::get<1>(*iter);
-	
-	q3model_ptr & model = std::get<1>(*m_vis_cache.emplace(m_vis_cache.begin(), cluster, make_q3model(), areamask));
 	
 	if (r_viscachesize->integer > 0 && m_vis_cache.size() > static_cast<unsigned>(r_viscachesize->integer)) m_vis_cache.resize(r_viscachesize->integer);
 	
@@ -106,23 +161,29 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 		std::visit( lambda_visit {
 			[&](q3worldmesh_maplit_proto const & proto) {
 				q3worldmesh_maplit_proto & sub = buckets_maplit[surf->shader];
-				sub.append(proto);
+				sub.append_indicies(proto);
 			},
 			[&](q3worldmesh_vertexlit_proto const & proto) {
 				q3worldmesh_vertexlit_proto & sub = buckets_vertlit[surf->shader];
-				sub.append(proto);
+				sub.append_indicies(proto);
 			},
 		}, surf->proto);
 	}
 	
+	q3model_ptr & model = std::get<1>(*m_vis_cache.emplace(m_vis_cache.begin(), cluster, make_q3model(), areamask));
+	
 	for (auto & [shader, proto] : buckets_maplit) {
-		proto.mode = q3mesh::mode::triangles;
-		model->meshes.emplace_back(shader, proto.generate());
+		auto rend = std::make_shared<q3worldrendermesh>();
+		rend->world_mesh = m_world_meshes[shader].maplit;
+		rend->upload_indicies(proto.indicies.data(), proto.indicies.size());
+		model->meshes.emplace_back(shader, rend);
 	}
 	
 	for (auto & [shader, proto] : buckets_vertlit) {
-		proto.mode = q3mesh::mode::triangles;
-		model->meshes.emplace_back(shader, proto.generate());
+		auto rend = std::make_shared<q3worldrendermesh>();
+		rend->world_mesh = m_world_meshes[shader].vertexlit;
+		rend->upload_indicies(proto.indicies.data(), proto.indicies.size());
+		model->meshes.emplace_back(shader, rend);
 	}
 	
 	return model;
@@ -141,6 +202,90 @@ q3world::q3worldnode const * q3world::find_leaf(qm::vec3_t const & coords) {
 			node = data.children[1];
 	}
 	return node;
+}
+
+//================================================================
+// WORLD MESHES
+//================================================================
+
+void q3world::build_world_meshes() {
+	std::unordered_set<q3worldsurface *> marked_surfaces;
+	std::unordered_map<q3shader_ptr, std::vector<q3worldsurface *>> buckets_maplit;
+	std::unordered_map<q3shader_ptr, std::vector<q3worldsurface *>> buckets_vertlit;
+	
+	// determine which leafs are part of worldspawn
+	for (size_t i = m_nodes_leafs_offset; i < m_nodes.size(); i++) {
+		auto const & node = m_nodes[i];
+		if (!node.parent) continue;
+		std::visit( lambda_visit{
+			[&](std::monostate) {assert(0);},
+			[&](q3worldnode::node_data const &) {},
+			[&](q3worldnode::leaf_data const & data) {
+				if (data.cluster < 0 || data.cluster >= m_clusters) return;
+				for (auto const & surf : data.surfaces) {
+					marked_surfaces.emplace(surf);
+				}
+			}
+		}, node.data);
+	}
+	
+	// bucket them by shader and lighting type
+	for (q3worldsurface * surf : marked_surfaces) {
+		assert(surf->info->numIndexes % 3 == 0);
+		std::visit( lambda_visit {
+			[&](q3worldmesh_maplit_proto const & proto) {
+				assert(proto.indicies.size() % 3 == 0);
+				buckets_maplit[surf->shader].push_back(surf);
+			},
+			[&](q3worldmesh_vertexlit_proto const & proto) {
+				assert(proto.indicies.size() % 3 == 0);
+				buckets_vertlit[surf->shader].push_back(surf);
+			},
+		}, surf->proto);
+	}
+	
+	// set index offsets and finalize
+	GLuint start_idx;
+	for (auto & [shad, vec] : buckets_maplit) {
+		start_idx = 0;
+		
+		q3worldmesh_maplit_proto master;
+		
+		for (auto & v : vec) {
+			auto & proto = std::get<q3worldmesh_maplit_proto>(v->proto);
+			v->index_start = start_idx;
+			v->index_num = 0;
+			for (GLuint & idx : proto.indicies) {
+				if (idx > v->index_num) v->index_num = idx;
+				idx += start_idx;
+			}
+			master.append_verticies(proto);
+			start_idx += ++v->index_num;
+		}
+		
+		m_world_meshes[shad].maplit = master.generate();
+	}
+	
+	
+	for (auto & [shad, vec] : buckets_vertlit) {
+		start_idx = 0;
+		
+		q3worldmesh_vertexlit_proto master;
+		
+		for (auto & v : vec) {
+			auto & proto = std::get<q3worldmesh_vertexlit_proto>(v->proto);
+			v->index_start = start_idx;
+			v->index_num = 0;
+			for (GLuint & idx : proto.indicies) {
+				if (idx > v->index_num) v->index_num = idx;
+				idx += start_idx;
+			}
+			master.append_verticies(proto);
+			start_idx += ++v->index_num;
+		}
+		
+		m_world_meshes[shad].vertexlit = master.generate();
+	}
 }
 
 //================================================================
@@ -317,74 +462,79 @@ void q3world::load_surfaces(int32_t idx) {
 				
 				if (vertex_lit) {
 					q3worldmesh_vertexlit_proto & proto = surfo.proto.emplace<q3worldmesh_vertexlit_proto>();
-					proto.mode = q3mesh::mode::triangles;
-					assert(surfi.numIndexes % 3 == 0);
-					for (int32_t i = 0; i < surfi.numIndexes; i ++) {
+					for (int32_t i = 0; i < surfi.numVerts; i ++) {
 						proto.verticies.emplace_back( q3worldmesh_vertexlit::vertex_t {
 							qm::vec3_t {
-								surf_verts[surf_indicies[i]].xyz[1],
-								surf_verts[surf_indicies[i]].xyz[2],
-								surf_verts[surf_indicies[i]].xyz[0]
+								surf_verts[i].xyz[1],
+								surf_verts[i].xyz[2],
+								surf_verts[i].xyz[0]
 							},
 							qm::vec2_t {
-								surf_verts[surf_indicies[i]].st[0],
-								surf_verts[surf_indicies[i]].st[1]
+								surf_verts[i].st[0],
+								surf_verts[i].st[1]
 							},
 							qm::vec3_t {
-								surf_verts[surf_indicies[i]].normal[1],
-								surf_verts[surf_indicies[i]].normal[2],
-								surf_verts[surf_indicies[i]].normal[0]
+								surf_verts[i].normal[1],
+								surf_verts[i].normal[2],
+								surf_verts[i].normal[0]
 							},
 							lightmap_color_t {
-								conv_color(surf_verts[surf_indicies[i]].color[0]),
-								conv_color(surf_verts[surf_indicies[i]].color[1]),
-								conv_color(surf_verts[surf_indicies[i]].color[2]),
-								conv_color(surf_verts[surf_indicies[i]].color[3]),
+								conv_color(surf_verts[i].color[0]),
+								conv_color(surf_verts[i].color[1]),
+								conv_color(surf_verts[i].color[2]),
+								conv_color(surf_verts[i].color[3]),
 							},
 							styles
 						});
 					}
+					
+					for (int32_t i = 0; i < surfi.numIndexes; i ++) {
+						proto.indicies.push_back(surf_indicies[i]);
+					}
+					
 				} else {
 					q3worldmesh_maplit_proto & proto = surfo.proto.emplace<q3worldmesh_maplit_proto>();
-					proto.mode = q3mesh::mode::triangles;
-					assert(surfi.numIndexes % 3 == 0);
-					for (int32_t i = 0; i < surfi.numIndexes; i ++) {
+					for (int32_t i = 0; i < surfi.numVerts; i ++) {
 						proto.verticies.emplace_back( q3worldmesh_maplit::vertex_t {
 							qm::vec3_t {
-								surf_verts[surf_indicies[i]].xyz[1],
-								surf_verts[surf_indicies[i]].xyz[2],
-								surf_verts[surf_indicies[i]].xyz[0]
+								surf_verts[i].xyz[1],
+								surf_verts[i].xyz[2],
+								surf_verts[i].xyz[0]
 							},
 							qm::vec2_t {
-								surf_verts[surf_indicies[i]].st[0],
-								surf_verts[surf_indicies[i]].st[1]
+								surf_verts[i].st[0],
+								surf_verts[i].st[1]
 							},
 							qm::vec3_t {
-								surf_verts[surf_indicies[i]].normal[1],
-								surf_verts[surf_indicies[i]].normal[2],
-								surf_verts[surf_indicies[i]].normal[0]
+								surf_verts[i].normal[1],
+								surf_verts[i].normal[2],
+								surf_verts[i].normal[0]
 							},
-							conv_color(surf_verts[surf_indicies[i]].color[0]),
+							conv_color(surf_verts[i].color[0]),
 							lightmap_uv_t {
 								uv_for_lightmap( surfi.lightmapNum[0], qm::vec2_t {
-									surf_verts[surf_indicies[i]].lightmap[0][0],
-									surf_verts[surf_indicies[i]].lightmap[0][1]
+									surf_verts[i].lightmap[0][0],
+									surf_verts[i].lightmap[0][1]
 								}),
 								uv_for_lightmap( surfi.lightmapNum[1], qm::vec2_t {
-									surf_verts[surf_indicies[i]].lightmap[1][0],
-									surf_verts[surf_indicies[i]].lightmap[1][1]
+									surf_verts[i].lightmap[1][0],
+									surf_verts[i].lightmap[1][1]
 								}),
 								uv_for_lightmap( surfi.lightmapNum[2], qm::vec2_t {
-									surf_verts[surf_indicies[i]].lightmap[2][0],
-									surf_verts[surf_indicies[i]].lightmap[2][1]
+									surf_verts[i].lightmap[2][0],
+									surf_verts[i].lightmap[2][1]
 								}),
 								uv_for_lightmap( surfi.lightmapNum[3], qm::vec2_t {
-									surf_verts[surf_indicies[i]].lightmap[3][0],
-									surf_verts[surf_indicies[i]].lightmap[3][1]
+									surf_verts[i].lightmap[3][0],
+									surf_verts[i].lightmap[3][1]
 								})
 							},
 							styles
 						});
+					}
+					
+					for (int32_t i = 0; i < surfi.numIndexes; i ++) {
+						proto.indicies.push_back(surf_indicies[i]);
 					}
 				}
 			} break;

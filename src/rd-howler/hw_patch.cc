@@ -181,9 +181,8 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 	
 	if (parent.vertex_lit) {
 		q3worldmesh_vertexlit_proto & proto = proto_var.emplace<q3worldmesh_vertexlit_proto>();
-		proto.mode = q3mesh::mode::triangles;
 		
-		auto addfunc = [&](q3patchvert const & v) {
+		auto vertfunc = [&](q3patchvert const & v) {
 			proto.verticies.emplace_back( q3worldmesh_vertexlit::vertex_t {
 				v.xyz,
 				v.uv,
@@ -198,19 +197,26 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 			});
 		};
 		
-		for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
-			addfunc(ctrl[y][x]);
-			addfunc(ctrl[y+1][x]);
-			addfunc(ctrl[y][x+1]);
-			addfunc(ctrl[y][x+1]);
-			addfunc(ctrl[y+1][x]);
-			addfunc(ctrl[y+1][x+1]);
+		auto idxfunc = [&](int_t x, int_t y) { proto.indicies.push_back(y * width + x); };
+		
+		for (int_t y = 0; y < height; y++) for (int_t x = 0; x < width; x++) {
+			vertfunc(ctrl[y][x]);
 		}
+		
+		for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
+			idxfunc(x + 0, y + 0);
+			idxfunc(x + 0, y + 1);
+			idxfunc(x + 1, y + 0);
+			idxfunc(x + 1, y + 0);
+			idxfunc(x + 0, y + 1);
+			idxfunc(x + 1, y + 1);
+		}
+		
+		
 	} else {
 		q3worldmesh_maplit_proto & proto = proto_var.emplace<q3worldmesh_maplit_proto>();
-		proto.mode = q3mesh::mode::triangles;
 		
-		auto addfunc = [&](q3patchvert const & v) {
+		auto vertfunc = [&](q3patchvert const & v) {
 			proto.verticies.emplace_back( q3worldmesh_maplit::vertex_t {
 				v.xyz,
 				v.uv,
@@ -226,13 +232,19 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 			});
 		};
 		
+		auto idxfunc = [&](int_t x, int_t y) { proto.indicies.push_back(y * width + x); };
+		
+		for (int_t y = 0; y < height; y++) for (int_t x = 0; x < width; x++) {
+			vertfunc(ctrl[y][x]);
+		}
+		
 		for (int_t y = 0; y < height - 1; y++) for (int_t x = 0; x < width - 1; x++) {
-			addfunc(ctrl[y][x]);
-			addfunc(ctrl[y+1][x]);
-			addfunc(ctrl[y][x+1]);
-			addfunc(ctrl[y][x+1]);
-			addfunc(ctrl[y+1][x]);
-			addfunc(ctrl[y+1][x+1]);
+			idxfunc(x + 0, y + 0);
+			idxfunc(x + 0, y + 1);
+			idxfunc(x + 1, y + 0);
+			idxfunc(x + 1, y + 0);
+			idxfunc(x + 0, y + 1);
+			idxfunc(x + 1, y + 1);
 		}
 	}
 	

@@ -1,7 +1,7 @@
 #include "hw_local.hh"
 using namespace howler;
 
-q3world::q3worldmesh_maplit::q3worldmesh_maplit(vertex_t const * data, size_t num, mode m) : q3mesh(m) {
+q3world::q3worldmesh_maplit::q3worldmesh_maplit(vertex_t const * data, size_t num, mode m) : q3mesh_basic(m) {
 	
 	static constexpr uint_fast8_t offsetof_verts = 0;
 	static constexpr uint_fast8_t sizeof_verts = sizeof(vertex_t::vert);
@@ -21,7 +21,7 @@ q3world::q3worldmesh_maplit::q3worldmesh_maplit(vertex_t const * data, size_t nu
 	m_size = num;
 	uniform_info_t & info = create_uniform_info();
 	
-	info.mode = 1;
+	info.lm_mode = 1;
 	
 	glCreateBuffers(1, &m_vbo);
 	glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
@@ -57,7 +57,7 @@ q3world::q3worldmesh_maplit::~q3worldmesh_maplit() {
 	glDeleteBuffers(1, &m_vbo);
 }
 
-q3world::q3worldmesh_vertexlit::q3worldmesh_vertexlit(vertex_t const * data, size_t num, mode m) : q3mesh(m) {
+q3world::q3worldmesh_vertexlit::q3worldmesh_vertexlit(vertex_t const * data, size_t num, mode m) : q3mesh_basic(m) {
 	
 	static constexpr uint_fast8_t offsetof_verts = 0;
 	static constexpr uint_fast8_t sizeof_verts = sizeof(vertex_t::vert);
@@ -75,7 +75,7 @@ q3world::q3worldmesh_vertexlit::q3worldmesh_vertexlit(vertex_t const * data, siz
 	m_size = num;
 	uniform_info_t & info = create_uniform_info();
 	
-	info.mode = 2;
+	info.lm_mode = 2;
 	
 	glCreateBuffers(1, &m_vbo);
 	glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);

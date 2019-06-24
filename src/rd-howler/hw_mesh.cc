@@ -7,11 +7,11 @@ size_t q3mesh::m_debug_draw_count = 0;
 
 GLuint q3mesh::bound_handle = 0;
 
-q3mesh::q3mesh(mode m) : m_mode(m) {
+q3mesh_basic::q3mesh_basic(mode m) : m_mode(m) {
 	glCreateVertexArrays(1, &m_handle);
 }
 
-q3mesh::~q3mesh() {
+q3mesh_basic::~q3mesh_basic() {
 	if (!m_handle) return;
 	glDeleteVertexArrays(1, &m_handle);
 	if (is_bound()) {
@@ -19,13 +19,13 @@ q3mesh::~q3mesh() {
 	}
 }
 
-void q3mesh::bind() {
+void q3mesh_basic::bind() {
 	if (is_bound()) return;
 	glBindVertexArray(m_handle);
 	bound_handle = m_handle;
 }
 
-void q3mesh::draw() {
+void q3mesh_basic::draw() {
 	bind();
 	glDrawArrays(static_cast<GLenum>(m_mode), 0, m_size);
 	
@@ -34,13 +34,13 @@ void q3mesh::draw() {
 	#endif
 }
 
-struct basic_quad_mesh : public q3mesh {
+struct basic_quad_mesh : public q3mesh_basic {
 	struct vertex_t {
 		qm::vec3_t vert;
 		qm::vec2_t uv;
 	};
 	
-	basic_quad_mesh(vertex_t const * data, size_t num) : q3mesh(mode::triangle_strip) {
+	basic_quad_mesh(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangle_strip) {
 		
 		static constexpr uint_fast16_t offsetof_verts = 0;
 		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
@@ -86,22 +86,22 @@ static constexpr std::array<basic_quad_mesh::vertex_t, 4> unitquad_combo_verts =
 	basic_quad_mesh::vertex_t {{1, 1, 0}, {1, 1}}
 };
 
-q3mesh_ptr q3mesh::generate_fullquad() {
+q3mesh_ptr q3mesh_basic::generate_fullquad() {
 	return std::make_shared<basic_quad_mesh>(fullquad_combo_verts.data(), fullquad_combo_verts.size());
 }
 
-q3mesh_ptr q3mesh::generate_unitquad() {
+q3mesh_ptr q3mesh_basic::generate_unitquad() {
 	return std::make_shared<basic_quad_mesh>(unitquad_combo_verts.data(), unitquad_combo_verts.size());
 }
 
-struct skybox_mesh : public q3mesh {
+struct skybox_mesh : public q3mesh_basic {
 	struct vertex_t {
 		qm::vec3_t vert;
 		qm::vec2_t uv;
 		uint32_t side;
 	};
 	
-	skybox_mesh(vertex_t const * data, size_t num) : q3mesh(mode::triangles) {
+	skybox_mesh(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
 		
 		static constexpr uint_fast16_t offsetof_verts = 0;
 		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
@@ -181,6 +181,6 @@ static constexpr std::array<skybox_mesh::vertex_t, 36> skybox_verts {
 	skybox_mesh::vertex_t {{ 1,  1,  1 }, {0, 0}, 5},
 };
 
-q3mesh_ptr q3mesh::generate_skybox_mesh() {
+q3mesh_ptr q3mesh_basic::generate_skybox_mesh() {
 	return std::make_shared<skybox_mesh>(skybox_verts.data(), skybox_verts.size());
 }
