@@ -14,9 +14,13 @@ cvar_t * r_aspectCorrectFonts;
 
 std::unique_ptr<howler::instance> hw_inst = nullptr;
 
+bool window_initialized = false;
+window_t window;
+
 void RE_Shutdown (qboolean destroyWindow, qboolean restarting) {
 	hw_inst.reset( new howler::instance {} );
-	if ( destroyWindow ) {
+	if ( destroyWindow && window_initialized ) {
+		window_initialized = false;
 		ri.WIN_Shutdown();
 	}
 }
@@ -57,6 +61,34 @@ static constexpr size_t commands_num = ARRAY_LEN ( commands );
 // INITIALIZE
 // ================================
 
+static void R_CreateWindow() {
+	windowDesc_t windowDesc {};
+	windowDesc.api = GRAPHICS_API_OPENGL;
+
+	window = ri.WIN_Init(&windowDesc, &glConfig);
+	window_initialized = true;
+	gladLoadGLLoader(ri.GL_GetProcAddress);
+
+	// get our config strings
+	glConfig.vendor_string = (const char *)glGetString (GL_VENDOR);
+	glConfig.renderer_string = (const char *)glGetString (GL_RENDERER);
+	glConfig.version_string = (const char *)glGetString (GL_VERSION);
+	glConfig.extensions_string = (const char *)glGetString (GL_EXTENSIONS);
+	glConfig.isFullscreen = qfalse;
+	glConfig.stereoEnabled = qfalse;
+	glConfig.clampToEdgeAvailable = qtrue;
+	glConfig.maxActiveTextures = 4096;
+
+	glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
+	glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
+	
+	if (GLAD_GL_ARB_texture_filter_anisotropic)
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &glConfig.maxTextureFilterAnisotropy);
+	else glConfig.maxTextureFilterAnisotropy = 0;
+	
+	Com_Printf("Vendor: %s\nRenderer: %s\nVersion: %s\n", glConfig.vendor_string, glConfig.renderer_string, glConfig.version_string);
+}
+
 void RE_BeginRegistration (vidconfig_t *config) {
 	
 	se_language = ri.Cvar_Get("se_language", "english", CVAR_ARCHIVE | CVAR_NORESTART, "");
@@ -69,6 +101,7 @@ void RE_BeginRegistration (vidconfig_t *config) {
 	r_showtris->min = 1;
 	
 	glConfig = *config;
+	if (!window_initialized) R_CreateWindow();
 	hw_inst->initialize_renderer();
 	*config = glConfig;
 	
@@ -138,6 +171,7 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 				obj.ref = *re;
 			} else {
 				auto & obj = hw_inst->frame().scene().basic_objects.emplace_back();
+				obj.ref = *re;
 				obj.basemodel = hw_inst->models.get(re->hModel);
 				qm::vec3_t origin = {re->origin[1], -re->origin[2], re->origin[0]};
 				
@@ -338,7 +372,22 @@ qboolean R_GetEntityToken (char *buffer, int size) {
 	return hw_inst->world_get_entity_token(buffer, size);
 }
 
+// why is the renderer doing this? copied from rd-vanilla
 qboolean R_inPVS (const vec3_t p1, const vec3_t p2, byte *mask) {
+	int		leafnum;
+	int		cluster;
+
+	leafnum = ri.CM_PointLeafnum (p1);
+	cluster = ri.CM_LeafCluster (leafnum);
+
+	//agh, the damn snapshot mask doesn't work for this
+	mask = (byte *) ri.CM_ClusterPVS (cluster);
+
+	leafnum = ri.CM_PointLeafnum (p2);
+	cluster = ri.CM_LeafCluster (leafnum);
+	if ( mask && (!(mask[cluster>>3] & (1<<(cluster&7)) ) ) )
+		return qfalse;
+
 	return qtrue;
 }
 
@@ -400,7 +449,9 @@ void RE_RegisterMedia_LevelLoadBegin (const char *psMapName, ForceReload_e eForc
 }
 
 void RE_RegisterMedia_LevelLoadEnd (void) {
-
+	// why does the renderer do this???
+	ri.SND_RegisterAudio_LevelLoadEnd(qfalse);
+	ri.S_RestartMusic();
 }
 
 int RE_RegisterMedia_GetLevel (void) {

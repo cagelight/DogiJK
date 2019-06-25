@@ -13,6 +13,14 @@ static std::string generate_vertex_shader() {
 	layout (std140) uniform LightStyles {
 		vec4 lightstyles[64];
 	};
+	
+	layout (std140) uniform GridLighting {
+		vec3 grid_ambient;
+		vec3 grid_directed;
+		vec3 grid_direction;
+	};
+	
+	uniform bool grid_active;
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
 	layout(location = )GLSL" << LAYOUT_UV << R"GLSL() in vec2 uv;
@@ -28,16 +36,13 @@ static std::string generate_vertex_shader() {
 	uniform float time;
 	uniform mat4 mvp;
 	uniform mat3 uvm;
-	
 	uniform vec3 view_origin;
-	
 	uniform bool use_vertex_color;
 	uniform bool turb;
 	uniform vec4 turb_data;
 	uniform uint mapgen;
 	uniform uint lm_mode;
 	uniform uint tcgen;
-	
 	uniform uint ghoul2;
 
 	out vec2 f_uv;
@@ -167,6 +172,12 @@ static std::string generate_vertex_shader() {
 			f_uv.y += sin((vert[1]) * (turb_data.w + time * turb_data.z) / 1024.0f) * turb_data.x;
 		}
 		
+		if (grid_active) {
+			vcolor.xyz *= grid_ambient;
+			float dir_frac = dot(normal, grid_direction);
+			if (dir_frac < 0) dir_frac = 0;
+			vcolor.xyz += dir_frac * grid_directed;
+		}
 	}
 	)GLSL";
 
@@ -284,12 +295,16 @@ struct programs::q3main::private_data {
 	uniform_uint m_mapgen = 0;
 	uniform_vec3 m_viewpos = qm::vec3_t {0, 0, 0};
 	uniform_uint m_tcgen = 0;
+	uniform_bool m_gridactive = false;
 	
 	GLint bone_matricies_binding;
 	GLuint bone_matricies_buffer = 0;
 	
 	GLint lightstyles_binding;
 	GLuint lightstyles_buffer = 0;
+	
+	GLint gridlighting_binding;
+	GLuint gridlighting_buffer = 0;
 	
 	void reset() {
 		m_time.reset();
@@ -304,6 +319,7 @@ struct programs::q3main::private_data {
 		m_mapgen.reset();
 		m_viewpos.reset();
 		m_tcgen.reset();
+		m_gridactive.reset();
 	}
 	
 	void push() {
@@ -314,11 +330,12 @@ struct programs::q3main::private_data {
 		m_use_vertex_colors.push();
 		m_turb.push();
 		m_turb_data.push();
-		m_lmmode.reset();
+		m_lmmode.push();
 		m_bones.push();
 		m_mapgen.push();
 		m_viewpos.push();
 		m_tcgen.push();
+		m_gridactive.push();
 	}
 };
 
@@ -371,6 +388,8 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"view_origin\"");
 	if (m_data->m_tcgen.set_location(get_location("tcgen")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"tcgen\"");
+	if (m_data->m_gridactive.set_location(get_location("grid_active")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"grid_active\"");
 		
 	m_data->bone_matricies_binding = glGetUniformBlockIndex(get_handle(), "BoneMatricies");
 	if (m_data->bone_matricies_binding == -1)
@@ -380,11 +399,18 @@ programs::q3main::q3main() : m_data(new private_data) {
 	if (m_data->lightstyles_binding == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform buffer binding for \"LightStyles\"");
 	
+	m_data->gridlighting_binding = glGetUniformBlockIndex(get_handle(), "GridLighting");
+	if (m_data->gridlighting_binding == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform buffer binding for \"GridLighting\"");
+	
 	glCreateBuffers(1, &m_data->bone_matricies_buffer);
 	glUniformBlockBinding(get_handle(), m_data->bone_matricies_binding, BINDING_BONE_MATRICIES);
 	
 	glCreateBuffers(1, &m_data->lightstyles_buffer);
 	glUniformBlockBinding(get_handle(), m_data->lightstyles_binding, BINDING_LIGHTSTYLES);
+	
+	glCreateBuffers(1, &m_data->gridlighting_buffer);
+	glUniformBlockBinding(get_handle(), m_data->gridlighting_binding, BINDING_GRIDLIGHTING);
 }
 
 programs::q3main::~q3main() {
@@ -456,8 +482,6 @@ void programs::q3main::tcgen(q3stage::tcgen v) {
 }
 
 void programs::q3main::bone_matricies(qm::mat4_t const * ptr, size_t num) {
-	assert(is_bound());
-	
 	if (ptr && num) {
 		m_data->m_bones = num;
 		m_data->m_bones.push();
@@ -472,8 +496,24 @@ void programs::q3main::bone_matricies(qm::mat4_t const * ptr, size_t num) {
 }
 
 void programs::q3main::lightstyles(lightstyles_t const & ls) {
-	assert(is_bound());
-	
 	glBindBufferBase(GL_UNIFORM_BUFFER, BINDING_LIGHTSTYLES, m_data->lightstyles_buffer);
 	glNamedBufferData(m_data->lightstyles_buffer, sizeof(lightstyles_t), &ls, GL_STATIC_DRAW);
+}
+
+static constexpr gridlighting_t gridlighting_off {
+	qm::vec3_t {0, 0, 0},
+	qm::vec3_t {0, 0, 0},
+	qm::vec3_t {0, 0, 0},
+};
+
+void programs::q3main::gridlighting(gridlighting_t const * ptr) {
+	glBindBufferBase(GL_UNIFORM_BUFFER, BINDING_GRIDLIGHTING, m_data->gridlighting_buffer);
+	if (ptr) {
+		m_data->m_gridactive = true;
+		
+		glNamedBufferData(m_data->gridlighting_buffer, sizeof(gridlighting_t), ptr, GL_STATIC_DRAW);
+	} else
+		m_data->m_gridactive = false;
+	
+	if (is_bound()) m_data->m_gridactive.push();
 }

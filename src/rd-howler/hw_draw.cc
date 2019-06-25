@@ -26,13 +26,14 @@ struct q3drawmesh {
 	q3drawmesh(q3drawmesh const &) = default;
 	q3drawmesh(q3drawmesh &&) = default;
 	
-	q3drawmesh & operator = (q3drawmesh const &) = delete;
+	q3drawmesh & operator = (q3drawmesh const &) = default;
 	q3drawmesh & operator = (q3drawmesh &&) = default;
 	
 	q3mesh_ptr mesh;
 	qm::mat4_t mvp;
 	qm::vec4_t shader_color;
 	std::vector<qm::mat4_t> weights;
+	gridlighting_t gridlight;
 };
 
 struct q3drawset {
@@ -40,7 +41,7 @@ struct q3drawset {
 	std::vector<q3drawmesh> meshes;
 	
 	q3drawset() = delete;
-	q3drawset(q3shader_ptr const & shader, std::vector<q3drawmesh> & meshes) : shader(shader), meshes(std::move(meshes)) {}
+	q3drawset(q3shader_ptr const & shader, std::vector<q3drawmesh> && meshes) : shader(shader), meshes(std::move(meshes)) {}
 	q3drawset(q3drawset const &) = delete;
 	q3drawset(q3drawset &&) = default;
 	
@@ -118,8 +119,14 @@ void instance::end_frame(float time) {
 			if (!obj.basemodel->model) continue;
 			qm::mat4_t mvp = obj.model_matrix * vp;
 			for (auto const & mesh : obj.basemodel->model->meshes) {
-				if (debug_enabled) debug_meshes.emplace_back(mesh.second, mvp);
-				draw_map[mesh.first].emplace_back(mesh.second, mvp);
+				
+				q3drawmesh draw {mesh.second, mvp};
+				
+				if (mesh.first && mesh.first->gridlit)
+					draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
+				
+				if (debug_enabled) debug_meshes.emplace_back(draw);
+				draw_map[mesh.first].emplace_back(draw);
 			}
 		}
 		
@@ -215,6 +222,9 @@ void instance::end_frame(float time) {
 					q3drawmesh draw {mesh.second, model_matrix * vp};
 					draw.weights = std::move(bone_array);
 					
+					if (shader->gridlit)
+						draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
+					
 					if (debug_enabled) debug_meshes.emplace_back(draw);
 					draw_map[shader].emplace_back(draw);
 				}
@@ -241,7 +251,7 @@ void instance::end_frame(float time) {
 			}
 			draw_set.emplace_back(
 				(shader && shader->valid) ? shader : shaders.get(0),
-				meshes
+				std::move(meshes)
 			);
 		}
 		
@@ -315,18 +325,20 @@ void instance::end_frame(float time) {
 		
 		if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
 		
+		q3stage::setup_draw_parameters_t params {};
+		
 		for (q3drawset const & draw : draw_set) {
 			draw.shader->setup_draw();
 			for (auto const & stg : draw.shader->stages)
 				for (auto const & mesh : draw.meshes) {
 					if (!mesh.mesh) continue;
-					q3stage::setup_draw_parameters_t params {};
 					params.time = time;
 					params.mvp = mesh.mvp;
 					params.mesh_uniforms = mesh.mesh->uniform_info();
 					params.shader_color = mesh.shader_color;
 					params.bone_weights = mesh.weights.size() ? &mesh.weights : nullptr;
 					params.view_origin = view_origin;
+					params.gridlight = &mesh.gridlight;
 					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}

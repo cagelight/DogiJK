@@ -1,6 +1,13 @@
 #include "hw_local.hh"
 using namespace howler;
 
+instance::skin_registry::skin_registry() {
+	auto & defskin = skins.emplace_back( make_q3skin() );
+	defskin->index = 0;
+	defskin->skin = {};
+	strcpy(defskin->skin.name, "<default skin>");
+}
+
 static char const * CommaParse( char **data_p ) {
 	int c = 0, len;
 	char *data;

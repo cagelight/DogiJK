@@ -9,6 +9,8 @@
 extern refimport_t ri;
 extern vidconfig_t glConfig;
 extern cvar_t * r_aspectCorrectFonts;
+extern bool window_initialized;
+extern window_t window;
 
 #define XCVAR_PROTO
 #include "tr_xcvar.inl"

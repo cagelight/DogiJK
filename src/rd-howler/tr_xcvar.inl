@@ -42,7 +42,7 @@ XCVAR_DEF( r_showedges,					"0",				CVAR_CHEAT,										"" )
 XCVAR_DEF( r_shownormals,				"0",				0,												"" )
 XCVAR_DEF( r_showtris,					"0",				CVAR_CHEAT,										"" )
 XCVAR_DEF( r_vis,						"1",				0,												"" )
-XCVAR_DEF( r_viscachesize,				"20",				CVAR_ARCHIVE,									"" )
+XCVAR_DEF( r_viscachesize,				"1",				CVAR_ARCHIVE,									"" )
 XCVAR_DEF( r_whiteimage,				"0",				0,												"" )
 
 #ifdef _DEBUG

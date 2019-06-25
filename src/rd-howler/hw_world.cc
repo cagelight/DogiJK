@@ -108,8 +108,8 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 	}
 	
 	if (cluster < 0) cluster = -1;
-	if (cluster >= m_clusters)
-		cluster = m_clusters - 1;
+	if (cluster > m_max_cluster)
+		cluster = m_max_cluster;
 	
 	if (r_lockpvs->integer)
 		cluster = m_lockpvs_cluster;
@@ -132,7 +132,7 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 				[&](std::monostate) {assert(0);},
 				[&](q3worldnode::node_data const &) {},
 				[&](q3worldnode::leaf_data const & data) {
-					if (data.cluster < 0 || data.cluster >= m_clusters) return;
+					if (data.cluster < 0 || data.cluster > m_max_cluster) return;
 					if (!(cluster_vis[data.cluster>>3] & (1<<(data.cluster&7)))) return; // WTF???
 					if ( (ref.areamask[data.area>>3] & (1<<(data.area&7)) ) ) return;
 					for (auto const & surf : data.surfaces) marked_surfaces.emplace(surf);
@@ -147,7 +147,7 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 				[&](std::monostate) {assert(0);},
 				[&](q3worldnode::node_data const &) {},
 				[&](q3worldnode::leaf_data const & data) {
-					if (data.cluster < 0 || data.cluster >= m_clusters) return;
+					if (data.cluster < 0 || data.cluster > m_max_cluster) return;
 					for (auto const & surf : data.surfaces) marked_surfaces.emplace(surf);
 				}
 			}, node.data);
@@ -221,7 +221,7 @@ void q3world::build_world_meshes() {
 			[&](std::monostate) {assert(0);},
 			[&](q3worldnode::node_data const &) {},
 			[&](q3worldnode::leaf_data const & data) {
-				if (data.cluster < 0 || data.cluster >= m_clusters) return;
+				if (data.cluster < 0 || data.cluster > m_max_cluster) return;
 				for (auto const & surf : data.surfaces) {
 					marked_surfaces.emplace(surf);
 				}
@@ -644,7 +644,7 @@ void q3world::load_nodesleafs() {
 		
 		data.cluster = dleaf.cluster;
 		data.area = dleaf.area;
-		if (data.cluster > m_clusters) m_clusters = data.cluster;
+		if (data.cluster > m_max_cluster) m_max_cluster = data.cluster;
 		
 		data.surfaces.resize(dleaf.numLeafSurfaces);
 		for (int32_t j = 0; j < dleaf.numLeafSurfaces; j++) {
@@ -742,7 +742,7 @@ void q3world::load_visibility() {
 	
 	int32_t const * bufi = base<int32_t>(l.fileofs);
 	
-	m_vis->m_clusters = bufi[0];
+	m_vis->m_max_cluster = bufi[0];
 	m_vis->m_cluster_bytes = bufi[1];
 	
 	m_vis->m_cluster_data.resize(l.filelen - 8);
@@ -875,6 +875,48 @@ qboolean q3world::get_entity_token(char * buffer, int size) {
 // LIGHTGRID
 //================================================================
 
+gridlighting_t q3world::calculate_gridlight(qm::vec3_t const & pos) {
+	gridlighting_t ret;
+	ret.ambient = {1, 0, 0};
+	ret.directed = {0, 1, 0};
+	ret.direction = {-1, -1, 0};
+	ret.direction.normalize();
+	
+	qm::vec3_t frac;
+	qm::vec3_t npos = pos - m_lightgrid_origin;
+	std::array<int32_t, 3> ipos;
+	
+	for (auto i = 0; i < 3; i++) {
+		float v = npos[i] / m_lightgrid_size[i];
+		ipos[i] = std::floor(v);
+		frac[i] = v - ipos[i];
+		if (ipos[i] < 0) ipos[i] = 0;
+		else if (ipos[i] >= m_lightgrid_bounds[i] - 1)
+			ipos[i] = m_lightgrid_bounds[i] - 1;
+	}
+	
+	std::array<int32_t, 3> step {1, m_lightgrid_bounds[0], m_lightgrid_bounds[0] * m_lightgrid_bounds[1]};
+	uint16_t const * start = m_lightgrid_array + (ipos[0] * step[0] + ipos[1] * step[1] + ipos[2] * step[2]);
+	
+	float factor_total = 0;
+	for (auto i = 0; i < 8; i++) {
+		
+		float factor = 1.0f;
+		uint16_t const * gpos = start;
+		
+		for (auto j = 0; j < 3; j++) {
+			if (i & (1 << j)) {
+				factor *= frac[j];
+				gpos += step[j];
+			} else factor *= (1.0 - frac[j]);
+		}
+		
+		
+	}
+	
+	return ret;
+}
+
 void q3world::load_lightgrid() {
 	
 	lump_t const & l = m_header->lumps[LUMP_LIGHTGRID];
@@ -888,16 +930,12 @@ void q3world::load_lightgrid() {
 	m_lightgrid = base<lightgrid_t>(l.fileofs);
 }
 
-//================================================================
-// LIGHTGRID ARRAY
-//================================================================
-
 void q3world::load_lightgridarray() {
 	
 	lump_t const & l = m_header->lumps[LUMP_LIGHTARRAY];
 	
 	m_lightgrid_array_num = m_lightgrid_bounds[0] * m_lightgrid_bounds[1] * m_lightgrid_bounds[2];
-	if (l.filelen != m_lightgrid_array_num * sizeof(*m_lightgrid_array)) {
+	if (static_cast<size_t>(l.filelen) != m_lightgrid_array_num * sizeof(*m_lightgrid_array)) {
 		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: light grid array mismatch: expected %lu, found %u\n", m_lightgrid_array_num * sizeof(*m_lightgrid_array), l.filelen);
 		m_lightgrid_array = nullptr;
 	}

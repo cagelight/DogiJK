@@ -388,12 +388,14 @@ void q3shader::validate() {
 	opaque = false;
 	blended = false;
 	depthwrite = false;
+	gridlit = false;
 	
 	for (q3stage & stg : stages) {
 		stg.validate();
 		if (stg.depthwrite) depthwrite = true;
 		if (stg.opaque) opaque = true;
 		if (stg.blend) blended = true;
+		if (stg.gridlit) gridlit = true;
 	}
 	
 	if (!sort) {
@@ -512,6 +514,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				gen = q3stage::gen_type::entity;
 			} else if (!Q_stricmp("lightingDiffuse", token)) {
 				gen = q3stage::gen_type::diffuse_lighting;
+				stg.gridlit = true;
 			} else if (!Q_stricmp("vertex", token)) {
 				gen = q3stage::gen_type::vertex;
 			} else if (!Q_stricmp("exactvertex", token)) {
@@ -891,7 +894,6 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			q3color = const_color * mult;
 			break;
 		case q3stage::gen_type::diffuse_lighting:
-			q3color = {1, 0, 1, 1};
 			// TODO
 			break;
 	}
@@ -975,6 +977,8 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->q3mainprog->tcgen(gen_tc);
 	hw_inst->q3mainprog->mapgen((r_shownormals->integer && !parm.is_2d) ? map_gen::normals : gen_map);
 	hw_inst->q3mainprog->viewpos(parm.view_origin);
+	
+	hw_inst->q3mainprog->gridlighting(gridlit ? parm.gridlight : nullptr);
 	
 	if (turb) {
 		hw_inst->q3mainprog->turb_data(*turb_data);

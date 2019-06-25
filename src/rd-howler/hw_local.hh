@@ -45,6 +45,7 @@ namespace howler {
 	static constexpr GLint BINDING_SKYBOX = 2; // TO 7
 	static constexpr GLint BINDING_BONE_MATRICIES = 8;
 	static constexpr GLint BINDING_LIGHTSTYLES = 9;
+	static constexpr GLint BINDING_GRIDLIGHTING = 10;
 	
 	static constexpr uint_fast16_t LIGHTMAP_NUM = 4;
 	static constexpr uint_fast16_t LIGHTMAP_DIM = 128;
@@ -66,6 +67,12 @@ namespace howler {
 	
 	static_assert(sizeof(lightstyles_t) == sizeof(GLfloat) * 256);
 	static_assert(sizeof(lightstylesidx_t) == LIGHTMAP_NUM);
+	
+	struct gridlighting_t {
+		qm::vec3_t ambient;
+		qm::vec3_t directed;
+		qm::vec3_t direction;
+	};
 	
 //================================================================
 // MODELS & MESHES
@@ -289,6 +296,7 @@ namespace howler {
 		bool clamp = false;
 		bool blend = false;
 		bool depthwrite = false;
+		bool gridlit = false;
 		qm::vec4_t const_color {1, 1, 1, 1};
 		
 		// DO NOT SET DIRECTLY
@@ -402,6 +410,7 @@ namespace howler {
 			qm::vec4_t shader_color {1, 1, 1, 1};
 			std::vector<qm::mat4_t> const * bone_weights = nullptr;
 			qm::vec3_t view_origin;
+			gridlighting_t const * gridlight;
 		};
 		void setup_draw(setup_draw_parameters_t const &) const;
 	};
@@ -423,6 +432,7 @@ namespace howler {
 		bool opaque = false;
 		bool blended = false;
 		bool depthwrite = false;
+		bool gridlit = false;
 		
 		// properties
 		bool polygon_offset = false;
@@ -510,6 +520,7 @@ namespace howler {
 			
 			void bone_matricies(qm::mat4_t const *, size_t num);
 			void lightstyles(lightstyles_t const &);
+			void gridlighting(gridlighting_t const *); // nullptr for off
 		protected:
 			virtual void on_bind() override;
 		private:
@@ -570,6 +581,7 @@ namespace howler {
 	namespace cmd3d {
 		
 		struct basic_object {
+			refEntity_t ref;
 			q3basemodel_ptr basemodel;
 			qm::mat4_t model_matrix;
 			qm::vec4_t shader_color;
@@ -647,8 +659,8 @@ namespace howler {
 		
 		void load(char const * name);
 		qboolean get_entity_token(char * buffer, int size);
-		
 		q3model_ptr get_vis_model(refdef_t const & ref);
+		gridlighting_t calculate_gridlight(qm::vec3_t const & pos);
 		
 	private:		
 		istring m_name;
@@ -784,7 +796,7 @@ namespace howler {
 		//================================
 		
 		struct q3vis {
-			int32_t m_clusters = 0;
+			int32_t m_max_cluster = 0;
 			int32_t m_cluster_bytes = 0;
 			std::vector<byte> m_cluster_data;
 		};
@@ -823,7 +835,7 @@ namespace howler {
 		int32_t m_lightmap_span = -1;
 		q3texture_ptr m_lightmap = nullptr;
 		
-		int32_t m_clusters = 0;
+		int32_t m_max_cluster = 0;
 		std::unique_ptr<q3vis> m_vis = nullptr;
 		//----------------
 		
@@ -908,7 +920,7 @@ namespace howler {
 		
 		// SKINS
 		struct skin_registry {
-			skin_registry() = default;
+			skin_registry();
 			skin_registry(skin_registry const &) = delete;
 			skin_registry(skin_registry &&) = delete;
 			~skin_registry() = default;
@@ -952,7 +964,6 @@ namespace howler {
 		inline qboolean world_get_entity_token(char * buffer, int size) { return m_world->get_entity_token(buffer, size); }
 		
 	private:
-		window_t window;
 		uint32_t width, height;
 		bool renderer_initialized = false;
 		

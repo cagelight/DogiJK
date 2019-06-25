@@ -7,32 +7,8 @@ instance::instance() {
 
 void instance::initialize_renderer() {
 	
+	assert(window_initialized);
 	if (renderer_initialized) return;
-	
-	windowDesc_t windowDesc {};
-	windowDesc.api = GRAPHICS_API_OPENGL;
-
-	window = ri.WIN_Init(&windowDesc, &glConfig);
-	gladLoadGLLoader(ri.GL_GetProcAddress);
-
-	// get our config strings
-	glConfig.vendor_string = (const char *)glGetString (GL_VENDOR);
-	glConfig.renderer_string = (const char *)glGetString (GL_RENDERER);
-	glConfig.version_string = (const char *)glGetString (GL_VERSION);
-	glConfig.extensions_string = (const char *)glGetString (GL_EXTENSIONS);
-	glConfig.isFullscreen = qfalse;
-	glConfig.stereoEnabled = qfalse;
-	glConfig.clampToEdgeAvailable = qtrue;
-	glConfig.maxActiveTextures = 4096;
-
-	glGetIntegerv( GL_MAX_TEXTURE_SIZE, &glConfig.maxTextureSize );
-	glConfig.maxTextureSize = Q_max(0, glConfig.maxTextureSize);
-	
-	if (GLAD_GL_ARB_texture_filter_anisotropic)
-		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &glConfig.maxTextureFilterAnisotropy);
-	else glConfig.maxTextureFilterAnisotropy = 0;
-	
-	Com_Printf("Vendor: %s\nRenderer: %s\nVersion: %s\n", glConfig.vendor_string, glConfig.renderer_string, glConfig.version_string);
 	
 	//gl::initialize_defaults();
 	
