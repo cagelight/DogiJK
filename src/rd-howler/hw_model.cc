@@ -182,7 +182,7 @@ void q3basemodel::setup_render_md3() {
 				vert_data.emplace_back( q3md3mesh::vertex_t {
 					qm::vec3_t { (float)v.xyz[1], (float)v.xyz[2], (float)v.xyz[0] } / 64.0,
 					qm::vec2_t { u.st[0], u.st[1] },
-					qm::vec3_t { std::sin(lat) * std::sin(lng), std::cos(lng), std::cos(lat) * std::sin(lng) },
+					qm::vec3_t { -std::sin(lat) * std::sin(lng), -std::cos(lng), -std::cos(lat) * std::sin(lng) }.normalized(),
 				});
 			}
 		}
@@ -310,9 +310,9 @@ void q3basemodel::setup_render_mdxm() {
 					bone_wgt = {1, 1, 1, 1};
 				
 				verticies.emplace_back( mdxm_animated_mesh::vertex_t {
-					qm::vec3_t { vtx.vertCoords[0], vtx.vertCoords[2], -vtx.vertCoords[1], },
+					qm::vec3_t { vtx.vertCoords[1], -vtx.vertCoords[2], vtx.vertCoords[0], },
 					qm::vec2_t { uv.texCoords[0], uv.texCoords[1] },
-					qm::vec3_t { vtx.normal[0], vtx.normal[2], -vtx.normal[1], },
+					qm::vec3_t { vtx.normal[1], -vtx.normal[2], vtx.normal[0], } .normalized(),
 					bone_idx,
 					bone_wgt
 				});

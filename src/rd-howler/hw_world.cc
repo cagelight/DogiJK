@@ -876,12 +876,9 @@ qboolean q3world::get_entity_token(char * buffer, int size) {
 //================================================================
 
 gridlighting_t q3world::calculate_gridlight(qm::vec3_t const & pos) {
-	gridlighting_t ret;
-	ret.ambient = {1, 0, 0};
-	ret.directed = {0, 1, 0};
-	ret.direction = {-1, -1, 0};
-	ret.direction.normalize();
+	gridlighting_t ret {};
 	
+	qm::vec3_t direction {0, 0, 0};
 	qm::vec3_t frac;
 	qm::vec3_t npos = pos - m_lightgrid_origin;
 	std::array<int32_t, 3> ipos;
@@ -911,8 +908,40 @@ gridlighting_t q3world::calculate_gridlight(qm::vec3_t const & pos) {
 			} else factor *= (1.0 - frac[j]);
 		}
 		
+		if (gpos >= m_lightgrid_array + m_lightgrid_array_num) continue;
 		
+		lightgrid_t const * data = m_lightgrid + *gpos;
+		if (data->styles[0] == LS_LSNONE) continue;
+		
+		factor_total += factor;
+		
+		for (uint_fast16_t j = 0; j < LIGHTMAP_NUM; j++) {
+			if (data->styles[j] == LS_LSNONE) break;
+			ret.ambient[0] += factor * (data->ambientLight[j][0] / 255.0f) * hw_inst->lightstyles[data->styles[j]][0];
+			ret.ambient[1] += factor * (data->ambientLight[j][1] / 255.0f) * hw_inst->lightstyles[data->styles[j]][1];
+			ret.ambient[2] += factor * (data->ambientLight[j][2] / 255.0f) * hw_inst->lightstyles[data->styles[j]][2];
+			ret.directed[0] += factor * (data->directLight[j][0] / 255.0f) * hw_inst->lightstyles[data->styles[j]][0];
+			ret.directed[1] += factor * (data->directLight[j][1] / 255.0f) * hw_inst->lightstyles[data->styles[j]][1];
+			ret.directed[2] += factor * (data->directLight[j][2] / 255.0f) * hw_inst->lightstyles[data->styles[j]][2];
+		}
+		
+		qm::vec3_t normal;
+		float lat = data->latLong[1] * (2 * qm::pi) / 255.0f;
+		float lng = data->latLong[0] * (2 * qm::pi) / 255.0f;
+		normal[0] = std::cos(lat) * std::sin(lng);
+		normal[1] = std::sin(lat) * std::sin(lng);
+		normal[2] = std::cos(lng);
+		VectorMA(&direction[0], factor, &normal[0], &direction[0]);
 	}
+	
+	if (factor_total > 0 && factor_total < 0.99) {
+		factor_total = 1.0f / factor_total;
+		ret.ambient *= factor_total;
+		ret.directed *= factor_total;
+	}
+	
+	ret.direction = {direction[1], direction[2], direction[0]};
+	ret.direction.normalize();
 	
 	return ret;
 }

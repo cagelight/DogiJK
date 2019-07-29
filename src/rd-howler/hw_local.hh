@@ -69,10 +69,15 @@ namespace howler {
 	static_assert(sizeof(lightstylesidx_t) == LIGHTMAP_NUM);
 	
 	struct gridlighting_t {
-		qm::vec3_t ambient;
-		qm::vec3_t directed;
-		qm::vec3_t direction;
+		qm::vec3_t ambient {0, 0, 0};
+		uint32_t pad_1;
+		qm::vec3_t directed {0, 0, 0};
+		uint32_t pad_2;
+		qm::vec3_t direction {0, 0, 0};
+		uint32_t pad_3;
 	};
+	
+	static_assert(sizeof(gridlighting_t) == 12 * sizeof(float));
 	
 //================================================================
 // MODELS & MESHES
@@ -342,6 +347,7 @@ namespace howler {
 			vertex_exact,
 			wave,
 			diffuse_lighting,
+			specular_lighting,
 			entity,
 		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
 		
@@ -405,6 +411,8 @@ namespace howler {
 			float time;
 			bool is_2d = false;
 			qm::mat4_t mvp = qm::mat4_t::identity();
+			qm::mat3_t itm = qm::mat3_t::identity();
+			qm::mat4_t m = qm::mat4_t::identity();
 			qm::mat3_t uvm = qm::mat3_t::identity();
 			q3mesh::uniform_info_t const * mesh_uniforms = nullptr;
 			qm::vec4_t shader_color {1, 1, 1, 1};
@@ -508,6 +516,8 @@ namespace howler {
 			
 			void time(float const &);
 			void mvp(qm::mat4_t const &);
+			void itm(qm::mat3_t const &);
+			void m(qm::mat4_t const &);
 			void uvm(qm::mat3_t const &);
 			void color(qm::vec4_t const &);
 			void use_vertex_colors(bool const &);
@@ -517,6 +527,9 @@ namespace howler {
 			void mapgen(q3stage::map_gen);
 			void viewpos(qm::vec3_t const &);
 			void tcgen(q3stage::tcgen);
+			
+			void rgbgen(q3stage::gen_type);
+			void alphagen(q3stage::gen_type);
 			
 			void bone_matricies(qm::mat4_t const *, size_t num);
 			void lightstyles(lightstyles_t const &);

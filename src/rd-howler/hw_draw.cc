@@ -30,10 +30,12 @@ struct q3drawmesh {
 	q3drawmesh & operator = (q3drawmesh &&) = default;
 	
 	q3mesh_ptr mesh;
-	qm::mat4_t mvp;
-	qm::vec4_t shader_color;
+	qm::mat4_t mvp = qm::mat4_t::identity();
+	qm::mat3_t itm = qm::mat3_t::identity();;
+	qm::mat4_t m = qm::mat4_t::identity();;
+	qm::vec4_t shader_color = {1, 1, 1, 1};
 	std::vector<qm::mat4_t> weights;
-	gridlighting_t gridlight;
+	gridlighting_t gridlight {};
 };
 
 struct q3drawset {
@@ -94,20 +96,29 @@ void instance::end_frame(float time) {
 		rq *= qm::quat_t { {1, 0, 0}, qm::deg2rad(scene.ref.viewangles[PITCH]) };
 		rq *= qm::quat_t { {0, 0, 1}, qm::deg2rad(scene.ref.viewangles[ROLL]) + qm::pi };
 		rq *= qm::quat_t { {0, 1, 0}, qm::deg2rad(scene.ref.viewangles[YAW]) };
-		qm::mat4_t r = qm::mat4_t { rq };
+		qm::mat4_t r = qm::mat4_t { qm::mat3_t {rq} };
 		qm::mat4_t vp = (v * r) * p;
 		
 		qm::mat4_t sbvp = r * qm::mat4_t::perspective(qm::deg2rad(scene.ref.fov_y), scene.ref.width, scene.ref.height, 0.125, 8);
 		
 		std::unordered_map<q3shader_ptr, std::vector<q3drawmesh>> draw_map;
 		
+		//================================================================
+		// WORLD -- WORLD MESHES
+		//================================================================
+		
 		if (!(scene.ref.rdflags & RDF_NOWORLDMODEL) && m_world) {
 			qm::mat4_t m = qm::mat4_t::scale(1, -1, 1);
 			for (auto const & dmesh : m_world->get_vis_model(scene.ref)->meshes) {
 				qm::mat4_t mvp = m * vp;
-				if (debug_enabled) debug_meshes.emplace_back(dmesh.second, mvp);
+				q3drawmesh draw {dmesh.second, mvp};
+				draw.m = qm::mat4_t::identity();
+				if (dmesh.first && dmesh.first->gridlit) {
+					draw.gridlight = m_world->calculate_gridlight({0, 0, 0});
+				}
 				if (!dmesh.second) continue;
-				draw_map[dmesh.first].emplace_back(dmesh.second, mvp);
+				if (debug_enabled) debug_meshes.emplace_back(draw);
+				draw_map[dmesh.first].emplace_back(draw);
 			}
 		}
 		
@@ -122,8 +133,26 @@ void instance::end_frame(float time) {
 				
 				q3drawmesh draw {mesh.second, mvp};
 				
-				if (mesh.first && mesh.first->gridlit)
+				if (mesh.first && mesh.first->gridlit) {
+					
+					qm::mat3_t m3 = {
+						obj.model_matrix[0][0], obj.model_matrix[0][1], obj.model_matrix[0][2],
+						obj.model_matrix[1][0], obj.model_matrix[1][1], obj.model_matrix[1][2],
+						obj.model_matrix[2][0], obj.model_matrix[2][1], obj.model_matrix[2][2],
+					};
+					qm::mat3_t testlawl;
+					MatrixInverse(reinterpret_cast<vec3_t *>(m3.ptr()), reinterpret_cast<vec3_t *>(testlawl.ptr()));
+					qm::mat3_t trans3 = {
+						testlawl[0][0], testlawl[1][0], testlawl[2][0],
+						testlawl[0][1], testlawl[1][1], testlawl[2][1],
+						testlawl[0][2], testlawl[1][2], testlawl[2][2],
+					};
+					draw.itm = trans3;
+					
+					draw.m = obj.model_matrix;
+					
 					draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
+				}
 				
 				if (debug_enabled) debug_meshes.emplace_back(draw);
 				draw_map[mesh.first].emplace_back(draw);
@@ -208,23 +237,24 @@ void instance::end_frame(float time) {
 					for (int32_t i = 0; i < surf->numBoneReferences; i++) {
 						
 						mdxaBone_t const & bone = g2.mBoneCache->EvalRender(refs[i]);
-						qm::mat4_t bone_conv = {
-							bone.matrix[0][0], bone.matrix[2][0], bone.matrix[1][0], 0,
-							bone.matrix[0][2], bone.matrix[2][2], bone.matrix[1][2], 0,
-							-bone.matrix[0][1], -bone.matrix[2][1], -bone.matrix[1][1], 0,
-							bone.matrix[0][3], bone.matrix[2][3], bone.matrix[1][3], 1
+						
+						qm::mat4_t bone_mat {
+							bone.matrix[1][1], -bone.matrix[1][2], bone.matrix[1][0], 0,
+							bone.matrix[2][1], -bone.matrix[2][2], bone.matrix[2][0], 0,
+							bone.matrix[0][1], -bone.matrix[0][2], bone.matrix[0][0], 0,
+							bone.matrix[1][3], bone.matrix[2][3], bone.matrix[0][3], 0,
 						};
 						
-						static constexpr qm::mat4_t adjust = qm::mat4_t::scale({1, 1, -1}) * qm::mat4_t {qm::quat_t {{0, 1, 0}, qm::pi / 2}};
-						bone_array.emplace_back(bone_conv * adjust);
+						bone_array.emplace_back(bone_mat);
 					}
 					
 					q3drawmesh draw {mesh.second, model_matrix * vp};
 					draw.weights = std::move(bone_array);
+					draw.m = model_matrix * v;
 					
 					if (shader->gridlit)
 						draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
-					
+						
 					if (debug_enabled) debug_meshes.emplace_back(draw);
 					draw_map[shader].emplace_back(draw);
 				}
@@ -334,6 +364,8 @@ void instance::end_frame(float time) {
 					if (!mesh.mesh) continue;
 					params.time = time;
 					params.mvp = mesh.mvp;
+					params.itm = mesh.itm;
+					params.m = mesh.m;
 					params.mesh_uniforms = mesh.mesh->uniform_info();
 					params.shader_color = mesh.shader_color;
 					params.bone_weights = mesh.weights.size() ? &mesh.weights : nullptr;

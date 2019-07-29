@@ -512,6 +512,50 @@ struct qm::meta::quat_t {
 		normalize();
 	}
 	
+	constexpr quat_t(mat3_t<T> const & m) : data {0, 0, 0, 0} {
+		
+		T t;
+		
+		if (m[2][2] < 0) {
+			if (m[0][0] > m[1][1]) {
+				t = 1 + m[0][0] - m[1][1] - m[2][2];
+				data[0] = t;
+				data[1] = m[0][1] + m[1][0];
+				data[2] = m[2][0] + m[0][2];
+				data[3] = m[1][2] - m[2][1];
+			} else {
+				t = 1 - m[0][0] + m[1][1] - m[2][2];
+				data[0] = m[0][1] + m[1][0];
+				data[1] = t;
+				data[2] = m[1][2] + m[2][1];
+				data[3] = m[2][0] - m[0][2];
+			}
+		} else {
+			if (m[0][0] < -m[1][1]) {
+				t = 1 - m[0][0] - m[1][1] + m[2][2];
+				data[0] = m[2][0] + m[0][2];
+				data[1] = m[1][2] + m[2][1];
+				data[2] = t;
+				data[3] = m[0][1] - m[1][0];
+			} else {
+				t = 1 + m[0][0] + m[1][1] + m[2][2];
+				data[0] = m[1][2] - m [2][1];
+				data[1] = m[2][0] - m [0][2];
+				data[2] = m[0][1] - m [1][0];
+				data[3] = t;
+			}
+		}
+		
+		
+		t = 0.5 * std::sqrt(t);
+		data[0] *= t;
+		data[1] *= t;
+		data[2] *= t;
+		data[3] *= t;
+		
+		normalize();
+	}
+	
 	constexpr quat_t(T const & x, T const & y, T const & z, T const & w) noexcept : data { x, y, z, w } {}
 	constexpr quat_t(T const * ptr) : data { ptr[0], ptr[1], ptr[2], ptr[3] } {}
 	
@@ -617,6 +661,28 @@ struct qm::meta::mat3_t {
 		row_t {v20, v21, v22,},
 	} {}
 	
+	constexpr explicit mat3_t(quat_t<T> const & v) noexcept : mat3_t(identity()) {
+		T sqx = v.data[0] * v.data[0];
+		T sqy = v.data[1] * v.data[1];
+		T sqz = v.data[2] * v.data[2];
+		T sqw = v.data[3] * v.data[3];
+		data[0][0] =  sqx - sqy - sqz + sqw;
+		data[1][1] = -sqx + sqy - sqz + sqw;
+		data[2][2] = -sqx - sqy + sqz + sqw;
+		T t1 = v.data[0] * v.data[1];
+		T t2 = v.data[2] * v.data[3];
+		data[1][0] = ((T)2) * (t1 + t2);
+		data[0][1] = ((T)2) * (t1 - t2);
+		t1 = v.data[0] * v.data[2];
+		t2 = v.data[1] * v.data[3];
+		data[2][0] = ((T)2) * (t1 - t2);
+		data[0][2] = ((T)2) * (t1 + t2);
+		t1 = v.data[1] * v.data[2];
+		t2 = v.data[0] * v.data[3];
+		data[2][1] = ((T)2) * (t1 + t2);
+		data[1][2] = ((T)2) * (t1 - t2);
+	}
+	
 	constexpr T * ptr() { return &data[0][0]; }
 	constexpr T const * ptr() const { return &data[0][0]; }
 	
@@ -711,6 +777,14 @@ struct qm::meta::mat3_t {
 	
 	// SPECIAL
 	
+	constexpr mat3_t transpose() const {
+		return mat3_t {
+			data[0][0], data[1][0], data[2][0],
+			data[0][1], data[1][1], data[2][1],
+			data[0][2], data[1][2], data[2][2]
+		};
+	}
+	
 	// OPERATORS
 	
 	constexpr mat3_t & operator = (mat3_t const &) noexcept = default;
@@ -763,30 +837,15 @@ struct qm::meta::mat4_t {
 		row_t {v30, v31, v32, v33},
 	} {}
 	
+	constexpr mat4_t(mat3_t<T> const & m) : mat4_t {
+		 m[0][0], m[0][1], m[0][2], 0,
+		 m[1][0], m[1][1], m[1][2], 0,
+		 m[2][0], m[2][1], m[2][2], 0,
+		 0,       0,       0,       1
+	} { }
+	
 	constexpr T * ptr() { return &data[0][0]; }
 	constexpr T const * ptr() const { return &data[0][0]; }
-	
-	constexpr explicit mat4_t(quat_t<T> const & v) noexcept : mat4_t(identity()) {
-		T sqx = v.data[0] * v.data[0];
-		T sqy = v.data[1] * v.data[1];
-		T sqz = v.data[2] * v.data[2];
-		T sqw = v.data[3] * v.data[3];
-		data[0][0] =  sqx - sqy - sqz + sqw;
-		data[1][1] = -sqx + sqy - sqz + sqw;
-		data[2][2] = -sqx - sqy + sqz + sqw;
-		T t1 = v.data[0] * v.data[1];
-		T t2 = v.data[2] * v.data[3];
-		data[1][0] = ((T)2) * (t1 + t2);
-		data[0][1] = ((T)2) * (t1 - t2);
-		t1 = v.data[0] * v.data[2];
-		t2 = v.data[1] * v.data[3];
-		data[2][0] = ((T)2) * (t1 - t2);
-		data[0][2] = ((T)2) * (t1 + t2);
-		t1 = v.data[1] * v.data[2];
-		t2 = v.data[0] * v.data[3];
-		data[2][1] = ((T)2) * (t1 + t2);
-		data[1][2] = ((T)2) * (t1 - t2);
-	}
 	
 	static constexpr mat4_t identity() noexcept {
 		return {
@@ -931,6 +990,16 @@ struct qm::meta::mat4_t {
 		w[3][1] = v.data[1];
 		w[3][2] = v.data[2];
 		return w;
+	}
+	
+	// SPECIAL
+	
+	constexpr mat3_t<T> top() const {
+		return mat3_t<T> {
+			data[0][0], data[0][1], data[0][2],
+			data[1][0], data[1][1], data[1][2],
+			data[2][0], data[2][1], data[2][2],
+		};
 	}
 	
 	// OPERATORS

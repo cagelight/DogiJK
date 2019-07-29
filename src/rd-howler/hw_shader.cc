@@ -515,6 +515,9 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			} else if (!Q_stricmp("lightingDiffuse", token)) {
 				gen = q3stage::gen_type::diffuse_lighting;
 				stg.gridlit = true;
+			} else if (!Q_stricmp("lightingSpecular", token)) {
+				gen = q3stage::gen_type::specular_lighting;
+				stg.gridlit = true;
 			} else if (!Q_stricmp("vertex", token)) {
 				gen = q3stage::gen_type::vertex;
 			} else if (!Q_stricmp("exactvertex", token)) {
@@ -893,8 +896,9 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			mult = gen_func_do(wave_rgb.func, parm.time, wave_rgb.base, wave_rgb.amplitude, wave_rgb.phase, wave_rgb.frequency);
 			q3color = const_color * mult;
 			break;
+		case q3stage::gen_type::specular_lighting:
 		case q3stage::gen_type::diffuse_lighting:
-			// TODO
+			// handled in shader
 			break;
 	}
 	
@@ -917,8 +921,9 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			mult = gen_func_do(wave_alpha.func, parm.time, wave_alpha.base, wave_alpha.amplitude, wave_alpha.phase, wave_alpha.frequency);
 			q3color[3] = const_color[3] * mult;
 			break;
+		case q3stage::gen_type::specular_lighting:
 		case q3stage::gen_type::diffuse_lighting: 
-			// TODO
+			// handled in shader
 			break;
 	}
 	
@@ -978,11 +983,21 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->q3mainprog->mapgen((r_shownormals->integer && !parm.is_2d) ? map_gen::normals : gen_map);
 	hw_inst->q3mainprog->viewpos(parm.view_origin);
 	
+	hw_inst->q3mainprog->rgbgen(gen_rgb);
+	hw_inst->q3mainprog->alphagen(gen_alpha);
 	hw_inst->q3mainprog->gridlighting(gridlit ? parm.gridlight : nullptr);
 	
 	if (turb) {
 		hw_inst->q3mainprog->turb_data(*turb_data);
 	}
+	
+	if (gridlit) {
+		hw_inst->q3mainprog->itm(parm.itm);
+	}
+	
+	//if (gridlit || gen_tc == tcgen::environment) {
+		hw_inst->q3mainprog->m(parm.m);
+	//}
 	
 	if (parm.bone_weights)
 		hw_inst->q3mainprog->bone_matricies(parm.bone_weights->data(), parm.bone_weights->size());

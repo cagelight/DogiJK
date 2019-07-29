@@ -15,12 +15,11 @@ static std::string generate_vertex_shader() {
 	};
 	
 	layout (std140) uniform GridLighting {
-		vec3 grid_ambient;
-		vec3 grid_directed;
-		vec3 grid_direction;
+		// treat as vec3, vec4s used for consistent padding
+		vec4 grid_ambient;
+		vec4 grid_directed;
+		vec4 grid_direction;
 	};
-	
-	uniform bool grid_active;
 		
 	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
 	layout(location = )GLSL" << LAYOUT_UV << R"GLSL() in vec2 uv;
@@ -34,8 +33,12 @@ static std::string generate_vertex_shader() {
 	layout(location = )GLSL" << LAYOUT_LMSTYLES << R"GLSL() in ivec4 lm_styles;
 
 	uniform float time;
+	
 	uniform mat4 mvp;
+	uniform mat4 m;
+	
 	uniform mat3 uvm;
+	
 	uniform vec3 view_origin;
 	uniform bool use_vertex_color;
 	uniform bool turb;
@@ -45,12 +48,19 @@ static std::string generate_vertex_shader() {
 	uniform uint tcgen;
 	uniform uint ghoul2;
 
+	// 0 = none, 1 = diffuse, 2 = specular
+	uniform uint rgbgen;
+	uniform uint alphagen;
+	// --------
+	
 	out vec2 f_uv;
 	out vec4 vcolor;
 	out vec2 lm_uv[4];
 	flat out ivec4 lm_styles_frag;
 
 	void main() {
+	
+		vec3 calcnorm = normal;
 	
 		if (ghoul2 != 0) {
 			
@@ -59,43 +69,89 @@ static std::string generate_vertex_shader() {
 			if (vertex_bg.z != 255) num_groups++;
 			if (vertex_bg.w != 255) num_groups++;
 			
+			calcnorm.x = dot(bone[vertex_bg.x][0].xyz, normal);
+			calcnorm.y = dot(bone[vertex_bg.x][1].xyz, normal);
+			calcnorm.z = dot(bone[vertex_bg.x][2].xyz, normal);
+			
 			switch(num_groups) {
-				case 1:
-					gl_Position = mvp * vec4((bone[vertex_bg.x] * vec4(vert, 1)).xyz, 1);
-					break;
-					
 				default:
-				case 2: {
-					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
+				case 1:
 					
-					gl_Position = mvp * vec4(vertex_wgt.x * (v0 - v1) + v1, 1);
+					vec3 bvert;
+					bvert.x = dot(bone[vertex_bg.x][0].xyz, vert) + bone[vertex_bg.x][3].x;
+					bvert.y = dot(bone[vertex_bg.x][1].xyz, vert) + bone[vertex_bg.x][3].y;
+					bvert.z = dot(bone[vertex_bg.x][2].xyz, vert) + bone[vertex_bg.x][3].z;
+					
+					gl_Position = mvp * vec4(bvert, 1);
+					break;
+				
+				case 2: {
+				
+					vec3 bvert0;
+					bvert0.x = dot(bone[vertex_bg.x][0].xyz, vert) + bone[vertex_bg.x][3].x;
+					bvert0.y = dot(bone[vertex_bg.x][1].xyz, vert) + bone[vertex_bg.x][3].y;
+					bvert0.z = dot(bone[vertex_bg.x][2].xyz, vert) + bone[vertex_bg.x][3].z;
+					
+					vec3 bvert1;
+					bvert1.x = dot(bone[vertex_bg.y][0].xyz, vert) + bone[vertex_bg.y][3].x;
+					bvert1.y = dot(bone[vertex_bg.y][1].xyz, vert) + bone[vertex_bg.y][3].y;
+					bvert1.z = dot(bone[vertex_bg.y][2].xyz, vert) + bone[vertex_bg.y][3].z;
+					
+					gl_Position = mvp * vec4(vertex_wgt.x * (bvert0 - bvert1) + bvert1, 1);
 					break;
 				}
 				
 				case 3: {
-					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
-					vec3 v2 = (bone[vertex_bg.z] * vec4(vert, 1)).xyz;
 					
-					vec3 sum = vertex_wgt.x * v0;
-					sum     += vertex_wgt.y * v1;
-					sum     += vertex_wgt.z * v2;
+					vec3 bvert0;
+					bvert0.x = dot(bone[vertex_bg.x][0].xyz, vert) + bone[vertex_bg.x][3].x;
+					bvert0.y = dot(bone[vertex_bg.x][1].xyz, vert) + bone[vertex_bg.x][3].y;
+					bvert0.z = dot(bone[vertex_bg.x][2].xyz, vert) + bone[vertex_bg.x][3].z;
+					
+					vec3 bvert1;
+					bvert1.x = dot(bone[vertex_bg.y][0].xyz, vert) + bone[vertex_bg.y][3].x;
+					bvert1.y = dot(bone[vertex_bg.y][1].xyz, vert) + bone[vertex_bg.y][3].y;
+					bvert1.z = dot(bone[vertex_bg.y][2].xyz, vert) + bone[vertex_bg.y][3].z;
+					
+					vec3 bvert2;
+					bvert2.x = dot(bone[vertex_bg.z][0].xyz, vert) + bone[vertex_bg.z][3].x;
+					bvert2.y = dot(bone[vertex_bg.z][1].xyz, vert) + bone[vertex_bg.z][3].y;
+					bvert2.z = dot(bone[vertex_bg.z][2].xyz, vert) + bone[vertex_bg.z][3].z;
+					
+					vec3 sum = vertex_wgt.x * bvert0;
+					sum     += vertex_wgt.y * bvert1;
+					sum     += vertex_wgt.z * bvert2;
 					
 					gl_Position = mvp * vec4(sum, 1);
 					break;
 				}
 				
 				case 4: {
-					vec3 v0 = (bone[vertex_bg.x] * vec4(vert, 1)).xyz;
-					vec3 v1 = (bone[vertex_bg.y] * vec4(vert, 1)).xyz;
-					vec3 v2 = (bone[vertex_bg.z] * vec4(vert, 1)).xyz;
-					vec3 v3 = (bone[vertex_bg.w] * vec4(vert, 1)).xyz;
 					
-					vec3 sum = vertex_wgt.x * v0;
-					sum     += vertex_wgt.y * v1;
-					sum     += vertex_wgt.z * v2;
-					sum     += vertex_wgt.w * v3;
+					vec3 bvert0;
+					bvert0.x = dot(bone[vertex_bg.x][0].xyz, vert) + bone[vertex_bg.x][3].x;
+					bvert0.y = dot(bone[vertex_bg.x][1].xyz, vert) + bone[vertex_bg.x][3].y;
+					bvert0.z = dot(bone[vertex_bg.x][2].xyz, vert) + bone[vertex_bg.x][3].z;
+					
+					vec3 bvert1;
+					bvert1.x = dot(bone[vertex_bg.y][0].xyz, vert) + bone[vertex_bg.y][3].x;
+					bvert1.y = dot(bone[vertex_bg.y][1].xyz, vert) + bone[vertex_bg.y][3].y;
+					bvert1.z = dot(bone[vertex_bg.y][2].xyz, vert) + bone[vertex_bg.y][3].z;
+					
+					vec3 bvert2;
+					bvert2.x = dot(bone[vertex_bg.z][0].xyz, vert) + bone[vertex_bg.z][3].x;
+					bvert2.y = dot(bone[vertex_bg.z][1].xyz, vert) + bone[vertex_bg.z][3].y;
+					bvert2.z = dot(bone[vertex_bg.z][2].xyz, vert) + bone[vertex_bg.z][3].z;
+					
+					vec3 bvert3;
+					bvert3.x = dot(bone[vertex_bg.w][0].xyz, vert) + bone[vertex_bg.w][3].x;
+					bvert3.y = dot(bone[vertex_bg.w][1].xyz, vert) + bone[vertex_bg.w][3].y;
+					bvert3.z = dot(bone[vertex_bg.w][2].xyz, vert) + bone[vertex_bg.w][3].z;
+					
+					vec3 sum = vertex_wgt.x * bvert0;
+					sum     += vertex_wgt.y * bvert1;
+					sum     += vertex_wgt.z * bvert2;
+					sum     += vertex_wgt.w * bvert3;
 					
 					gl_Position = mvp * vec4(sum, 1);
 					break;
@@ -106,8 +162,13 @@ static std::string generate_vertex_shader() {
 			gl_Position = mvp * vec4(vert, 1);
 		}
 		
-		if (mapgen == 2) {
-			vcolor = vec4(normal / 2 + 0.5, 1);
+		calcnorm = mat3(m) * calcnorm;
+		
+		if (ghoul2 != 0) calcnorm.y = -calcnorm.y; // FIXME -- I don't know why I have to do this
+		
+		if (mapgen == 2) { // normals
+			//vcolor = vec4(calcnorm / 2 + 0.5, 1);
+			vcolor.xyz = calcnorm;
 		} else if (lm_mode != 0 && mapgen == 1) {
 			lm_styles_frag = lm_styles;
 			switch (lm_mode) {
@@ -156,7 +217,7 @@ static std::string generate_vertex_shader() {
 		if (tcgen == 0)
 			f_uv = uv;
 		else if (tcgen == 1) { // environment
-			vec3 dir = normalize(view_origin - vert);
+			vec3 dir = normalize(view_origin - (m * vec4(vert, 1)).xyz);
 			float d = dot(normal, dir);
 			f_uv.x = 0.5 + (normal.y * 2 * d - dir.y) * 0.5;
 			f_uv.y = 0.5 - (normal.z * 2 * d - dir.z) * 0.5;
@@ -172,11 +233,26 @@ static std::string generate_vertex_shader() {
 			f_uv.y += sin((vert[1]) * (turb_data.w + time * turb_data.z) / 1024.0f) * turb_data.x;
 		}
 		
-		if (grid_active) {
-			vcolor.xyz *= grid_ambient;
-			float dir_frac = dot(normal, grid_direction);
+		if (rgbgen == 1 && mapgen != 2) {
+			vcolor.xyz = grid_ambient.xyz + 0.125;
+			float dir_frac = dot(calcnorm, grid_direction.xyz);
 			if (dir_frac < 0) dir_frac = 0;
-			vcolor.xyz += dir_frac * grid_directed;
+			vcolor.xyz += dir_frac * grid_directed.xyz;
+		}
+		
+		if (alphagen == 2 && mapgen != 2) {
+			/*
+			mat3 itm2 = transpose(inverse(mat3(m)));
+			vec3 calcnorm = normalize(itm2 * normal);
+			
+			float dir_frac = 2 * dot(calcnorm, grid_direction.xyz);
+			vec3 reflected = calcnorm * dir_frac - grid_direction.xyz;
+			vec3 viewer = view_origin - (m * vec4(vert, 1)).xyz;
+			float l = dot(reflected, viewer) * length(viewer);
+			if (l < 0) vcolor.w = 0;
+			vcolor.w = clamp(pow(l, 3), 0, 1);
+			*/
+			vcolor.w = 0;
 		}
 	}
 	)GLSL";
@@ -295,7 +371,11 @@ struct programs::q3main::private_data {
 	uniform_uint m_mapgen = 0;
 	uniform_vec3 m_viewpos = qm::vec3_t {0, 0, 0};
 	uniform_uint m_tcgen = 0;
-	uniform_bool m_gridactive = false;
+	//uniform_mat3 m_itm = qm::mat3_t::identity(); // inverse transpose model
+	uniform_mat4 m_m = qm::mat4_t::identity();
+	
+	uniform_uint m_genrgb = 0;
+	uniform_uint m_genalpha = 0;
 	
 	GLint bone_matricies_binding;
 	GLuint bone_matricies_buffer = 0;
@@ -319,7 +399,10 @@ struct programs::q3main::private_data {
 		m_mapgen.reset();
 		m_viewpos.reset();
 		m_tcgen.reset();
-		m_gridactive.reset();
+		m_genrgb.reset();
+		m_genalpha.reset();
+		//m_itm.reset();
+		m_m.reset();
 	}
 	
 	void push() {
@@ -335,7 +418,10 @@ struct programs::q3main::private_data {
 		m_mapgen.push();
 		m_viewpos.push();
 		m_tcgen.push();
-		m_gridactive.push();
+		m_genrgb.push();
+		m_genalpha.push();
+		//m_itm.push();
+		m_m.push();
 	}
 };
 
@@ -368,6 +454,10 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"time\"");
 	if (m_data->m_mvp.set_location(get_location("mvp")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"mvp\"");
+	//if (m_data->m_itm.set_location(get_location("itm")) == -1)
+	//	Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"itm\"");
+	if (m_data->m_m.set_location(get_location("m")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"m\"");
 	if (m_data->m_uv.set_location(get_location("uvm")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"uvm\"");
 	if (m_data->m_color.set_location(get_location("q3color")) == -1)
@@ -388,8 +478,10 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"view_origin\"");
 	if (m_data->m_tcgen.set_location(get_location("tcgen")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"tcgen\"");
-	if (m_data->m_gridactive.set_location(get_location("grid_active")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"grid_active\"");
+	if (m_data->m_genrgb.set_location(get_location("rgbgen")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"rgbgen\"");
+	if (m_data->m_genalpha.set_location(get_location("alphagen")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"alphagen\"");
 		
 	m_data->bone_matricies_binding = glGetUniformBlockIndex(get_handle(), "BoneMatricies");
 	if (m_data->bone_matricies_binding == -1)
@@ -434,6 +526,16 @@ void programs::q3main::time(float const & v) {
 void programs::q3main::mvp(qm::mat4_t const & v) {
 	m_data->m_mvp = v;
 	if (is_bound()) m_data->m_mvp.push();
+}
+
+void programs::q3main::itm(qm::mat3_t const & v) {
+	//m_data->m_itm = v;
+	//if (is_bound()) m_data->m_itm.push();
+}
+
+void programs::q3main::m(qm::mat4_t const & v) {
+	m_data->m_m = v;
+	if (is_bound()) m_data->m_m.push();
 }
 
 void programs::q3main::uvm(qm::mat3_t const & v) {
@@ -481,6 +583,36 @@ void programs::q3main::tcgen(q3stage::tcgen v) {
 	if (is_bound()) m_data->m_tcgen.push();
 }
 
+void programs::q3main::rgbgen(q3stage::gen_type gen) {
+	switch(gen) {
+		default:
+			m_data->m_genrgb = 0;
+			break;
+		case q3stage::gen_type::diffuse_lighting:
+			m_data->m_genrgb = 1;
+			break;
+		case q3stage::gen_type::specular_lighting:
+			m_data->m_genrgb = 2;
+			break;
+	}
+	if (is_bound()) m_data->m_genrgb.push();
+}
+
+void programs::q3main::alphagen(q3stage::gen_type gen) {
+	switch(gen) {
+		default:
+			m_data->m_genalpha = 0;
+			break;
+		case q3stage::gen_type::diffuse_lighting:
+			m_data->m_genalpha = 1;
+			break;
+		case q3stage::gen_type::specular_lighting:
+			m_data->m_genalpha = 2;
+			break;
+	}
+	if (is_bound()) m_data->m_genalpha.push();
+}
+
 void programs::q3main::bone_matricies(qm::mat4_t const * ptr, size_t num) {
 	if (ptr && num) {
 		m_data->m_bones = num;
@@ -500,20 +632,9 @@ void programs::q3main::lightstyles(lightstyles_t const & ls) {
 	glNamedBufferData(m_data->lightstyles_buffer, sizeof(lightstyles_t), &ls, GL_STATIC_DRAW);
 }
 
-static constexpr gridlighting_t gridlighting_off {
-	qm::vec3_t {0, 0, 0},
-	qm::vec3_t {0, 0, 0},
-	qm::vec3_t {0, 0, 0},
-};
-
 void programs::q3main::gridlighting(gridlighting_t const * ptr) {
 	glBindBufferBase(GL_UNIFORM_BUFFER, BINDING_GRIDLIGHTING, m_data->gridlighting_buffer);
 	if (ptr) {
-		m_data->m_gridactive = true;
-		
 		glNamedBufferData(m_data->gridlighting_buffer, sizeof(gridlighting_t), ptr, GL_STATIC_DRAW);
-	} else
-		m_data->m_gridactive = false;
-	
-	if (is_bound()) m_data->m_gridactive.push();
+	}
 }
