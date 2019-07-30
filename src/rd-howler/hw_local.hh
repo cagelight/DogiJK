@@ -419,6 +419,7 @@ namespace howler {
 			std::vector<qm::mat4_t> const * bone_weights = nullptr;
 			qm::vec3_t view_origin;
 			gridlighting_t const * gridlight;
+			bool vertex_color_override = false; // used by sprite assemblies
 		};
 		void setup_draw(setup_draw_parameters_t const &) const;
 	};
@@ -615,7 +616,9 @@ namespace howler {
 		
 		std::vector<cmd3d::basic_object> basic_objects;
 		std::vector<cmd3d::ghoul2_object> ghoul2_objects;
+		
 		std::vector<cmd3d::sprite> sprites;
+		std::vector<cmd3d::sprite> oriented_quads;
 	};
 	
 	struct q3frame {

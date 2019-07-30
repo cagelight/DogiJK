@@ -30,12 +30,16 @@ struct q3drawmesh {
 	q3drawmesh & operator = (q3drawmesh &&) = default;
 	
 	q3mesh_ptr mesh;
+	
+	
+	
 	qm::mat4_t mvp = qm::mat4_t::identity();
 	qm::mat3_t itm = qm::mat3_t::identity();;
 	qm::mat4_t m = qm::mat4_t::identity();;
 	qm::vec4_t shader_color = {1, 1, 1, 1};
 	std::vector<qm::mat4_t> weights;
 	gridlighting_t gridlight {};
+	bool vertex_color_override = false;
 };
 
 struct q3drawset {
@@ -68,6 +72,15 @@ struct q3drawset {
 	}
 };
 
+static constexpr qm::vec4_t convert_4u8(byte const * RGBA) {
+	return qm::vec4_t {
+		RGBA[0] / 255.0f,
+		RGBA[1] / 255.0f,
+		RGBA[2] / 255.0f,
+		RGBA[3] / 255.0f,
+	};
+}
+
 void instance::end_frame(float time) {
 	
 	q3frame_ptr drawframe = m_frame;
@@ -87,6 +100,10 @@ void instance::end_frame(float time) {
 	for (q3scene const & scene : drawframe->scenes) {
 		
 		if (!scene.finalized) continue;
+		
+		qm::vec3_t axis_forward = scene.ref.viewaxis[0];
+		qm::vec3_t axis_up = scene.ref.viewaxis[2];
+		qm::vec3_t axis_left = scene.ref.viewaxis[1];
 		
 		qm::vec3_t view_origin {scene.ref.vieworg[1], -scene.ref.vieworg[2], scene.ref.vieworg[0]};
 		
@@ -265,8 +282,206 @@ void instance::end_frame(float time) {
 		// PRIMITIVE -- SPRITES AND OTHER PRIMITIVE RENDERABLES
 		//================================================================
 		
+		struct sprite_assembly : public q3mesh_basic {
+			
+			struct vertex_t {
+				qm::vec3_t vert;
+				qm::vec2_t uv;
+				qm::vec3_t normal;
+				qm::vec4_t color;
+			};
+			
+			sprite_assembly(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
+				
+				static constexpr uint_fast16_t offsetof_verts = 0;
+				static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
+				static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
+				static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
+				static constexpr uint_fast16_t offsetof_norm = offsetof_uv + sizeof_uv;
+				static constexpr uint_fast16_t sizeof_norm = sizeof(vertex_t::normal);
+				static constexpr uint_fast16_t offsetof_color = offsetof_norm + sizeof_norm;
+				static constexpr uint_fast16_t sizeof_color = sizeof(vertex_t::color);
+				static constexpr uint_fast16_t sizeof_all = offsetof_color + sizeof_color;
+				static_assert(sizeof_all == sizeof(vertex_t));
+				
+				m_size = num;
+				glCreateBuffers(1, &m_vbo);
+				glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
+				
+				glVertexArrayVertexBuffer(m_handle, 0, m_vbo, 0, sizeof_all);
+				
+				glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
+				glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
+				glEnableVertexArrayAttrib(m_handle, LAYOUT_NORMAL);
+				glEnableVertexArrayAttrib(m_handle, LAYOUT_COLOR0);
+				
+				glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
+				glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
+				glVertexArrayAttribBinding(m_handle, LAYOUT_NORMAL, 0);
+				glVertexArrayAttribBinding(m_handle, LAYOUT_COLOR0, 0);
+				
+				glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, sizeof_verts / 4, GL_FLOAT, GL_FALSE, offsetof_verts);
+				glVertexArrayAttribFormat(m_handle, LAYOUT_UV, sizeof_uv / 4, GL_FLOAT, GL_FALSE, offsetof_uv);
+				glVertexArrayAttribFormat(m_handle, LAYOUT_NORMAL, sizeof_norm / 4, GL_FLOAT, GL_FALSE, offsetof_norm);
+				glVertexArrayAttribFormat(m_handle, LAYOUT_COLOR0, sizeof_color / 4, GL_FLOAT, GL_FALSE, offsetof_color);
+			}
+			
+			~sprite_assembly() {
+				glDeleteBuffers(1, &m_vbo);
+			}
+		private:
+			GLuint m_vbo;
+		};
+		
+		std::unordered_map<q3shader_ptr, std::vector<sprite_assembly::vertex_t>> sprites_verticies;
+		
 		for (auto const & obj : scene.sprites) {
 			
+			qm::vec3_t left = axis_left, up = axis_up;
+			
+			if (!obj.ref.rotation) {
+				left *= obj.ref.radius;
+				up *= obj.ref.radius;
+			} else {
+				float ang = qm::deg2rad(obj.ref.rotation);
+				float s = std::sin(ang);
+				float c = std::cos(ang);
+				
+				left *= obj.ref.radius * c;
+				up *= obj.ref.radius * c;
+				
+				VectorMA(left.ptr(), -s * obj.ref.radius, axis_up.ptr(), left.ptr());
+				VectorMA(up.ptr(), s * obj.ref.radius, axis_left.ptr(), up.ptr());
+			}
+			
+			qm::vec3_t normal = {
+				axis_forward[1],
+				-axis_forward[2], 
+				axis_forward[0]
+			};
+			
+			sprite_assembly::vertex_t v0 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] + left[1] + up[1], 
+					-(obj.ref.origin[2] + left[2] + up[2]),
+					  obj.ref.origin[0] + left[0] + up[0],
+				},
+				qm::vec2_t { 1, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			sprite_assembly::vertex_t v1 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] - left[1] + up[1], 
+					-(obj.ref.origin[2] - left[2] + up[2]),
+					  obj.ref.origin[0] - left[0] + up[0],
+				},
+				qm::vec2_t { 1, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			sprite_assembly::vertex_t v2 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] + left[1] - up[1], 
+					-(obj.ref.origin[2] + left[2] - up[2]),
+					  obj.ref.origin[0] + left[0] - up[0],
+				},
+				qm::vec2_t { 0, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			sprite_assembly::vertex_t v3 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] - left[1] - up[1], 
+					-(obj.ref.origin[2] - left[2] - up[2]),
+					  obj.ref.origin[0] - left[0] - up[0],
+				},
+				qm::vec2_t { 0, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[hw_inst->shaders.get(obj.ref.customShader)];
+			sasm.emplace_back(v0);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v3);
+		}
+		
+		/*
+		for (auto const & obj : scene.oriented_quads) {
+			
+			qm::vec3_t left = axis_left, up = axis_up;
+			
+			if (obj.ref.rotation) {
+				left *= obj.ref.radius;
+				up *= obj.ref.radius;
+			} else {
+				float ang = qm::deg2rad(obj.ref.rotation);
+				float s = std::sin(ang);
+				float c = std::cos(ang);
+				
+				left *= obj.ref.radius * c;
+				up *= obj.ref.radius * c;
+				
+				VectorMA(left.ptr(), -s * obj.ref.radius, axis_up.ptr(), left.ptr());
+				VectorMA(up.ptr(), s * obj.ref.radius, axis_left.ptr(), up.ptr());
+			}
+			
+			qm::vec3_t normal = {
+				axis_forward[1],
+				-axis_forward[2], 
+				axis_forward[0]
+			};
+			
+			sprite_assembly::vertex_t v0 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] + left[1] + up[1], 
+					-(obj.ref.origin[2] + left[2] + up[2]),
+					  obj.ref.origin[0] + left[0] + up[0],
+				},
+				qm::vec2_t { 1, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			sprite_assembly::vertex_t v1 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] - left[1] + up[1], 
+					-(obj.ref.origin[2] - left[2] + up[2]),
+					  obj.ref.origin[0] - left[0] + up[0],
+				},
+				qm::vec2_t { 1, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			sprite_assembly::vertex_t v2 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] + left[1] - up[1], 
+					-(obj.ref.origin[2] + left[2] - up[2]),
+					  obj.ref.origin[0] + left[0] - up[0],
+				},
+				qm::vec2_t { 0, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			sprite_assembly::vertex_t v3 = {
+				qm::vec3_t { 
+					  obj.ref.origin[1] - left[1] - up[1], 
+					-(obj.ref.origin[2] - left[2] - up[2]),
+					  obj.ref.origin[0] - left[0] - up[0],
+				},
+				qm::vec2_t { 0, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[hw_inst->shaders.get(obj.ref.customShader)];
+			sasm.emplace_back(v0);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v3);
+		}
+		*/
+		
+		for (auto & [shad, verts] : sprites_verticies) {
+			q3drawmesh sprite_draw {std::make_shared<sprite_assembly>(verts.data(), verts.size()), vp};
+			sprite_draw.vertex_color_override = true;
+			if (debug_enabled) debug_meshes.emplace_back(sprite_draw);
+			draw_map[shad].emplace_back(std::move(sprite_draw));
 		}
 		
 		//================================================================
@@ -371,6 +586,7 @@ void instance::end_frame(float time) {
 					params.bone_weights = mesh.weights.size() ? &mesh.weights : nullptr;
 					params.view_origin = view_origin;
 					params.gridlight = &mesh.gridlight;
+					params.vertex_color_override = mesh.vertex_color_override;
 					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}

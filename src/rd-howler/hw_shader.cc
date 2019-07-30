@@ -977,7 +977,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->q3mainprog->mvp(parm.mvp);
 	hw_inst->q3mainprog->uvm(uvm2);
 	hw_inst->q3mainprog->color(q3color);
-	hw_inst->q3mainprog->use_vertex_colors(use_vertex_colors);
+	hw_inst->q3mainprog->use_vertex_colors(parm.vertex_color_override || use_vertex_colors);
 	hw_inst->q3mainprog->turb(turb);
 	hw_inst->q3mainprog->tcgen(gen_tc);
 	hw_inst->q3mainprog->mapgen((r_shownormals->integer && !parm.is_2d) ? map_gen::normals : gen_map);

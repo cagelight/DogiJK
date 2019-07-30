@@ -161,7 +161,9 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 	
 	switch (re->reType) {
 		default:
+		case RT_POLY:
 		case RT_ENT_CHAIN:
+			// NOT IMPLEMENTED
 			break;
 			
 		case RT_MODEL: {
@@ -197,12 +199,48 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 		case RT_SPRITE: {
 			auto & obj = hw_inst->frame().scene().sprites.emplace_back();
 			obj.ref = *re;
-		}
+		} break;
+		
+		case RT_ORIENTED_QUAD: {
+			auto & obj = hw_inst->frame().scene().oriented_quads.emplace_back();
+			obj.ref = *re;
+		} break;
+		
+		case RT_BEAM: {
+			// TODO
+		} break;
+		
+		case RT_ELECTRICITY: {
+			// TODO
+		} break;
+		
+		case RT_LINE: {
+			// TODO
+		} break;
+	
+		case RT_ORIENTEDLINE: {
+			// TODO
+		} break;
+		
+		case RT_SABER_GLOW: {
+			// TODO
+		} break;
+		
+		case RT_CYLINDER: {
+			// TODO
+		} break;
+		
+		case RT_PORTALSURFACE: {
+			// TODO????
+		} break;
 	}
 }
 
-void RE_AddMiniRefEntityToScene (const miniRefEntity_t *re) {
-	// TODO -- USED BY FX SYSTEM
+void RE_AddMiniRefEntityToScene (miniRefEntity_t const * ref) {
+	if (!ref) return;
+	refEntity_t temp {};
+	memcpy(&temp, ref, sizeof(*ref));
+	RE_AddRefEntityToScene(&temp);
 }
 
 void RE_AddPolyToScene (qhandle_t hShader , int numVerts, const polyVert_t *verts, int num) {
@@ -228,6 +266,7 @@ void RE_AddAdditiveLightToScene (const vec3_t org, float intensity, float r, flo
 void RE_RenderScene (const refdef_t *fd) {
 	hw_inst->frame().scene().ref = *fd;
 	
+	/*
 	if (!(fd->rdflags & RDF_NOWORLDMODEL))
 		for (size_t i = 0; i < 512; i++) {
 			auto & obj = hw_inst->frame().scene().sprites.emplace_back();
@@ -235,6 +274,7 @@ void RE_RenderScene (const refdef_t *fd) {
 			VectorSet(obj.ref.origin, Q_flrand(-512, 512), Q_flrand(-512, 512), Q_flrand(-512, 512));
 			obj.ref.radius = 10;
 		}
+	*/
 	
 	hw_inst->frame().new_scene();
 }
