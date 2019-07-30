@@ -819,7 +819,7 @@ static inline float Q_fractional(float v) {
 static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
 	switch (func) {
 		case q3stage::gen_func::sine:
-			return base + std::sin((in + phase) * frequency * qm::pi * 2) * amplitude;
+			return base + std::sin(in * frequency * qm::pi * 2 + phase * qm::pi * 2) * amplitude;
 		case q3stage::gen_func::square:
 			return base + (Q_fractional((in + phase) * frequency) > 0.5f ? 1.0f : -1.0f) * amplitude;
 		case q3stage::gen_func::triangle:
