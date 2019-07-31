@@ -589,6 +589,7 @@ void programs::q3main::rgbgen(q3stage::gen_type gen) {
 			m_data->m_genrgb = 0;
 			break;
 		case q3stage::gen_type::diffuse_lighting:
+		case q3stage::gen_type::diffuse_lighting_entity:
 			m_data->m_genrgb = 1;
 			break;
 		case q3stage::gen_type::specular_lighting:
@@ -604,6 +605,7 @@ void programs::q3main::alphagen(q3stage::gen_type gen) {
 			m_data->m_genalpha = 0;
 			break;
 		case q3stage::gen_type::diffuse_lighting:
+		case q3stage::gen_type::diffuse_lighting_entity:
 			m_data->m_genalpha = 1;
 			break;
 		case q3stage::gen_type::specular_lighting:

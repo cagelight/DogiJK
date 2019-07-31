@@ -433,7 +433,7 @@ void q3world::load_surfaces(int32_t idx) {
 		lightstylesidx_t lm_styles;
 		memcpy(lm_styles.data(), surfi.lightmapStyles, 4);
 		
-		surfo.shader = hw_inst->shaders.reg(m_shaders[surfi.shaderNum].shader, true, true);
+		surfo.shader = hw_inst->shaders.reg(m_shaders[surfi.shaderNum].shader, true, default_shader_mode::lightmap);
 		
 		bool vertex_lit = false;
 		

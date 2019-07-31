@@ -156,7 +156,7 @@ static bool setup_skin( q3skin & q3s, char const * path, bool server )
 
 		Q_strncpyz( surf.name, surfName, sizeof( surf.name ) );
 		
-		surf.shader = hw_inst->shaders.reg(token, true);
+		surf.shader = hw_inst->shaders.reg(token, true, default_shader_mode::diffuse);
 		
 		q3s.lookup[surfName] = std::move(surf);
 		q3s.skin.numSurfaces++;

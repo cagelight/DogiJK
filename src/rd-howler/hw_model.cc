@@ -432,7 +432,7 @@ void q3basemodel::load_mdxm(bool server) {
 		if ( !strcmp( &surfi->name[strlen(surfi->name) - 4], "_off") ) 
 			surfi->name[strlen(surfi->name) - 4] = 0; //remove "_off" from name
 		if (surfi->shader[0]) {
-			surfi->shaderIndex = hw_inst->shaders.reg(surfi->shader)->index;
+			surfi->shaderIndex = hw_inst->shaders.reg(surfi->shader, true, default_shader_mode::diffuse)->index;
 		}
 		surfi = (mdxmSurfHierarchy_t *)( (byte *)surfi + (size_t)( &((mdxmSurfHierarchy_t *)0)->childIndexes[ surfi->numChildren ] ));
 	}
@@ -481,7 +481,7 @@ void q3basemodel::load_md3(int32_t lod) {
 		
 		md3Shader_t * shader = (md3Shader_t *) ((byte *)surf + surf->ofsShaders);
 		for (j = 0; j < surf->numShaders; j++) {
-			shader->shaderIndex = hw_inst->shaders.reg(shader->name, true)->index;
+			shader->shaderIndex = hw_inst->shaders.reg(shader->name, true, default_shader_mode::diffuse)->index;
 		}
 		
 		surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );

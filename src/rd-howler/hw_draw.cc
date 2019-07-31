@@ -165,8 +165,8 @@ void instance::end_frame(float time) {
 						testlawl[0][2], testlawl[1][2], testlawl[2][2],
 					};
 					draw.itm = trans3;
-					
 					draw.m = obj.model_matrix;
+					draw.shader_color = convert_4u8(obj.ref.shaderRGBA);
 					
 					draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
 				}
@@ -268,6 +268,7 @@ void instance::end_frame(float time) {
 					q3drawmesh draw {mesh.second, model_matrix * vp};
 					draw.weights = std::move(bone_array);
 					draw.m = model_matrix * v;
+					draw.shader_color = convert_4u8(obj.ref.shaderRGBA);
 					
 					if (shader->gridlit)
 						draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);

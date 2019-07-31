@@ -79,6 +79,12 @@ namespace howler {
 	
 	static_assert(sizeof(gridlighting_t) == 12 * sizeof(float));
 	
+	enum struct default_shader_mode {
+		basic,
+		lightmap,
+		diffuse
+	};
+	
 //================================================================
 // MODELS & MESHES
 //================================================================
@@ -347,6 +353,7 @@ namespace howler {
 			vertex_exact,
 			wave,
 			diffuse_lighting,
+			diffuse_lighting_entity,
 			specular_lighting,
 			entity,
 		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
@@ -430,8 +437,8 @@ namespace howler {
 		bool mips = false;
 		bool valid = false;
 		
-		// used only for loading -- if shader does not exist and thus is generated from a texture, generate lightmap stage
-		bool lightmap_if_texture = false;
+		// used only for loading
+		default_shader_mode dmode = default_shader_mode::basic;
 		
 		static constexpr float q3sort_opaque = 3.0f;
 		static constexpr float q3sort_seethrough = 5.0f;
@@ -922,7 +929,7 @@ namespace howler {
 			shader_registry(shader_registry &&) = delete;
 			~shader_registry() = default;
 			
-			q3shader_ptr reg(istring const &, bool mipmaps = true, bool lightmap_if_texture = false);
+			q3shader_ptr reg(istring const &, bool mipmaps = true, default_shader_mode dmode = default_shader_mode::basic);
 			q3shader_ptr get(qhandle_t);
 			void process_waiting();
 		private:

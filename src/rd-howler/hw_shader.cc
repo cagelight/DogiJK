@@ -69,12 +69,12 @@ instance::shader_registry::shader_registry() {
 	ri.FS_FreeFileList(shfiles);
 }
 
-q3shader_ptr instance::shader_registry::reg(istring const & name_in, bool mipmaps, bool lightmap_if_texture) {
+q3shader_ptr instance::shader_registry::reg(istring const & name_in, bool mipmaps, default_shader_mode dmode) {
 	char name_stripped [MAX_QPATH];
 	COM_StripExtension(name_in.c_str(), name_stripped, MAX_QPATH);
 	istring name = name_stripped;
 	
-	if (!hw_inst->m_world || !hw_inst->m_world->m_lightmap) lightmap_if_texture = false;
+	if (dmode == default_shader_mode::lightmap && (!hw_inst->m_world || !hw_inst->m_world->m_lightmap)) dmode = default_shader_mode::basic;
 	
 	auto m = lookup.find(name);
 	if (m != lookup.end()) return m->second;
@@ -83,7 +83,7 @@ q3shader_ptr instance::shader_registry::reg(istring const & name_in, bool mipmap
 	shad->index = shaders.size() - 1;
 	shad->name = name;
 	shad->mips = mipmaps;
-	shad->lightmap_if_texture = lightmap_if_texture;
+	shad->dmode = dmode;
 	
 	lookup[name] = shad;
 	
@@ -125,7 +125,12 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 		return;
 	}
 	
-	{ // STAGE 0
+	if (shad->dmode == default_shader_mode::diffuse) {
+		q3stage & stg = shad->stages.emplace_back();
+		stg.diffuse = diffuse;
+		stg.gridlit = true;
+		stg.gen_rgb = q3stage::gen_type::diffuse_lighting;
+	} else {
 		q3stage & stg = shad->stages.emplace_back();
 		stg.diffuse = diffuse;
 		if (diffuse->is_transparent() && !shad->mips /* vanilla behavior, transparency only automatically used if no mipmaps */) {
@@ -135,14 +140,16 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 			stg.clamp = true;
 			shad->sort = q3shader::q3sort_basetrans;
 		}
+		if (shad->dmode == default_shader_mode::lightmap) { // STAGE 1
+			q3stage & stg = shad->stages.emplace_back();
+			stg.gen_map = q3stage::map_gen::lightmap;
+			stg.blend_src = GL_DST_COLOR;
+			stg.blend_dst = GL_ZERO;
+			stg.blend = true;
+		}
 	}
-	if (shad->lightmap_if_texture) { // STAGE 1
-		q3stage & stg = shad->stages.emplace_back();
-		stg.gen_map = q3stage::map_gen::lightmap;
-		stg.blend_src = GL_DST_COLOR;
-		stg.blend_dst = GL_ZERO;
-		stg.blend = true;
-	}
+	
+
 	shad->validate();
 }
 
@@ -515,6 +522,9 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			} else if (!Q_stricmp("lightingDiffuse", token)) {
 				gen = q3stage::gen_type::diffuse_lighting;
 				stg.gridlit = true;
+			} else if (!Q_stricmp("lightingDiffuseEntity", token)) {
+				gen = q3stage::gen_type::diffuse_lighting_entity;
+				stg.gridlit = true;
 			} else if (!Q_stricmp("lightingSpecular", token)) {
 				gen = q3stage::gen_type::specular_lighting;
 				stg.gridlit = true;
@@ -819,7 +829,7 @@ static inline float Q_fractional(float v) {
 static float gen_func_do(q3stage::gen_func func, float in, float base, float amplitude, float phase, float frequency) {
 	switch (func) {
 		case q3stage::gen_func::sine:
-			return base + std::sin(in * frequency * qm::pi * 2 + phase * qm::pi * 2) * amplitude;
+			return base + std::sin((in * frequency + phase) * qm::pi * 2) * amplitude;
 		case q3stage::gen_func::square:
 			return base + (Q_fractional((in + phase) * frequency) > 0.5f ? 1.0f : -1.0f) * amplitude;
 		case q3stage::gen_func::triangle:
@@ -873,6 +883,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	
 	qm::vec4_t q3color {1, 1, 1, 1};
 	switch (gen_rgb) {
+		case q3stage::gen_type::diffuse_lighting_entity:
 		case q3stage::gen_type::entity:
 			q3color[0] = parm.shader_color[0];
 			q3color[1] = parm.shader_color[1];
@@ -903,6 +914,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	}
 	
 	switch (gen_alpha) {
+		case q3stage::gen_type::diffuse_lighting_entity:
 		case q3stage::gen_type::entity:
 			q3color[3] = parm.shader_color[3];
 			break;
