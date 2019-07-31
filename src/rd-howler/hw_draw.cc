@@ -367,7 +367,7 @@ void instance::end_frame(float time) {
 					-(obj.ref.origin[2] + left[2] + up[2]),
 					  obj.ref.origin[0] + left[0] + up[0],
 				},
-				qm::vec2_t { 1, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+				qm::vec2_t { 0, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
 			};
 			
 			sprite_assembly::vertex_t v1 = {
@@ -394,7 +394,7 @@ void instance::end_frame(float time) {
 					-(obj.ref.origin[2] - left[2] - up[2]),
 					  obj.ref.origin[0] - left[0] - up[0],
 				},
-				qm::vec2_t { 0, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+				qm::vec2_t { 1, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
 			};
 			
 			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[hw_inst->shaders.get(obj.ref.customShader)];

@@ -1954,7 +1954,10 @@ void S_AddLoopingSound( int entityNum, const vec3_t origin, const vec3_t velocit
 	if ( !sfx->iSoundLengthInSamples ) {
 		Com_Error( ERR_DROP, "%s has length 0", sfx->sSoundName );
 	}
-	assert(!sfx->pMP3StreamHeader);
+	
+	// not sure why this is here
+	// assert(!sfx->pMP3StreamHeader);
+	
 	VectorCopy( origin, loopSounds[numLoopSounds].origin );
 	VectorCopy( velocity, loopSounds[numLoopSounds].velocity );
 	loopSounds[numLoopSounds].doppler = qfalse;
