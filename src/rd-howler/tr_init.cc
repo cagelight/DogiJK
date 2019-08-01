@@ -196,13 +196,9 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 			
 		} break;
 		
-		case RT_SPRITE: {
-			auto & obj = hw_inst->frame().scene().sprites.emplace_back();
-			obj.ref = *re;
-		} break;
-		
+		case RT_SPRITE: 
 		case RT_ORIENTED_QUAD: {
-			auto & obj = hw_inst->frame().scene().oriented_quads.emplace_back();
+			auto & obj = hw_inst->frame().scene().sprites.emplace_back();
 			obj.ref = *re;
 		} break;
 		

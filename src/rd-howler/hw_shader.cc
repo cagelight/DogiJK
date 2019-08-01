@@ -330,18 +330,26 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 			mips = false;
 			goto next;
 		} else if (!Q_stricmp(token, "cull")) {
-			token = COM_ParseExt(&p, qtrue);
+			token = COM_ParseExt(&p, qfalse);
 			cull = parse_cull(name.c_str(), token);
 			goto next;
 		} else if ( !Q_stricmp(token, "polygonOffset" )) {
 			polygon_offset = true;
 			goto next;
 		} else if (!Q_stricmp(token, "sort")) {
-			token = COM_ParseExt(&p, qtrue);
+			token = COM_ParseExt(&p, qfalse);
 			sort = parse_sort(token);
 			goto next;
 		} else if (!Q_stricmp(token, "notc")) {
 			// IGNORED
+			goto next;
+		} else if (!Q_stricmp(token, "surfaceParm")) {
+			token = COM_ParseExt(&p, qfalse);
+			if (!Q_stricmp(token, "nodraw")) {
+				nodraw = true;
+			} else {
+				Com_Printf(S_COLOR_YELLOW "ERROR: shader (\"%s\") has unknown/invalid surfaceParm (\"%s\").\n", name.c_str(), token);
+			}
 			goto next;
 		} else if ( !Q_stricmp( token, "skyparms" ) ) {
 			
@@ -406,7 +414,9 @@ void q3shader::validate() {
 	}
 	
 	if (!sort) {
-		if (opaque)
+		if (polygon_offset)
+			sort = q3sort_decal;
+		else if (opaque)
 			sort = q3sort_opaque;
 		else
 			sort = depthwrite ? q3sort_seethrough : q3sort_basetrans;

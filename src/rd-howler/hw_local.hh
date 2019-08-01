@@ -441,6 +441,7 @@ namespace howler {
 		default_shader_mode dmode = default_shader_mode::basic;
 		
 		static constexpr float q3sort_opaque = 3.0f;
+		static constexpr float q3sort_decal = 4.0f;
 		static constexpr float q3sort_seethrough = 5.0f;
 		static constexpr float q3sort_basetrans = 14.0f;
 		
@@ -451,6 +452,7 @@ namespace howler {
 		bool gridlit = false;
 		
 		// properties
+		bool nodraw = false;
 		bool polygon_offset = false;
 		float sort = 0;
 		std::vector<q3stage> stages;
@@ -625,7 +627,6 @@ namespace howler {
 		std::vector<cmd3d::ghoul2_object> ghoul2_objects;
 		
 		std::vector<cmd3d::sprite> sprites;
-		std::vector<cmd3d::sprite> oriented_quads;
 	};
 	
 	struct q3frame {

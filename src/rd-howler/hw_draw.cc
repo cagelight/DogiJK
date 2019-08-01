@@ -406,78 +406,6 @@ void instance::end_frame(float time) {
 			sasm.emplace_back(v3);
 		}
 		
-		/*
-		for (auto const & obj : scene.oriented_quads) {
-			
-			qm::vec3_t left = axis_left, up = axis_up;
-			
-			if (obj.ref.rotation) {
-				left *= obj.ref.radius;
-				up *= obj.ref.radius;
-			} else {
-				float ang = qm::deg2rad(obj.ref.rotation);
-				float s = std::sin(ang);
-				float c = std::cos(ang);
-				
-				left *= obj.ref.radius * c;
-				up *= obj.ref.radius * c;
-				
-				VectorMA(left.ptr(), -s * obj.ref.radius, axis_up.ptr(), left.ptr());
-				VectorMA(up.ptr(), s * obj.ref.radius, axis_left.ptr(), up.ptr());
-			}
-			
-			qm::vec3_t normal = {
-				axis_forward[1],
-				-axis_forward[2], 
-				axis_forward[0]
-			};
-			
-			sprite_assembly::vertex_t v0 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] + left[1] + up[1], 
-					-(obj.ref.origin[2] + left[2] + up[2]),
-					  obj.ref.origin[0] + left[0] + up[0],
-				},
-				qm::vec2_t { 1, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
-			};
-			
-			sprite_assembly::vertex_t v1 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] - left[1] + up[1], 
-					-(obj.ref.origin[2] - left[2] + up[2]),
-					  obj.ref.origin[0] - left[0] + up[0],
-				},
-				qm::vec2_t { 1, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
-			};
-			
-			sprite_assembly::vertex_t v2 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] + left[1] - up[1], 
-					-(obj.ref.origin[2] + left[2] - up[2]),
-					  obj.ref.origin[0] + left[0] - up[0],
-				},
-				qm::vec2_t { 0, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
-			};
-			
-			sprite_assembly::vertex_t v3 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] - left[1] - up[1], 
-					-(obj.ref.origin[2] - left[2] - up[2]),
-					  obj.ref.origin[0] - left[0] - up[0],
-				},
-				qm::vec2_t { 0, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
-			};
-			
-			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[hw_inst->shaders.get(obj.ref.customShader)];
-			sasm.emplace_back(v0);
-			sasm.emplace_back(v1);
-			sasm.emplace_back(v2);
-			sasm.emplace_back(v2);
-			sasm.emplace_back(v1);
-			sasm.emplace_back(v3);
-		}
-		*/
-		
 		for (auto & [shad, verts] : sprites_verticies) {
 			q3drawmesh sprite_draw {std::make_shared<sprite_assembly>(verts.data(), verts.size()), vp};
 			sprite_draw.vertex_color_override = true;
@@ -574,6 +502,7 @@ void instance::end_frame(float time) {
 		q3stage::setup_draw_parameters_t params {};
 		
 		for (q3drawset const & draw : draw_set) {
+			if (draw.shader->nodraw) continue;
 			draw.shader->setup_draw();
 			for (auto const & stg : draw.shader->stages)
 				for (auto const & mesh : draw.meshes) {
