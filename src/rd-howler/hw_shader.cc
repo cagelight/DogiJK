@@ -348,7 +348,7 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 			if (!Q_stricmp(token, "nodraw")) {
 				nodraw = true;
 			} else {
-				Com_Printf(S_COLOR_YELLOW "ERROR: shader (\"%s\") has unknown/invalid surfaceParm (\"%s\").\n", name.c_str(), token);
+				//Com_Printf(S_COLOR_YELLOW "ERROR: shader (\"%s\") has unknown/invalid surfaceParm (\"%s\").\n", name.c_str(), token);
 			}
 			goto next;
 		} else if ( !Q_stricmp( token, "skyparms" ) ) {

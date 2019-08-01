@@ -242,9 +242,6 @@ static std::string generate_vertex_shader() {
 		
 		if (alphagen == 2 && mapgen != 2) {
 			/*
-			mat3 itm2 = transpose(inverse(mat3(m)));
-			vec3 calcnorm = normalize(itm2 * normal);
-			
 			float dir_frac = 2 * dot(calcnorm, grid_direction.xyz);
 			vec3 reflected = calcnorm * dir_frac - grid_direction.xyz;
 			vec3 viewer = view_origin - (m * vec4(vert, 1)).xyz;

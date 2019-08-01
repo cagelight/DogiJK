@@ -470,6 +470,7 @@ void instance::end_frame(float time) {
 			// draw skyboxes on correct stencil
 			stencil_id = 1;
 			for (auto const & sbp : skyboxes) {
+				if (!sbp.first->sky_parms->sides[0]) continue; // skybox has no textures
 				gl::stencil_func(GL_EQUAL, stencil_id);
 				gl::stencil_op(GL_KEEP, GL_KEEP, GL_KEEP);
 				for (auto i = 0; i < 6; i++)
@@ -497,7 +498,7 @@ void instance::end_frame(float time) {
 		q3mainprog->bind();
 		q3mainprog->lightstyles(lightstyles);
 		
-		if (m_world) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
+		if (m_world && m_world->m_lightmap) m_world->m_lightmap->bind(BINDING_LIGHTMAP);
 		
 		q3stage::setup_draw_parameters_t params {};
 		
