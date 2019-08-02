@@ -31,8 +31,6 @@ struct q3drawmesh {
 	
 	q3mesh_ptr mesh;
 	
-	
-	
 	qm::mat4_t mvp = qm::mat4_t::identity();
 	qm::mat3_t itm = qm::mat3_t::identity();;
 	qm::mat4_t m = qm::mat4_t::identity();;

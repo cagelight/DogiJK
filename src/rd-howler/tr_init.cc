@@ -240,7 +240,7 @@ void RE_AddMiniRefEntityToScene (miniRefEntity_t const * ref) {
 }
 
 void RE_AddPolyToScene (qhandle_t hShader , int numVerts, const polyVert_t *verts, int num) {
-	// NOT IMPLEMENTED -- NOTHING USES THIS
+	
 }
 
 void RE_AddDecalToScene (qhandle_t shader, const vec3_t origin, const vec3_t dir, float orientation, float r, float g, float b, float a, qboolean alphaFade, float radius, qboolean temporary) {

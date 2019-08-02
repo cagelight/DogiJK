@@ -396,7 +396,6 @@ static constexpr qm::vec4_t conv_color(byte const * arr) {
 // ----
 
 static constexpr uint8_t conv_lm_mode(int32_t lm_idx) {
-	return 1;
 	if (lm_idx >= 0) return LIGHTMAP_MODE_MAP;
 	if (lm_idx == LIGHTMAP_BY_VERTEX) return LIGHTMAP_MODE_VERTEX;
 	if (lm_idx == LIGHTMAP_WHITEIMAGE) return LIGHTMAP_MODE_WHITEIMAGE;
@@ -430,12 +429,17 @@ void q3world::load_surfaces(int32_t idx) {
 		
 		surfo.info = &surfi;
 		
+		surfo.shader = hw_inst->shaders.reg(m_shaders[surfi.shaderNum].shader, true, default_shader_mode::lightmap);
+		if (surfo.shader->nodraw) continue;
+		
 		lightstylesidx_t lm_styles;
 		memcpy(lm_styles.data(), surfi.lightmapStyles, 4);
 		
-		surfo.shader = hw_inst->shaders.reg(m_shaders[surfi.shaderNum].shader, true, default_shader_mode::lightmap);
-		
-		bool vertex_lit = false;
+		enum struct lmode_e {
+			none,
+			map,
+			vertex
+		} lmode = lmode_e::none;
 		
 		switch (surfi.surfaceType) {
 			default: break;
@@ -443,24 +447,30 @@ void q3world::load_surfaces(int32_t idx) {
 			// BRUSH AND TRIANGLE SOUP
 			//================================
 			case MST_TRIANGLE_SOUP:
-				vertex_lit = true;
+				lmode = lmode_e::vertex;
 				[[fallthrough]];
 			case MST_PLANAR: {
 				
 				mapVert_t const * surf_verts = dvert + surfi.firstVert;
 				int32_t const * surf_indicies = dindx + surfi.firstIndex;
 				
-				if (conv_lm_mode(surfi.lightmapNum[0]) == LIGHTMAP_MODE_VERTEX)
-					vertex_lit = true;
+				if (lmode == lmode_e::none) {
+					switch(conv_lm_mode(surfi.lightmapNum[0])) {
+						case LIGHTMAP_MODE_NONE: break;
+						case LIGHTMAP_MODE_VERTEX: lmode = lmode_e::vertex; break;
+						default:
+						case LIGHTMAP_MODE_MAP: lmode = lmode_e::map; break;
+					}
+				}
 				
 				lightstylesidx_t styles {
-					vertex_lit ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
-					vertex_lit ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
-					vertex_lit ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
-					vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
 				};
 				
-				if (vertex_lit) {
+				if (lmode == lmode_e::vertex) {
 					q3worldmesh_vertexlit_proto & proto = surfo.proto.emplace<q3worldmesh_vertexlit_proto>();
 					for (int32_t i = 0; i < surfi.numVerts; i ++) {
 						proto.verticies.emplace_back( q3worldmesh_vertexlit::vertex_t {
@@ -492,7 +502,7 @@ void q3world::load_surfaces(int32_t idx) {
 						proto.indicies.push_back(surf_indicies[i]);
 					}
 					
-				} else {
+				} else if (lmode == lmode_e::map) {
 					q3worldmesh_maplit_proto & proto = surfo.proto.emplace<q3worldmesh_maplit_proto>();
 					for (int32_t i = 0; i < surfi.numVerts; i ++) {
 						proto.verticies.emplace_back( q3worldmesh_maplit::vertex_t {
@@ -550,16 +560,22 @@ void q3world::load_surfaces(int32_t idx) {
 				surf.width = surfi.patchWidth;
 				surf.height = surfi.patchHeight;
 				
-				if (conv_lm_mode(surfi.lightmapNum[0]) == LIGHTMAP_MODE_VERTEX)
-					vertex_lit = true;
+				if (lmode == lmode_e::none) {
+					switch(conv_lm_mode(surfi.lightmapNum[0])) {
+						case LIGHTMAP_MODE_NONE: break;
+						case LIGHTMAP_MODE_VERTEX: lmode = lmode_e::vertex; break;
+						default:
+						case LIGHTMAP_MODE_MAP: lmode = lmode_e::map; break;
+					}
+				}
 				
-				surf.vertex_lit = vertex_lit;
+				surf.vertex_lit = lmode == lmode_e::vertex;
 				
 				surf.styles = lightstylesidx_t {
-					vertex_lit ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
-					vertex_lit ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
-					vertex_lit ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
-					vertex_lit ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[0] : surfi.lightmapStyles[0],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[1] : surfi.lightmapStyles[1],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[2] : surfi.lightmapStyles[2],
+					lmode == lmode_e::vertex ? surfi.vertexStyles[3] : surfi.lightmapStyles[3],
 				};
 				
 				for (int32_t i = 0; i < num_points; i ++) {
