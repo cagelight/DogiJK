@@ -203,7 +203,8 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 		} break;
 		
 		case RT_BEAM: {
-			// TODO
+			auto & obj = hw_inst->frame().scene().beams.emplace_back();
+			obj.ref = *re;
 		} break;
 		
 		case RT_ELECTRICITY: {

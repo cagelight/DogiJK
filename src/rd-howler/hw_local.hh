@@ -627,6 +627,7 @@ namespace howler {
 		std::vector<cmd3d::ghoul2_object> ghoul2_objects;
 		
 		std::vector<cmd3d::sprite> sprites;
+		std::vector<cmd3d::sprite> beams;
 	};
 	
 	struct q3frame {

@@ -43,8 +43,9 @@ struct q3drawmesh {
 struct q3drawset {
 	q3shader_ptr shader;
 	std::vector<q3drawmesh> meshes;
+	float sort_offset = 0; // using this for particles
 	
-	q3drawset() = delete;
+	q3drawset() = default;
 	q3drawset(q3shader_ptr const & shader, std::vector<q3drawmesh> && meshes) : shader(shader), meshes(std::move(meshes)) {}
 	q3drawset(q3drawset const &) = delete;
 	q3drawset(q3drawset &&) = default;
@@ -54,7 +55,7 @@ struct q3drawset {
 	
 	static inline bool compare(q3drawset & A, q3drawset & B) {	
 		
-		switch (compare3(A.shader->sort, B.shader->sort)) {
+		switch (compare3(A.shader->sort + A.sort_offset, B.shader->sort + B.sort_offset)) {
 			case -1: return true;
 			case 1: return false;
 			case 0: break;
@@ -116,7 +117,11 @@ void instance::end_frame(float time) {
 		
 		qm::mat4_t sbvp = r * qm::mat4_t::perspective(qm::deg2rad(scene.ref.fov_y), scene.ref.width, scene.ref.height, 0.125, 8);
 		
+		//================================================================
+		// DRAW TRACKING DECLARATIONS
+		//================================================================
 		std::unordered_map<q3shader_ptr, std::vector<q3drawmesh>> draw_map;
+		std::vector<q3drawset> additonal_draws;
 		
 		//================================================================
 		// WORLD -- WORLD MESHES
@@ -334,6 +339,10 @@ void instance::end_frame(float time) {
 		
 		std::unordered_map<q3shader_ptr, std::vector<sprite_assembly::vertex_t>> sprites_verticies;
 		
+		//================
+		// SPRITES & ORIENTED QUADS
+		//================
+		
 		for (auto const & obj : scene.sprites) {
 			
 			qm::vec3_t left = axis_left, up = axis_up;
@@ -404,11 +413,25 @@ void instance::end_frame(float time) {
 			sasm.emplace_back(v3);
 		}
 		
+		//================
+		// BEAMS
+		//================
+		
+		for (auto const & obj : scene.beams) {
+			qm::vec3_t origin = obj.ref.origin, old_origin = obj.ref.oldorigin;
+			qm::vec3_t dir = old_origin - origin;
+			qm::vec3_t dirn = dir.normalized();
+		}
+		
 		for (auto & [shad, verts] : sprites_verticies) {
 			q3drawmesh sprite_draw {std::make_shared<sprite_assembly>(verts.data(), verts.size()), vp};
 			sprite_draw.vertex_color_override = true;
 			if (debug_enabled) debug_meshes.emplace_back(sprite_draw);
-			draw_map[shad].emplace_back(std::move(sprite_draw));
+			
+			q3drawset & set = additonal_draws.emplace_back();
+			set.sort_offset = 0.1f;
+			set.shader = shad;
+			set.meshes.emplace_back(std::move(sprite_draw));
 		}
 		
 		//================================================================
@@ -416,7 +439,9 @@ void instance::end_frame(float time) {
 		std::vector<std::pair<q3shader_ptr, std::vector<q3drawmesh>>> skyboxes;
 		
 		std::vector<q3drawset> draw_set;
+		
 		for (auto & [shader, meshes] : draw_map) {
+			if (shader && shader->nodraw) continue;
 			if (shader && shader->sky_parms) {
 				skyboxes.emplace_back(shader, std::move(meshes));
 				continue;
@@ -425,6 +450,12 @@ void instance::end_frame(float time) {
 				(shader && shader->valid) ? shader : shaders.get(0),
 				std::move(meshes)
 			);
+		}
+		
+		for (auto & draw : additonal_draws) {
+			if (!draw.shader || !draw.shader->valid) draw.shader = shaders.get(0);
+			if (draw.shader->nodraw) continue;
+			draw_set.emplace_back(std::move(draw));
 		}
 		
 		std::sort(draw_set.begin(), draw_set.end(), q3drawset::compare);

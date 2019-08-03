@@ -218,9 +218,9 @@ static std::string generate_vertex_shader() {
 			f_uv = uv;
 		else if (tcgen == 1) { // environment
 			vec3 dir = normalize(view_origin - (m * vec4(vert, 1)).xyz);
-			float d = dot(normal, dir);
-			f_uv.x = 0.5 + (normal.y * 2 * d - dir.y) * 0.5;
-			f_uv.y = 0.5 - (normal.z * 2 * d - dir.z) * 0.5;
+			float d = dot(calcnorm, dir);
+			f_uv.x = 0.5 + (calcnorm.y * 2 * d - dir.y) * 0.5;
+			f_uv.y = 0.5 - (calcnorm.z * 2 * d - dir.z) * 0.5;
 		}
 		else if (tcgen == 2 && lm_mode != 2) { // lightmap
 			f_uv = lm_color2_uv01.xy;
