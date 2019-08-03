@@ -44,6 +44,7 @@ struct q3drawset {
 	q3shader_ptr shader;
 	std::vector<q3drawmesh> meshes;
 	float sort_offset = 0; // using this for particles
+	float relative_depth = 0;
 	
 	q3drawset() = default;
 	q3drawset(q3shader_ptr const & shader, std::vector<q3drawmesh> && meshes) : shader(shader), meshes(std::move(meshes)) {}
@@ -67,7 +68,13 @@ struct q3drawset {
 			case 0: break;
 		}
 		
-		return A.shader.get() > B.shader.get();
+		switch (compare3(A.relative_depth, B.relative_depth)) {
+			case -1: return false;
+			case 1: return true;
+			case 0: break;
+		}
+		
+		return A.shader->index < B.shader->index;
 	}
 };
 
