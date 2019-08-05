@@ -400,15 +400,19 @@ argv(0) god
 ==================
 */
 void Cmd_God_f( gentity_t *ent ) {
-	char *msg = NULL;
-
-	ent->flags ^= FL_GODMODE;
-	if ( !(ent->flags & FL_GODMODE) )
-		msg = "godmode OFF";
-	else
-		msg = "godmode ON";
-
-	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+	
+	if ( trap->Argc() == 1 ) {
+		ent->flags ^= FL_GODMODE;
+	} else {
+		char buf [MAX_STRING_CHARS];
+		trap->Argv(1, buf, sizeof(buf));
+		if (!strtol(buf, nullptr, 10))
+			ent->flags &= ~FL_GODMODE;
+		else
+			ent->flags |= FL_GODMODE;
+	}
+	
+	trap->SendServerCommand( ent-g_entities, va( "print \"Godmode %s\n\"", ent->flags & FL_GODMODE ? "ON" : "OFF" ) );
 }
 
 
@@ -422,15 +426,19 @@ argv(0) notarget
 ==================
 */
 void Cmd_Notarget_f( gentity_t *ent ) {
-	char *msg = NULL;
-
-	ent->flags ^= FL_NOTARGET;
-	if ( !(ent->flags & FL_NOTARGET) )
-		msg = "notarget OFF";
-	else
-		msg = "notarget ON";
-
-	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+	
+	if ( trap->Argc() == 1 ) {
+		ent->flags ^= FL_NOTARGET;
+	} else {
+		char buf [MAX_STRING_CHARS];
+		trap->Argv(1, buf, sizeof(buf));
+		if (!strtol(buf, nullptr, 10))
+			ent->flags &= ~FL_NOTARGET;
+		else
+			ent->flags |= FL_NOTARGET;
+	}
+	
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", ent->flags & FL_NOTARGET ? "notarget ON" : "notarget OFF" ) );
 }
 
 
@@ -442,15 +450,16 @@ argv(0) noclip
 ==================
 */
 void Cmd_Noclip_f( gentity_t *ent ) {
-	char *msg = NULL;
-
-	ent->client->noclip = !ent->client->noclip;
-	if ( !ent->client->noclip )
-		msg = "noclip OFF";
-	else
-		msg = "noclip ON";
-
-	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+	
+	if ( trap->Argc() == 1 ) {
+		ent->client->noclip = !ent->client->noclip;
+	} else {
+		char buf [MAX_STRING_CHARS];
+		trap->Argv(1, buf, sizeof(buf));
+		ent->client->noclip = strtol(buf, nullptr, 10);
+	}
+	
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", ent->client->noclip ? "noclip ON" : "noclip OFF" ) );
 }
 
 
@@ -3543,35 +3552,45 @@ static void Cmd_Qui_f( gentity_t * ent ) {
 	G_Kill( ent );
 }
 
-static void Cmd_wrist_f( gentity_t * ent ) {
+static void Cmd_Wrist_f( gentity_t * ent ) {
 	//     /wrist
 	G_Kill( ent );
 }
 
-static void Cmd_Kitty_f( gentity_t * ent ) {
-	//Turn the player invisible
-	char const * msg = nullptr;
-
-	ent->client->ps.eFlags ^= EF_NODRAW;
-	if ( !(ent->client->ps.eFlags & EF_NODRAW) )
-		msg = "You are no longer stealth like a kitty!";
-	else
-		msg = "You are stealth like a kitty!";
-
-	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+static void Cmd_Kitty_f( gentity_t * ent ) { //Turn the player invisible
+	
+	if ( trap->Argc() == 1 ) {
+		ent->client->ps.eFlags ^= EF_NODRAW;
+	} else {
+		char buf [MAX_STRING_CHARS];
+		trap->Argv(1, buf, sizeof(buf));
+		if (!strtol(buf, nullptr, 10))
+			ent->client->ps.eFlags &= ~EF_NODRAW;
+		else
+			ent->client->ps.eFlags |= EF_NODRAW;
+	}
+	
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", 
+		ent->client->ps.eFlags & EF_NODRAW ? "You are stealth like a kitty!" : "You are no longer stealth like a kitty!"
+	));
 }
 
 static void Cmd_Hercules_f( gentity_t *ent ) {
-	char const * msg = nullptr;
-	//This cheat disables knockback
-
-	ent->flags ^= FL_NO_KNOCKBACK;
-	if ( !(ent->flags & FL_NO_KNOCKBACK) )
-		msg = "You do not feel like Hercules any more!";
-	else
-		msg = "You feel strong like Hercules!";
-
-	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", msg ) );
+	
+	if ( trap->Argc() == 1 ) {
+		ent->flags ^= FL_NO_KNOCKBACK;
+	} else {
+		char buf [MAX_STRING_CHARS];
+		trap->Argv(1, buf, sizeof(buf));
+		if (!strtol(buf, nullptr, 10))
+			ent->flags &= ~FL_NO_KNOCKBACK;
+		else
+			ent->flags |= FL_NO_KNOCKBACK;
+	}
+	
+	trap->SendServerCommand( ent-g_entities, va( "print \"%s\n\"", 
+		ent->flags & FL_NO_KNOCKBACK ? "You feel strong like Hercules!" : "You do not feel like Hercules any more!"
+	));
 }
 
 // ================================================================
@@ -3989,7 +4008,7 @@ command_t commands[] = {
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },
-	{ "wrist",				Cmd_wrist_f,				CMD_ALIVE|CMD_NOINTERMISSION },
+	{ "wrist",				Cmd_Wrist_f,				CMD_ALIVE|CMD_NOINTERMISSION },
 };
 static const size_t numCommands = ARRAY_LEN( commands );
 

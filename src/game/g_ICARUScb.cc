@@ -2533,7 +2533,10 @@ static void Q3_SetHealth( int entID, int data )
 			return;
 		}
 
-		ent->flags &= ~FL_GODMODE;
+		if ( ent->flags & FL_GODMODE ) {
+			return;
+		}
+		
 		ent->client->ps.stats[STAT_HEALTH] = ent->health = -999;
 		player_die (ent, ent, ent, 100000, MOD_FALLING);
 	}

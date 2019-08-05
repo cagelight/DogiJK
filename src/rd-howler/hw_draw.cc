@@ -78,6 +78,57 @@ struct q3drawset {
 	}
 };
 
+struct sprite_assembly : public q3mesh_basic {
+	
+	struct vertex_t {
+		qm::vec3_t vert;
+		qm::vec2_t uv;
+		qm::vec3_t normal;
+		qm::vec4_t color;
+	};
+	
+	sprite_assembly(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
+		
+		static constexpr uint_fast16_t offsetof_verts = 0;
+		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
+		static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
+		static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
+		static constexpr uint_fast16_t offsetof_norm = offsetof_uv + sizeof_uv;
+		static constexpr uint_fast16_t sizeof_norm = sizeof(vertex_t::normal);
+		static constexpr uint_fast16_t offsetof_color = offsetof_norm + sizeof_norm;
+		static constexpr uint_fast16_t sizeof_color = sizeof(vertex_t::color);
+		static constexpr uint_fast16_t sizeof_all = offsetof_color + sizeof_color;
+		static_assert(sizeof_all == sizeof(vertex_t));
+		
+		m_size = num;
+		glCreateBuffers(1, &m_vbo);
+		glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
+		
+		glVertexArrayVertexBuffer(m_handle, 0, m_vbo, 0, sizeof_all);
+		
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_NORMAL);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_COLOR0);
+		
+		glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_NORMAL, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_COLOR0, 0);
+		
+		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, sizeof_verts / 4, GL_FLOAT, GL_FALSE, offsetof_verts);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, sizeof_uv / 4, GL_FLOAT, GL_FALSE, offsetof_uv);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_NORMAL, sizeof_norm / 4, GL_FLOAT, GL_FALSE, offsetof_norm);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_COLOR0, sizeof_color / 4, GL_FLOAT, GL_FALSE, offsetof_color);
+	}
+	
+	~sprite_assembly() {
+		glDeleteBuffers(1, &m_vbo);
+	}
+private:
+	GLuint m_vbo;
+};
+
 static constexpr qm::vec4_t convert_4u8(byte const * RGBA) {
 	return qm::vec4_t {
 		RGBA[0] / 255.0f,
@@ -107,9 +158,9 @@ void instance::end_frame(float time) {
 		
 		if (!scene.finalized) continue;
 		
-		qm::vec3_t axis_forward = scene.ref.viewaxis[0];
-		qm::vec3_t axis_up = scene.ref.viewaxis[2];
-		qm::vec3_t axis_left = scene.ref.viewaxis[1];
+		qm::vec3_t const axis_forward = {scene.ref.viewaxis[0][1], -scene.ref.viewaxis[0][2], scene.ref.viewaxis[0][0]};
+		qm::vec3_t const axis_up = {scene.ref.viewaxis[2][1], -scene.ref.viewaxis[2][2], scene.ref.viewaxis[2][0]};
+		qm::vec3_t const axis_left = {scene.ref.viewaxis[1][1], -scene.ref.viewaxis[1][2], scene.ref.viewaxis[1][0]};
 		
 		qm::vec3_t view_origin {scene.ref.vieworg[1], -scene.ref.vieworg[2], scene.ref.vieworg[0]};
 		
@@ -128,15 +179,83 @@ void instance::end_frame(float time) {
 		// DRAW TRACKING DECLARATIONS
 		//================================================================
 		std::unordered_map<q3shader_ptr, std::vector<q3drawmesh>> draw_map;
+		std::unordered_map<q3shader_ptr, std::vector<sprite_assembly::vertex_t>> sprites_verticies;
 		std::vector<q3drawset> additonal_draws;
+		
+		//================================================================
+		// UNIVERSAL SPRITE FUNCTION
+		//================================================================
+		auto do_sprite = [&](qm::vec3_t const & origin, float radius, float rotation, q3shader_ptr shader, qm::vec4_t const & shader_color){
+			qm::vec3_t left = axis_left, up = axis_up;
+			if (!rotation) {
+				left *= radius;
+				up *= radius;
+			} else {
+				float ang = qm::deg2rad(rotation);
+				float s = std::sin(ang);
+				float c = std::cos(ang);
+				
+				left *= radius * c;
+				up *= radius * c;
+				
+				VectorMA(left.ptr(), -s * radius, axis_up.ptr(), left.ptr());
+				VectorMA(up.ptr(), s * radius, axis_left.ptr(), up.ptr());
+			}
+			
+			sprite_assembly::vertex_t v0 = {
+				qm::vec3_t { 
+					origin[0] + left[0] + up[0], 
+					origin[1] + left[1] + up[1],
+					origin[2] + left[2] + up[2],
+				},
+				qm::vec2_t { 0, 0 }, axis_forward, shader_color
+			};
+			
+			sprite_assembly::vertex_t v1 = {
+				qm::vec3_t { 
+					origin[0] - left[0] + up[0], 
+					origin[1] - left[1] + up[1],
+					origin[2] - left[2] + up[2],
+				},
+				qm::vec2_t { 1, 0 }, axis_forward, shader_color
+			};
+			
+			sprite_assembly::vertex_t v2 = {
+				qm::vec3_t { 
+					origin[0] + left[0] - up[0], 
+					origin[1] + left[1] - up[1],
+					origin[2] + left[2] - up[2],
+				},
+				qm::vec2_t { 0, 1 }, axis_forward, shader_color
+			};
+			
+			sprite_assembly::vertex_t v3 = {
+				qm::vec3_t { 
+					origin[0] - left[0] - up[0], 
+					origin[1] - left[1] - up[1],
+					origin[2] - left[2] - up[2],
+				},
+				qm::vec2_t { 1, 1 }, axis_forward, shader_color
+			};
+			
+			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[shader];
+			sasm.emplace_back(v0);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v3);
+		};
 		
 		//================================================================
 		// WORLD -- WORLD MESHES
 		//================================================================
 		
 		if (!(scene.ref.rdflags & RDF_NOWORLDMODEL) && m_world) {
+			q3world::q3world_draw const & wdraw = m_world->get_vis_model(scene.ref);
+			
 			qm::mat4_t m = qm::mat4_t::scale(1, -1, 1);
-			for (auto const & dmesh : m_world->get_vis_model(scene.ref)->meshes) {
+			for (auto const & dmesh : wdraw.model->meshes) {
 				qm::mat4_t mvp = m * vp;
 				q3drawmesh draw {dmesh.second, mvp};
 				draw.m = qm::mat4_t::identity();
@@ -146,6 +265,9 @@ void instance::end_frame(float time) {
 				if (!dmesh.second) continue;
 				if (debug_enabled) debug_meshes.emplace_back(draw);
 				draw_map[dmesh.first].emplace_back(draw);
+			}
+			for (auto const & [shad, flares] : wdraw.flares) {
+				for (auto const & flare : flares) do_sprite(flare.origin, 30, 0, shad, qm::vec4_t { flare.color, 1 });
 			}
 		}
 		
@@ -293,122 +415,114 @@ void instance::end_frame(float time) {
 		// PRIMITIVE -- SPRITES AND OTHER PRIMITIVE RENDERABLES
 		//================================================================
 		
-		struct sprite_assembly : public q3mesh_basic {
-			
-			struct vertex_t {
-				qm::vec3_t vert;
-				qm::vec2_t uv;
-				qm::vec3_t normal;
-				qm::vec4_t color;
-			};
-			
-			sprite_assembly(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
-				
-				static constexpr uint_fast16_t offsetof_verts = 0;
-				static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
-				static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
-				static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
-				static constexpr uint_fast16_t offsetof_norm = offsetof_uv + sizeof_uv;
-				static constexpr uint_fast16_t sizeof_norm = sizeof(vertex_t::normal);
-				static constexpr uint_fast16_t offsetof_color = offsetof_norm + sizeof_norm;
-				static constexpr uint_fast16_t sizeof_color = sizeof(vertex_t::color);
-				static constexpr uint_fast16_t sizeof_all = offsetof_color + sizeof_color;
-				static_assert(sizeof_all == sizeof(vertex_t));
-				
-				m_size = num;
-				glCreateBuffers(1, &m_vbo);
-				glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
-				
-				glVertexArrayVertexBuffer(m_handle, 0, m_vbo, 0, sizeof_all);
-				
-				glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
-				glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
-				glEnableVertexArrayAttrib(m_handle, LAYOUT_NORMAL);
-				glEnableVertexArrayAttrib(m_handle, LAYOUT_COLOR0);
-				
-				glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
-				glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
-				glVertexArrayAttribBinding(m_handle, LAYOUT_NORMAL, 0);
-				glVertexArrayAttribBinding(m_handle, LAYOUT_COLOR0, 0);
-				
-				glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, sizeof_verts / 4, GL_FLOAT, GL_FALSE, offsetof_verts);
-				glVertexArrayAttribFormat(m_handle, LAYOUT_UV, sizeof_uv / 4, GL_FLOAT, GL_FALSE, offsetof_uv);
-				glVertexArrayAttribFormat(m_handle, LAYOUT_NORMAL, sizeof_norm / 4, GL_FLOAT, GL_FALSE, offsetof_norm);
-				glVertexArrayAttribFormat(m_handle, LAYOUT_COLOR0, sizeof_color / 4, GL_FLOAT, GL_FALSE, offsetof_color);
-			}
-			
-			~sprite_assembly() {
-				glDeleteBuffers(1, &m_vbo);
-			}
-		private:
-			GLuint m_vbo;
-		};
-		
-		std::unordered_map<q3shader_ptr, std::vector<sprite_assembly::vertex_t>> sprites_verticies;
-		
 		//================
 		// SPRITES & ORIENTED QUADS
 		//================
 		
 		for (auto const & obj : scene.sprites) {
+			do_sprite(
+				{obj.ref.origin[1], -obj.ref.origin[2], obj.ref.origin[0]}, 
+				obj.ref.radius, 
+				obj.ref.rotation, 
+				hw_inst->shaders.get(obj.ref.customShader), 
+				convert_4u8(obj.ref.shaderRGBA)
+			);
+		}
+		
+		//================
+		// BEAMS
+		//================
+		
+		for (auto const & obj : scene.beams) {
+			// what even is a beam?
+			/*
+			qm::vec3_t origin = obj.ref.origin, old_origin = obj.ref.oldorigin;
+			qm::vec3_t dir = old_origin - origin;
+			qm::vec3_t dirn = dir;
+			if (!dirn.normalize()) continue;
 			
-			qm::vec3_t left = axis_left, up = axis_up;
+			qm::vec3_t perpvec;
+			PerpendicularVector(perpvec.ptr(), dirn.ptr());
+			perpvec *= 4;
 			
-			if (!obj.ref.rotation) {
-				left *= obj.ref.radius;
-				up *= obj.ref.radius;
-			} else {
-				float ang = qm::deg2rad(obj.ref.rotation);
-				float s = std::sin(ang);
-				float c = std::cos(ang);
-				
-				left *= obj.ref.radius * c;
-				up *= obj.ref.radius * c;
-				
-				VectorMA(left.ptr(), -s * obj.ref.radius, axis_up.ptr(), left.ptr());
-				VectorMA(up.ptr(), s * obj.ref.radius, axis_left.ptr(), up.ptr());
-			}
+			*/
+		}
+		
+		//================
+		// LINES
+		//================
+		
+		for (auto const & obj : scene.lines) {
+			qm::vec3_t start = {obj.ref.origin[1], -obj.ref.origin[2], obj.ref.origin[0]};
+			qm::vec3_t end = {obj.ref.oldorigin[1], -obj.ref.oldorigin[2], obj.ref.oldorigin[0]};
 			
-			qm::vec3_t normal = {
-				axis_forward[1],
-				-axis_forward[2], 
-				axis_forward[0]
-			};
+			qm::vec3_t right = qm::vec3_t::cross(start - view_origin, end - view_origin).normalized();
+			qm::vec3_t xyz;
 			
+			VectorMA(start.ptr(), obj.ref.radius, right.ptr(), xyz.ptr());
 			sprite_assembly::vertex_t v0 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] + left[1] + up[1], 
-					-(obj.ref.origin[2] + left[2] + up[2]),
-					  obj.ref.origin[0] + left[0] + up[0],
-				},
-				qm::vec2_t { 0, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+				xyz,
+				qm::vec2_t { 0, 0 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
 			};
 			
+			VectorMA(start.ptr(), -obj.ref.radius, right.ptr(), xyz.ptr());
 			sprite_assembly::vertex_t v1 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] - left[1] + up[1], 
-					-(obj.ref.origin[2] - left[2] + up[2]),
-					  obj.ref.origin[0] - left[0] + up[0],
-				},
-				qm::vec2_t { 1, 0 }, normal, convert_4u8(obj.ref.shaderRGBA)
+				xyz,
+				qm::vec2_t { 1, 0 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
 			};
 			
+			VectorMA(end.ptr(), obj.ref.radius, right.ptr(), xyz.ptr());
 			sprite_assembly::vertex_t v2 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] + left[1] - up[1], 
-					-(obj.ref.origin[2] + left[2] - up[2]),
-					  obj.ref.origin[0] + left[0] - up[0],
-				},
-				qm::vec2_t { 0, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+				xyz,
+				qm::vec2_t { 0, 1 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
 			};
 			
+			VectorMA(end.ptr(), -obj.ref.radius, right.ptr(), xyz.ptr());
 			sprite_assembly::vertex_t v3 = {
-				qm::vec3_t { 
-					  obj.ref.origin[1] - left[1] - up[1], 
-					-(obj.ref.origin[2] - left[2] - up[2]),
-					  obj.ref.origin[0] - left[0] - up[0],
-				},
-				qm::vec2_t { 1, 1 }, normal, convert_4u8(obj.ref.shaderRGBA)
+				xyz,
+				qm::vec2_t { 1, 1 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[hw_inst->shaders.get(obj.ref.customShader)];
+			sasm.emplace_back(v0);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v2);
+			sasm.emplace_back(v1);
+			sasm.emplace_back(v3);
+		}
+		
+		for (auto const & obj : scene.oriented_lines) {
+			qm::vec3_t start = {obj.ref.origin[1], -obj.ref.origin[2], obj.ref.origin[0]};
+			qm::vec3_t end = {obj.ref.oldorigin[1], -obj.ref.oldorigin[2], obj.ref.oldorigin[0]};
+			
+			qm::vec3_t right = {obj.ref.axis[2][1], -obj.ref.axis[2][2], obj.ref.axis[2][0]};
+			right = -right;
+			right.normalize();
+			qm::vec3_t xyz;
+			
+			VectorMA(start.ptr(), obj.ref.radius, right.ptr(), xyz.ptr());
+			sprite_assembly::vertex_t v0 = {
+				xyz,
+				qm::vec2_t { 0, 0 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			VectorMA(start.ptr(), -obj.ref.radius, right.ptr(), xyz.ptr());
+			sprite_assembly::vertex_t v1 = {
+				xyz,
+				qm::vec2_t { 1, 0 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			VectorMA(end.ptr(), obj.ref.radius, right.ptr(), xyz.ptr());
+			sprite_assembly::vertex_t v2 = {
+				xyz,
+				qm::vec2_t { 0, 1 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
+			};
+			
+			VectorMA(end.ptr(), -obj.ref.radius, right.ptr(), xyz.ptr());
+			sprite_assembly::vertex_t v3 = {
+				xyz,
+				qm::vec2_t { 1, 1 }, qm::vec3_t { 0, 1, 0 }, convert_4u8(obj.ref.shaderRGBA)
 			};
 			
 			std::vector<sprite_assembly::vertex_t> & sasm = sprites_verticies[hw_inst->shaders.get(obj.ref.customShader)];
@@ -421,14 +535,27 @@ void instance::end_frame(float time) {
 		}
 		
 		//================
-		// BEAMS
+		// SABER GLOW
 		//================
 		
-		for (auto const & obj : scene.beams) {
-			qm::vec3_t origin = obj.ref.origin, old_origin = obj.ref.oldorigin;
-			qm::vec3_t dir = old_origin - origin;
-			qm::vec3_t dirn = dir.normalized();
+		for (auto const & obj : scene.saber_glow) {
+			
+			qm::vec3_t origin = {obj.ref.origin[1], -obj.ref.origin[2], obj.ref.origin[0]};
+			qm::vec3_t axis = {obj.ref.axis[0][1], -obj.ref.axis[0][2], obj.ref.axis[0][0]};
+			auto shader = hw_inst->shaders.get(obj.ref.customShader);
+			auto color = convert_4u8(obj.ref.shaderRGBA);
+			float radius = obj.ref.radius;
+			
+			for (float i = obj.ref.saberLength; i > 0; i -= radius * 0.65f) {
+				qm::vec3_t end;
+				VectorMA(origin.ptr(), i, axis.ptr(), end.ptr());
+				do_sprite(end, radius, 0, shader, color);
+				radius += 0.017f;
+			}
+			do_sprite(origin, Q_flrand(5.5f, 5.75f), 0, shader, color);
 		}
+		
+		//================
 		
 		for (auto & [shad, verts] : sprites_verticies) {
 			q3drawmesh sprite_draw {std::make_shared<sprite_assembly>(verts.data(), verts.size()), vp};

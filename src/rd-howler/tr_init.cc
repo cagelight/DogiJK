@@ -212,15 +212,18 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 		} break;
 		
 		case RT_LINE: {
-			// TODO
+			auto & obj = hw_inst->frame().scene().lines.emplace_back();
+			obj.ref = *re;
 		} break;
 	
 		case RT_ORIENTEDLINE: {
-			// TODO
+			auto & obj = hw_inst->frame().scene().oriented_lines.emplace_back();
+			obj.ref = *re;
 		} break;
 		
 		case RT_SABER_GLOW: {
-			// TODO
+			auto & obj = hw_inst->frame().scene().saber_glow.emplace_back();
+			obj.ref = *re;
 		} break;
 		
 		case RT_CYLINDER: {

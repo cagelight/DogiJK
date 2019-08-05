@@ -94,7 +94,7 @@ void q3world::load(char const * name) {
 // RENDERABLE MODEL CALCULATION
 //================================================================
 
-q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
+q3world::q3world_draw const & q3world::get_vis_model(refdef_t const & ref) {
 	
 	std::array<byte, 32> areamask;
 	memcpy(areamask.data(), ref.areamask, 32);
@@ -154,6 +154,7 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 		}
 	}
 	
+	q3world_draw & world_draw = std::get<1>(*m_vis_cache.emplace(m_vis_cache.begin(), cluster, q3world_draw {make_q3model(), {}}, areamask));
 	std::unordered_map<q3shader_ptr, q3worldmesh_maplit_proto> buckets_maplit;
 	std::unordered_map<q3shader_ptr, q3worldmesh_vertexlit_proto> buckets_vertlit;
 	
@@ -167,10 +168,13 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 				q3worldmesh_vertexlit_proto & sub = buckets_vertlit[surf->shader];
 				sub.append_indicies(proto);
 			},
+			[&](q3worldmesh_flare const & flare) {
+				world_draw.flares[surf->shader].push_back(flare);
+			}
 		}, surf->proto);
 	}
 	
-	q3model_ptr & model = std::get<1>(*m_vis_cache.emplace(m_vis_cache.begin(), cluster, make_q3model(), areamask));
+	q3model_ptr & model = world_draw.model;
 	
 	for (auto & [shader, proto] : buckets_maplit) {
 		auto rend = std::make_shared<q3worldrendermesh>();
@@ -186,7 +190,7 @@ q3model_ptr q3world::get_vis_model(refdef_t const & ref) {
 		model->meshes.emplace_back(shader, rend);
 	}
 	
-	return model;
+	return world_draw;
 }
 
 q3world::q3worldnode const * q3world::find_leaf(qm::vec3_t const & coords) {
@@ -231,6 +235,7 @@ void q3world::build_world_meshes() {
 	
 	// bucket them by shader and lighting type
 	for (q3worldsurface * surf : marked_surfaces) {
+		if (std::holds_alternative<q3worldmesh_flare>(surf->proto)) continue;
 		assert(surf->info->numIndexes % 3 == 0);
 		std::visit( lambda_visit {
 			[&](q3worldmesh_maplit_proto const & proto) {
@@ -241,6 +246,7 @@ void q3world::build_world_meshes() {
 				assert(proto.indicies.size() % 3 == 0);
 				buckets_vertlit[surf->shader].push_back(surf);
 			},
+			[&](q3worldmesh_flare const & flare) { assert(0); }
 		}, surf->proto);
 	}
 	
@@ -601,6 +607,16 @@ void q3world::load_surfaces(int32_t idx) {
 				surfo.proto = surf.process();
 			} break;
 			//================================
+			// PATCH MESH SOUP
+			//================================
+			case MST_FLARE: {
+				surfo.proto = q3worldmesh_flare {
+					qm::vec3_t { surfi.lightmapOrigin[1], -surfi.lightmapOrigin[2], surfi.lightmapOrigin[0] },
+					qm::vec3_t { surfi.lightmapVecs[2][1], -surfi.lightmapVecs[2][2], surfi.lightmapVecs[2][0] },
+					surfi.lightmapVecs[0],
+				};
+			} break;
+			//================================
 		}
 	}
 }
@@ -727,6 +743,7 @@ void q3world::load_submodels() {
 		for (int32_t m = 0; m < bmod.surf_num; m++) {
 			q3worldsurface const & surf = m_surfaces[bmod.surf_idx + m];
 			
+			if (std::holds_alternative<q3worldmesh_flare>(surf.proto)) continue;
 			auto rend = std::make_shared<q3worldrendermesh>();
 			std::visit( lambda_visit {
 				[&](q3worldmesh_maplit_proto const & proto) { 
@@ -737,6 +754,7 @@ void q3world::load_submodels() {
 					rend->world_mesh = proto.generate(); 
 					rend->upload_indicies(proto.indicies.data(), proto.indicies.size());
 				},
+				[&](q3worldmesh_flare const & flare) { assert(0); }
 			}, surf.proto);
 			model.meshes.emplace_back(surf.shader, rend);
 		}

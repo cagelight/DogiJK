@@ -628,6 +628,9 @@ namespace howler {
 		
 		std::vector<cmd3d::sprite> sprites;
 		std::vector<cmd3d::sprite> beams;
+		std::vector<cmd3d::sprite> lines;
+		std::vector<cmd3d::sprite> oriented_lines;
+		std::vector<cmd3d::sprite> saber_glow;
 	};
 	
 	struct q3frame {
@@ -682,9 +685,20 @@ namespace howler {
 		q3world(q3world &&) = delete;
 		~q3world();
 		
+		struct q3worldmesh_flare {
+			qm::vec3_t origin;
+			qm::vec3_t normal;
+			qm::vec3_t color;
+		};
+		
+		struct q3world_draw {
+			q3model_ptr model;
+			std::unordered_map<q3shader_ptr, std::vector<q3worldmesh_flare>> flares;
+		};
+		
 		void load(char const * name);
 		qboolean get_entity_token(char * buffer, int size);
-		q3model_ptr get_vis_model(refdef_t const & ref);
+		q3world_draw const & get_vis_model(refdef_t const & ref);
 		gridlighting_t calculate_gridlight(qm::vec3_t const & pos);
 		
 	private:		
@@ -756,7 +770,7 @@ namespace howler {
 			inline void append_indicies(q3worldmesh_vertexlit_proto const & other) { indicies.insert(indicies.end(), other.indicies.begin(), other.indicies.end()); }
 		};
 		
-		using q3worldmesh_proto_variant = std::variant<q3worldmesh_maplit_proto, q3worldmesh_vertexlit_proto>;
+		using q3worldmesh_proto_variant = std::variant<q3worldmesh_maplit_proto, q3worldmesh_vertexlit_proto, q3worldmesh_flare>;
 		
 		//================================
 		// PATCH
@@ -865,7 +879,7 @@ namespace howler {
 		//----------------
 		
 		//std::unordered_map<int32_t, q3model_ptr> m_vis_cache;
-		using vis_cache_t = std::tuple<int32_t, q3model_ptr, std::array<byte, 32>>;
+		using vis_cache_t = std::tuple<int32_t, q3world_draw, std::array<byte, 32>>;
 		std::vector<vis_cache_t> m_vis_cache;
 		
 		int32_t m_lockpvs_cluster = -1;
