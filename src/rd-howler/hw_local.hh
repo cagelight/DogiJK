@@ -457,6 +457,12 @@ namespace howler {
 		float sort = 0;
 		std::vector<q3stage> stages;
 		
+		enum struct sprite_mode_t {
+			none,
+			sprite,
+			line
+		} sprite_mode = sprite_mode_t::none;
+		
 		enum struct cull_type {
 			front,
 			back,

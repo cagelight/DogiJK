@@ -351,6 +351,20 @@ bool q3shader::parse_shader(istring const & src, bool mips) {
 				//Com_Printf(S_COLOR_YELLOW "ERROR: shader (\"%s\") has unknown/invalid surfaceParm (\"%s\").\n", name.c_str(), token);
 			}
 			goto next;
+		} else if ( !Q_stricmp( token, "deformVertexes" ) || !Q_stricmp( token, "deform" ) ) {
+			
+			token = COM_ParseExt( &p, qfalse );
+			
+			if ( !Q_stricmp( token, "autosprite" ) ) {
+				sprite_mode = sprite_mode_t::sprite;
+				goto next;
+			}
+			
+			if ( !Q_stricmp( token, "autosprite2" ) ) {
+				sprite_mode = sprite_mode_t::line;
+				goto next;
+			}
+			
 		} else if ( !Q_stricmp( token, "skyparms" ) ) {
 			
 			static constexpr char const * suf[6] {"rt", "lf", "bk", "ft", "up", "dn"};
@@ -464,15 +478,37 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 				}
 			}
 			
-		/*} else if (!Q_stricmp("animmap", token) || !Q_stricmp("clampanimmap", token) || !Q_stricmp("oneshotanimmap", token)) {
+		} else if (!Q_stricmp("animmap", token) || !Q_stricmp("clampanimmap", token) || !Q_stricmp("oneshotanimmap", token)) {
 			
 			stg.clamp = !Q_stricmp("clampanimmap", token);
-			token = COM_ParseExt(&sptr, qfalse);
 			q3stage::diffuse_anim_ptr anim = std::make_shared<q3stage::diffuse_anim_t>();
+			
+			token = COM_ParseExt(&sptr, qfalse);
+			anim->speed = std::strtof(token, nullptr);
+			
+			while (true) {
+				token = COM_ParseExt(&sptr, qfalse);
+				if (!token[0]) break;
+				
+				q3texture_ptr tex = hw_inst->textures.reg(token, mips);
+				if (!tex) {
+					Com_Printf(S_COLOR_RED "ERROR: animated map for (\"%s\") has invalid frame (\"%s\"), could not find this image.\n", name.c_str(), token);
+					continue;
+				}
+				anim->maps.push_back(tex);
+				if (tex->is_transparent()) anim->is_transparent = true;
+			}
+			
+			if (!anim->maps.size()) {
+				Com_Printf(S_COLOR_RED "ERROR: shader stage for (\"%s\") has invalid animated map (\"%s\"), could not load any frames.\n", name.c_str(), token);
+				goto fail;
+			}
+			
+			stg.diffuse = anim;
 			
 		//================================
 			
-		*/} else if (!Q_stricmp("alphaFunc", token)) {
+		} else if (!Q_stricmp("alphaFunc", token)) {
 			
 			token = COM_ParseExt(&sptr, qfalse);
 			auto iter = alphafunc_map.find(token);
@@ -989,7 +1025,11 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 		} else
 			std::visit( lambda_visit {
 				[&](q3texture_ptr const & tex) { tex->bind(BINDING_DIFFUSE); },
-				[&](diffuse_anim_ptr const & anim) {  }
+				[&](diffuse_anim_ptr const & anim) {
+					uint_fast16_t index = std::floor(parm.time * anim->speed);
+					index %= anim->maps.size();
+					anim->maps[index]->bind(BINDING_DIFFUSE);
+				}
 			}, diffuse);
 	else
 		q3texture::unbind(BINDING_DIFFUSE);
