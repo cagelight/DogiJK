@@ -287,18 +287,24 @@ namespace howler {
 			float speed;
 			bool is_transparent = false;
 		};
+		struct diffuse_cinematic_t {
+			qhandle_t handle;
+		};
 		using diffuse_anim_ptr = std::shared_ptr<diffuse_anim_t>;
-		using diffuse_variant = std::variant<q3texture_ptr, diffuse_anim_ptr>;
+		using diffuse_variant = std::variant<q3texture_ptr, diffuse_anim_ptr, diffuse_cinematic_t>;
 		diffuse_variant diffuse;
 		
 		inline bool has_diffuse() const { return std::visit(lambda_visit{
 			[&](q3texture_ptr const & i)->bool{return i.operator bool();},
-			[&](diffuse_anim_ptr const & i)->bool{return i.operator bool();}}, diffuse);}
+			[&](diffuse_anim_ptr const & i)->bool{return i.operator bool();},
+			[&](diffuse_cinematic_t const & cin) -> bool { return true; }
+		}, diffuse);}
 		inline bool diffuse_has_transparency() const {
 			if (!has_diffuse()) return false;
 			return std::visit( lambda_visit {
 				[&](q3texture_ptr const & image) -> bool { return image->is_transparent(); },
-				[&](diffuse_anim_ptr const & image) -> bool { return image->is_transparent; }
+				[&](diffuse_anim_ptr const & image) -> bool { return image->is_transparent; },
+				[&](diffuse_cinematic_t const & cin) -> bool { return false; }
 			}, diffuse);
 		}
 		
@@ -427,6 +433,7 @@ namespace howler {
 			qm::vec3_t view_origin;
 			gridlighting_t const * gridlight;
 			bool vertex_color_override = false; // used by sprite assemblies
+			bool vertex_alpha_override = false; // used by map geometry like terrain
 		};
 		void setup_draw(setup_draw_parameters_t const &) const;
 	};
@@ -537,6 +544,7 @@ namespace howler {
 			void uvm(qm::mat3_t const &);
 			void color(qm::vec4_t const &);
 			void use_vertex_colors(bool const &);
+			void use_vertex_alpha(bool const &);
 			void turb(bool const &);
 			void turb_data(q3stage::tx_turb const &);
 			void lm_mode(GLuint const &);
@@ -1007,6 +1015,8 @@ namespace howler {
 		
 		inline q3frame & frame() { return *m_frame; }
 		inline qboolean world_get_entity_token(char * buffer, int size) { return m_world->get_entity_token(buffer, size); }
+		
+		std::vector<q3texture_ptr> cinematic_frames;
 		
 	private:
 		uint32_t width, height;

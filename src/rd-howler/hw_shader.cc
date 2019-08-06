@@ -506,6 +506,12 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			
 			stg.diffuse = anim;
 			
+		} else if (!Q_stricmp("videomap", token)) {
+			
+			token = COM_ParseExt(&sptr, qfalse);
+			q3stage::diffuse_cinematic_t & cin = stg.diffuse.emplace<q3stage::diffuse_cinematic_t>();
+			cin.handle = ri.CIN_PlayCinematic( token, 0, 0, 256, 256, (CIN_loop | CIN_silent | CIN_shader));
+			
 		//================================
 			
 		} else if (!Q_stricmp("alphaFunc", token)) {
@@ -641,8 +647,9 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			//TODO
 			
 		} else if (!Q_stricmp( token, "depthwrite" )) {
-			// TODO -- figure out why this is a stage property, it doesn't seem to make any sense
+			
 			stg.depthwrite = true;
+			
 		} else if (!Q_stricmp( token, "depthfunc" )) {
 			
 			static std::unordered_map<istring, GLenum> const depth_func_map {
@@ -926,6 +933,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	
 	float mult;
 	bool use_vertex_colors = false;
+	bool use_vertex_alpha = false;
 	
 	qm::vec4_t q3color {1, 1, 1, 1};
 	switch (gen_rgb) {
@@ -966,7 +974,10 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			break;
 		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
-			// TODO -- too niche for now
+			if (!hw_inst->m_ui_draw) {
+				use_vertex_alpha = true;
+				break;
+			} else [[fallthrough]];
 		case q3stage::gen_type::none:
 			q3color[3] = hw_inst->m_shader_color[3];
 			break;
@@ -1029,6 +1040,12 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 					uint_fast16_t index = std::floor(parm.time * anim->speed);
 					index %= anim->maps.size();
 					anim->maps[index]->bind(BINDING_DIFFUSE);
+				},
+				[&](diffuse_cinematic_t const & cin) {
+					ri.CIN_RunCinematic(cin.handle);
+					ri.CIN_UploadCinematic(cin.handle);
+					if (cin.handle >= hw_inst->cinematic_frames.size()) return;
+					hw_inst->cinematic_frames[cin.handle]->bind(BINDING_DIFFUSE);
 				}
 			}, diffuse);
 	else
@@ -1040,6 +1057,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->q3mainprog->uvm(uvm2);
 	hw_inst->q3mainprog->color(q3color);
 	hw_inst->q3mainprog->use_vertex_colors(parm.vertex_color_override || use_vertex_colors);
+	hw_inst->q3mainprog->use_vertex_alpha(parm.vertex_alpha_override || use_vertex_alpha);
 	hw_inst->q3mainprog->turb(turb);
 	hw_inst->q3mainprog->tcgen(gen_tc);
 	hw_inst->q3mainprog->mapgen((r_shownormals->integer && !parm.is_2d) ? map_gen::normals : gen_map);

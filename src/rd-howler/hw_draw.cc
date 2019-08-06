@@ -38,6 +38,7 @@ struct q3drawmesh {
 	std::vector<qm::mat4_t> weights;
 	gridlighting_t gridlight {};
 	bool vertex_color_override = false;
+	bool vertex_alpha_override = false;
 };
 
 struct q3drawset {
@@ -263,6 +264,7 @@ void instance::end_frame(float time) {
 					draw.gridlight = m_world->calculate_gridlight({0, 0, 0});
 				}
 				if (!dmesh.second) continue;
+				draw.vertex_alpha_override = true;
 				if (debug_enabled) debug_meshes.emplace_back(draw);
 				draw_map[dmesh.first].emplace_back(draw);
 			}
@@ -300,7 +302,8 @@ void instance::end_frame(float time) {
 					draw.m = obj.model_matrix;
 					draw.shader_color = convert_4u8(obj.ref.shaderRGBA);
 					
-					draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
+					if (mesh.first->gridlit && m_world)
+						draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
 				}
 				
 				if (debug_enabled) debug_meshes.emplace_back(draw);
@@ -402,7 +405,7 @@ void instance::end_frame(float time) {
 					draw.m = model_matrix * v;
 					draw.shader_color = convert_4u8(obj.ref.shaderRGBA);
 					
-					if (shader->gridlit)
+					if (shader->gridlit && m_world)
 						draw.gridlight = m_world->calculate_gridlight((obj.ref.renderfx & RF_LIGHTING_ORIGIN) ? obj.ref.lightingOrigin : obj.ref.origin);
 						
 					if (debug_enabled) debug_meshes.emplace_back(draw);
@@ -681,6 +684,7 @@ void instance::end_frame(float time) {
 					params.view_origin = view_origin;
 					params.gridlight = &mesh.gridlight;
 					params.vertex_color_override = mesh.vertex_color_override;
+					params.vertex_alpha_override = mesh.vertex_alpha_override;
 					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}

@@ -287,7 +287,7 @@ void RE_SetColor (const float *rgba) {
 
 void RE_StretchPic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, qhandle_t hShader) {
 	if (!hShader) return;
-	hw_inst->frame().ui_stretchpics.emplace_back( howler::cmd2d::stretchpic { x, y, w, h, s1 ,t1, s2, t2, hw_inst->shaders.get(hShader), ui_color });
+	hw_inst->frame().ui_stretchpics.emplace_back( howler::cmd2d::stretchpic { x, y, w, h, s1, t1, s2, t2, hw_inst->shaders.get(hShader), ui_color });
 }
 
 void RE_RotatePic (float x, float y, float w, float h, float s1, float t1, float s2, float t2, float a1, qhandle_t hShader) {
@@ -299,11 +299,21 @@ void RE_RotatePic2 (float x, float y, float w, float h, float s1, float t1, floa
 }
 
 void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *data, int client, qboolean dirty) {
-
+	printf("TEST RAW\n");
+	auto shad = howler::make_q3shader();
+	auto & stg = shad->stages.emplace_back();
+	auto tex = howler::make_q3texture(cols, rows);
+	tex->upload(cols, rows, data);
+	stg.diffuse = tex;
+	shad->validate();
+	hw_inst->frame().ui_stretchpics.emplace_back( howler::cmd2d::stretchpic { (float)x, (float)y, (float)w, (float)h, 0, 0, 1, 1, shad, ui_color });
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
-
+	if (client >= hw_inst->cinematic_frames.size()) hw_inst->cinematic_frames.resize(client + 1);
+	assert(hw_inst->cinematic_frames.size());
+	hw_inst->cinematic_frames[client] = howler::make_q3texture(cols, rows);
+	hw_inst->cinematic_frames[client]->upload(cols, rows, data);
 }
 
 void RE_BeginFrame (stereoFrame_t stereoFrame) {

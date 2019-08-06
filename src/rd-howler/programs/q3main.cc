@@ -41,6 +41,7 @@ static std::string generate_vertex_shader() {
 	
 	uniform vec3 view_origin;
 	uniform bool use_vertex_color;
+	uniform bool use_vertex_alpha;
 	uniform bool turb;
 	uniform vec4 turb_data;
 	uniform uint mapgen;
@@ -208,10 +209,12 @@ static std::string generate_vertex_shader() {
 					
 				} break;
 			}
-		} else if (use_vertex_color) {
-			vcolor = color0;
 		} else {
 			vcolor = vec4(1, 1, 1, 1);
+			if (use_vertex_color)
+				vcolor.xyz = color0.xyz;
+			if (use_vertex_alpha)
+				vcolor.w = color0.w;
 		}
 		
 		if (tcgen == 0)
@@ -361,6 +364,7 @@ struct programs::q3main::private_data {
 	uniform_mat3 m_uv = qm::mat3_t::identity();
 	uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
 	uniform_bool m_use_vertex_colors = false;
+	uniform_bool m_use_vertex_alpha = false;
 	uniform_bool m_turb = false;
 	uniform_vec4 m_turb_data = qm::vec4_t {0, 0, 0, 0};
 	uniform_uint m_lmmode = 0;
@@ -389,6 +393,7 @@ struct programs::q3main::private_data {
 		m_uv.reset();
 		m_color.reset();
 		m_use_vertex_colors.reset();
+		m_use_vertex_alpha.reset();
 		m_turb.reset();
 		m_turb_data.reset();
 		m_lmmode.reset();
@@ -408,6 +413,7 @@ struct programs::q3main::private_data {
 		m_uv.push();
 		m_color.push();
 		m_use_vertex_colors.push();
+		m_use_vertex_alpha.reset();
 		m_turb.push();
 		m_turb_data.push();
 		m_lmmode.push();
@@ -461,6 +467,8 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"q3color\"");
 	if (m_data->m_use_vertex_colors.set_location(get_location("use_vertex_color")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"use_vertex_color\"");
+	if (m_data->m_use_vertex_alpha.set_location(get_location("use_vertex_alpha")) == -1)
+		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"use_vertex_alpha\"");
 	if (m_data->m_turb.set_location(get_location("turb")) == -1)
 		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"turb\"");
 	if (m_data->m_turb_data.set_location(get_location("turb_data")) == -1)
@@ -548,6 +556,11 @@ void programs::q3main::color(qm::vec4_t const & v) {
 void programs::q3main::use_vertex_colors(bool const & v) {
 	m_data->m_use_vertex_colors = v;
 	if (is_bound()) m_data->m_use_vertex_colors.push();
+}
+
+void programs::q3main::use_vertex_alpha(bool const & v) {
+	m_data->m_use_vertex_alpha = v;
+	if (is_bound()) m_data->m_use_vertex_alpha.push();
 }
 
 void programs::q3main::turb(bool const & v) {
