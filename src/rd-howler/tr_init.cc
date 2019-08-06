@@ -314,6 +314,7 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 	assert(hw_inst->cinematic_frames.size());
 	hw_inst->cinematic_frames[client] = howler::make_q3texture(cols, rows);
 	hw_inst->cinematic_frames[client]->upload(cols, rows, data);
+	hw_inst->cinematic_frames[client]->generate_mipmaps();
 }
 
 void RE_BeginFrame (stereoFrame_t stereoFrame) {

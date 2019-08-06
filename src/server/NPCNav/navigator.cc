@@ -178,8 +178,6 @@ void CNode::AddEdge( int ID, int cost, int flags )
 	STL_INSERT( m_edges, edge );
 
 	m_numEdges++;
-
-	assert( m_numEdges < 9 );//8 is the max
 }
 
 /*

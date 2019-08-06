@@ -75,7 +75,7 @@ struct q3drawset {
 			case 0: break;
 		}
 		
-		return A.shader->index < B.shader->index;
+		return A.shader->index > B.shader->index;
 	}
 };
 
