@@ -977,6 +977,11 @@ gridlighting_t q3world::calculate_gridlight(qm::vec3_t const & pos) {
 	ret.direction = {direction[1], direction[2], direction[0]};
 	ret.direction.normalize();
 	
+	if (r_vanilla_gridlighting->integer)
+		ret.ambient += 0.125f; // vanilla ambient minimum
+	else
+		ret.ambient += 0.125f * ret.directed; // new ambient minimum calc
+	
 	return ret;
 }
 

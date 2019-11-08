@@ -3939,6 +3939,29 @@ static void Cmd_Prop_f( gentity_t * player ) {
 	}
 }
 
+// ================================================================
+// SURFACE TRACING COMMAND
+// ================================================================
+
+static void Cmd_TraceShader_f(gentity_t * player) {
+
+	vec3_t forward, right, up, muzzle, start, end;
+	AngleVectors( player->client->ps.viewangles, forward, right, up );
+	CalcMuzzlePoint( player, forward, right, up, muzzle );
+	VectorCopy( player->client->ps.origin, start );
+	start[2] += player->client->ps.viewheight;//By eyes
+	VectorMA( start, 1 << 17, forward, end );
+	
+	trace_t tr;
+	static constexpr int32_t surfmask = MASK_PLAYERSOLID | MASK_WATER;
+	trap->Trace( &tr, start, NULL, NULL, end, player - g_entities, surfmask, qfalse, 0, 0 );
+	if (tr.shaderNum >= 0) {
+		clipMap_t const * clip = reinterpret_cast<clipMap_t const *>(trap->CM_Get());
+		char const * shaderName = clip->shaders[tr.shaderNum].shader;
+		trap->SendServerCommand( player - g_entities, va("print \"shader name: %s\n\"", shaderName) );
+	}
+}
+
 /*
 =================
 ClientCommand
@@ -4005,6 +4028,7 @@ command_t commands[] = {
 	{ "t_use",				Cmd_TargetUse_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "tele",				Cmd_Tele_f,					CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "teles",				Cmd_Tele_f,					CMD_CHEAT|CMD_NOINTERMISSION },
+	{ "traceshader",		Cmd_TraceShader_f,			CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "voice_cmd",			Cmd_VoiceCommand_f,			CMD_NOINTERMISSION },
 	{ "vote",				Cmd_Vote_f,					CMD_NOINTERMISSION },
 	{ "where",				Cmd_Where_f,				CMD_NOINTERMISSION },

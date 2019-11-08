@@ -117,7 +117,6 @@ def build(bld):
 	clsv_files += bld.path.ant_glob('src/sys/con_log.cc')
 	clsv_files += bld.path.ant_glob('src/sys/sys_unix.cc')
 	clsv_files += bld.path.ant_glob('src/sys/con_tty.cc')
-	clsv_files += bld.path.ant_glob('src/ruby/*.cc')
 	
 	# SERVER
 	if build_server:

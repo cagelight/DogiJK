@@ -696,7 +696,6 @@ void q3stage::validate() {
 	
 	opaque = true;
 	
-	if (gen_alpha == q3stage::gen_type::constant && const_color[3] < 1) opaque = false;
 	if (blend) {
 		if (blend_dst == GL_ONE_MINUS_SRC_ALPHA && has_diffuse() && diffuse_has_transparency()) opaque = false;
 		else if (blend_dst != GL_ZERO) opaque = false;

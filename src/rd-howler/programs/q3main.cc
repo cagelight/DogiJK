@@ -237,7 +237,7 @@ static std::string generate_vertex_shader() {
 		}
 		
 		if (rgbgen == 1 && mapgen != 2) {
-			vcolor.xyz = grid_ambient.xyz + 0.125;
+			vcolor.xyz = grid_ambient.xyz;
 			float dir_frac = dot(calcnorm, grid_direction.xyz);
 			if (dir_frac < 0) dir_frac = 0;
 			vcolor.xyz += dir_frac * grid_directed.xyz;

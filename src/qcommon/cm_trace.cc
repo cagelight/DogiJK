@@ -611,6 +611,7 @@ void CM_TraceThroughBrush( traceWork_t *tw, trace_t &trace, cbrush_t *brush, boo
 			{
 				trace.fraction = tw->enterFrac;
 				trace.plane = *tw->clipplane;
+				trace.shaderNum = tw->leadside->shaderNum;
 				trace.surfaceFlags = cmg.shaders[tw->leadside->shaderNum].surfaceFlags;
 				trace.contents = brush->contents;
 			}

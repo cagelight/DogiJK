@@ -45,6 +45,9 @@ XCVAR_DEF( r_vis,						"1",				0,												"" )
 XCVAR_DEF( r_viscachesize,				"1",				CVAR_ARCHIVE,									"" )
 XCVAR_DEF( r_whiteimage,				"0",				0,												"" )
 
+// vanilla behavior toggles
+XCVAR_DEF( r_vanilla_gridlighting,		"0",				CVAR_ARCHIVE,									"" )
+
 #ifdef _DEBUG
 XCVAR_DEF( r_drawcalls,					"0",				0,												"" )
 #endif

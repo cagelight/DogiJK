@@ -4,9 +4,15 @@ This only compiles on Linux and that's unlikely to change any time soon.
 
 TODO:
 1. Make a new renderer from scratch.  
-	• Ghoul2 has been moved outside of the renderer so this should now be fairly easy  
-	• 2D and the majority of shaders are working
+	* Mostly working, just a few things left to do and iron out the occasional bug.
 2. Re-add the Bullet physics engine  
-	• Should be easy, I've done it before, albeit poorly.  
+	* Should be easy, I've done it before, albeit poorly.
+	* Basics are in, still much left to do.
 3. Add scripting engine  
-	• likely mruby  
+	* Why do all embeddable language frameworks suck
+	* Seriously there's not a single good one
+	* The only remotely well programmed one is LUA, and I hate LUA
+4. Implement navigation meshes
+	* Look into https://github.com/recastnavigation/recastnavigation
+	* Should be easy to generate for existing maps
+	* Should work for both bots and NPCs (mostly NPCs)

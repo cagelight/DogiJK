@@ -1745,7 +1745,7 @@ void G2_SetRagDoll(CGhoul2Info_v &ghoul2V,CRagDollParams *parms)
 			VectorClear(parms->pelvisAnglesOffset);
 			VectorClear(parms->pelvisPositionOffset);
 		}
-		// intentional lack of a break
+		[[fallthrough]];
 	case CRagDollParams::RP_SET_PELVIS_OFFSET:
 		if (index>=0&&index<(int)blist.size())
 		{

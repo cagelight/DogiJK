@@ -191,6 +191,7 @@ void RE_AddRefEntityToScene (const refEntity_t *re) {
 					re->shaderRGBA[2] / 255.0f,
 					re->shaderRGBA[3] / 255.0f,
 				};
+				
 				obj.model_matrix = axis_conv * origin_m;
 			}
 			
