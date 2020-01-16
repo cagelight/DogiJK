@@ -2639,6 +2639,7 @@ void CG_DrawActiveFrame( int serverTime, stereoFrame_t stereoView, qboolean demo
 		CG_AddPacketEntities(qfalse);			// adter calcViewValues, so predicted player state is correct
 		CG_AddMarks();
 		CG_AddLocalEntities();
+		CG_AddDebugEntities();
 	}
 	CG_AddViewWeapon( &cg.predictedPlayerState );
 

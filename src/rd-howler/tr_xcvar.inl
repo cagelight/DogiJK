@@ -36,20 +36,21 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 	#define XCVAR_DEF( name, defVal, flags, desc ) name = ri.Cvar_Get ( #name , defVal , flags , desc );
 #endif
 
-XCVAR_DEF( r_debug,						"0",				CVAR_ARCHIVE,									"" )
-XCVAR_DEF( r_lockpvs,					"0",				0,												"" )
-XCVAR_DEF( r_showedges,					"0",				CVAR_CHEAT,										"" )
-XCVAR_DEF( r_shownormals,				"0",				0,												"" )
-XCVAR_DEF( r_showtris,					"0",				CVAR_CHEAT,										"" )
-XCVAR_DEF( r_vis,						"1",				0,												"" )
-XCVAR_DEF( r_viscachesize,				"1",				CVAR_ARCHIVE,									"" )
-XCVAR_DEF( r_whiteimage,				"0",				0,												"" )
+XCVAR_DEF( r_debug,						"0",				CVAR_ARCHIVE,									"[DEBUG][binary]" )
+XCVAR_DEF( r_lockpvs,					"0",				0,												"[DEBUG][binary]" )
+XCVAR_DEF( r_patch_minsize,				"2",				CVAR_ARCHIVE,									"[VISUAL][float] Minimum size of a patch plane, lower is better." )
+XCVAR_DEF( r_showedges,					"0",				CVAR_CHEAT,										"[DEBUG][binary]" )
+XCVAR_DEF( r_shownormals,				"0",				0,												"[DEBUG][binary]" )
+XCVAR_DEF( r_showtris,					"0",				CVAR_CHEAT,										"[DEBUG][binary] Draw wireframes." )
+XCVAR_DEF( r_vis,						"1",				0,												"[DEBUG][binary] Toggle vis. [integer > 1] Show a specific vis index (index + 1)." )
+XCVAR_DEF( r_viscachesize,				"1",				CVAR_ARCHIVE,									"[PERF][integer] Number of Index Buffers to cache for vis." )
+XCVAR_DEF( r_whiteimage,				"0",				0,												"[DEBUG][binary]" )
 
 // vanilla behavior toggles
-XCVAR_DEF( r_vanilla_gridlighting,		"0",				CVAR_ARCHIVE,									"" )
+XCVAR_DEF( r_vanilla_gridlighting,		"0",				CVAR_ARCHIVE,									"[VISUAL][binary] Use similar grid lighting to rd-vanilla." )
 
 #ifdef _DEBUG
-XCVAR_DEF( r_drawcalls,					"0",				0,												"" )
+XCVAR_DEF( r_drawcalls,					"0",				0,												"[DEBUG][binary]" )
 #endif
 
 #undef XCVAR_DEF

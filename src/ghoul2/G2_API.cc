@@ -661,7 +661,7 @@ void RestoreGhoul2InfoArray()
 			return;
 		}
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 		size_t read =
 #endif
 			singleton->Deserialize ((const char *)data, size);
@@ -675,7 +675,7 @@ void SaveGhoul2InfoArray()
 {
 	size_t size = singleton->GetSerializedSize();
 	void *data = g2_ri.Z_Malloc (size, TAG_GHOUL2, qfalse, 4);
-#ifdef _DEBUG
+#ifndef NDEBUG
 	size_t written =
 #endif
 		singleton->Serialize ((char *)data);
@@ -1352,7 +1352,7 @@ qboolean G2API_GetBoneAnim(CGhoul2Info_v& ghoul2, int modelIndex, const char *bo
 		int aCurrentTime=G2API_GetTime(currentTime);
  		qboolean ret=G2_Get_Bone_Anim(ghlInfo, ghlInfo->mBlist, boneName, aCurrentTime, currentFrame,
 			startFrame, endFrame, flags, animSpeed, modelList, ghlInfo->mModelindex);
-#ifdef _DEBUG
+#ifndef NDEBUG
 		/*
 		assert(*endFrame>0);
 		assert(*endFrame<100000);
@@ -1397,7 +1397,7 @@ qboolean G2API_GetAnimRange(CGhoul2Info *ghlInfo, const char *boneName,	int *sta
 	if (G2_SetupModelPointers(ghlInfo))
 	{
  		qboolean ret=G2_Get_Bone_Anim_Range(ghlInfo, ghlInfo->mBlist, boneName, startFrame, endFrame);
-#ifdef _DEBUG
+#ifndef NDEBUG
 		assert(*endFrame>0);
 		assert(*endFrame<100000);
 		assert(*startFrame>=0);
@@ -1630,7 +1630,7 @@ qboolean G2API_RemoveBone(CGhoul2Info_v& ghoul2, int modelIndex, const char *bon
 }
 
 //rww - RAGDOLL_BEGIN
-#ifdef _DEBUG
+#ifndef NDEBUG
 extern int ragTraceTime;
 extern int ragSSCount;
 extern int ragTraceCount;
@@ -1641,7 +1641,7 @@ void G2API_AnimateG2ModelsRag(CGhoul2Info_v &ghoul2, int AcurrentTime,CRagDollUp
 	int model;
 	int currentTime=G2API_GetTime(AcurrentTime);
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 	ragTraceTime = 0;
 	ragSSCount = 0;
 	ragTraceCount = 0;
@@ -1655,7 +1655,7 @@ void G2API_AnimateG2ModelsRag(CGhoul2Info_v &ghoul2, int AcurrentTime,CRagDollUp
 			G2_Animate_Bone_List(ghoul2,currentTime,model,params);
 		}
 	}
-#ifdef _DEBUG
+#ifndef NDEBUG
 	/*
 	if (ragTraceTime)
 	{
@@ -2448,7 +2448,7 @@ int G2API_CopyGhoul2Instance(CGhoul2Info_v &g2From, CGhoul2Info_v &g2To, int mod
 	//G2ERROR(ghoul2From.IsValid(),"Invalid ghlInfo");
 	if (g2From.IsValid())
 	{
-#ifdef _DEBUG
+#ifndef NDEBUG
 		if (g2To.IsValid())
 		{
 			assert(!"Copying to a valid g2 instance?!");

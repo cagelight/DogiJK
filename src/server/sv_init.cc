@@ -28,6 +28,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/MiniHeap.hh"
 #include "qcommon/stringed_ingame.hh"
 #include "sv_gameapi.hh"
+#include "sys/sys_loadlib.hh"
+
+static void	*g2Lib = NULL;
 
 /*
 ===============
@@ -821,8 +824,15 @@ g2export_t * g2api = NULL;
 static void SV_InitRef( void ) {
 	static refimport_t ri;
 	refexport_t *ret;
+	char dllName [MAX_OSPATH];
 
 	Com_Printf( "----- Initializing Renderer ----\n" );
+
+	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, "ghoul2" );
+	g2Lib = Sys_LoadDll( dllName, qfalse );
+	if ( !g2Lib ) {
+		Com_Error( ERR_FATAL, "Failed to load ghoul2\n" );
+	}
 
 	memset( &ri, 0, sizeof( ri ) );
 
@@ -902,7 +912,10 @@ static void SV_InitRef( void ) {
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;
 	G2VertSpaceServer = &IHeapAllocator_singleton;
 	
-	g2api = G2_GetInterface();
+	typedef g2export_t *(*G2_GetInterface_f)();
+	G2_GetInterface_f g2gi = (G2_GetInterface_f)Sys_LoadFunction( g2Lib, "G2_GetInterface" );
+	assert(g2gi);
+	g2api = g2gi();
 	
 	ri.G2API_GetTime = g2api->G2API_GetTime;
 	ri.G2API_FindGoreRecord = g2api->G2API_FindGoreRecord;
@@ -922,9 +935,14 @@ static void SV_InitRef( void ) {
 	ri.G2_IsValid = g2api->G2_IsValid;
 	ri.G2_Size = g2api->G2_Size;
 	ri.G2_At = g2api->G2_At;
+	
+	ri.PD_Store = PD_Store;
+	ri.PD_Load = PD_Load;
 
 	ret = GetRefAPI( REF_API_VERSION, &ri );
-	G2_Init(&ri, ret);
+	typedef void(*G2_Init_f)(refimport_t * ri, refexport_t * re);
+	G2_Init_f g2init = (G2_Init_f)Sys_LoadFunction( g2Lib, "G2_Init" );
+	g2init(&ri, ret);
 
 //	Com_Printf( "-------------------------------\n");
 
@@ -1128,4 +1146,9 @@ Ghoul2 Insert Start
 	// disconnect any local clients
 	if( sv_killserver->integer != 2 )
 		CL_Disconnect( qfalse );
+	
+	if ( g2Lib != NULL ) {
+		Sys_UnloadDll (g2Lib);
+		g2Lib = NULL;
+	}
 }

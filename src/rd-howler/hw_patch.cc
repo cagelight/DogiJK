@@ -5,7 +5,7 @@ using namespace howler;
 struct q3world::q3patchsubdivider {
 	
 	using int_t = int_fast16_t;
-	static constexpr int_t MAX_GRID_SIZE = 65;
+	static constexpr int_t MAX_GRID_SIZE = 128 + 1;
 	
 	q3patchsubdivider(q3patchsurface const & parent) : parent(parent) {
 		memset(ctrl, 0, sizeof(ctrl));
@@ -106,7 +106,7 @@ void q3world::q3patchsubdivider::subdivide() {
 				continue;
 			}
 			
-			if ( len_max <= 4 /* TODO -- CVAR*/ ) {
+			if ( len_max <= r_patch_minsize->value ) {
 				errors[dir][x+1] = 1.0f / len_max;
 				continue;
 			}

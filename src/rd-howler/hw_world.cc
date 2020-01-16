@@ -30,21 +30,23 @@ struct q3world::q3worldrendermesh : public q3mesh {
 	}
 	
 	void bind() override {
+		if (!world_mesh) return;
 		world_mesh->bind();
 	}
 	
 	void draw() override {
+		if (!world_mesh) return;
 		world_mesh->bind();
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, idx_ary);
 		glDrawElements(GL_TRIANGLES, idx_num, GL_UNSIGNED_INT, nullptr);
 	}
 	
 	bool is_bound() const override {
-		return world_mesh->is_bound();
+		return world_mesh ? world_mesh->is_bound() : false;
 	}
 	
 	uniform_info_t const * uniform_info() const override { 
-		return world_mesh->uniform_info();
+		return world_mesh ? world_mesh->uniform_info() : nullptr;
 	}
 	
 };
@@ -160,6 +162,7 @@ q3world::q3world_draw const & q3world::get_vis_model(refdef_t const & ref) {
 	
 	for (q3worldsurface const * surf : marked_surfaces) {
 		std::visit( lambda_visit {
+			[&](std::monostate const &) {},
 			[&](q3worldmesh_maplit_proto const & proto) {
 				q3worldmesh_maplit_proto & sub = buckets_maplit[surf->shader];
 				sub.append_indicies(proto);
@@ -238,6 +241,7 @@ void q3world::build_world_meshes() {
 		if (std::holds_alternative<q3worldmesh_flare>(surf->proto)) continue;
 		assert(surf->info->numIndexes % 3 == 0);
 		std::visit( lambda_visit {
+			[&](std::monostate const &) {},
 			[&](q3worldmesh_maplit_proto const & proto) {
 				assert(proto.indicies.size() % 3 == 0);
 				buckets_maplit[surf->shader].push_back(surf);
@@ -409,6 +413,7 @@ static constexpr uint8_t conv_lm_mode(int32_t lm_idx) {
 }
 
 qm::vec2_t q3world::uv_for_lightmap(int32_t idx, qm::vec2_t uv_in) {
+	if (!m_lightmap_span) return {0, 0};
 	int32_t x = idx % m_lightmap_span;
 	int32_t y = idx / m_lightmap_span;
 	qm::vec2_t uv_base {static_cast<float>(x), static_cast<float>(y)};
@@ -436,7 +441,7 @@ void q3world::load_surfaces(int32_t idx) {
 		surfo.info = &surfi;
 		
 		surfo.shader = hw_inst->shaders.reg(m_shaders[surfi.shaderNum].shader, true, default_shader_mode::lightmap);
-		if (surfo.shader->nodraw) continue;
+		if (surfo.shader->nodraw || (m_shaders[surfi.shaderNum].surfaceFlags & SURF_NODRAW)) continue;
 		
 		lightstylesidx_t lm_styles;
 		memcpy(lm_styles.data(), surfi.lightmapStyles, 4);
@@ -746,6 +751,7 @@ void q3world::load_submodels() {
 			if (std::holds_alternative<q3worldmesh_flare>(surf.proto)) continue;
 			auto rend = std::make_shared<q3worldrendermesh>();
 			std::visit( lambda_visit {
+				[&](std::monostate const &) {},
 				[&](q3worldmesh_maplit_proto const & proto) { 
 					rend->world_mesh = proto.generate(); 
 					rend->upload_indicies(proto.indicies.data(), proto.indicies.size());
@@ -911,6 +917,7 @@ qboolean q3world::get_entity_token(char * buffer, int size) {
 
 gridlighting_t q3world::calculate_gridlight(qm::vec3_t const & pos) {
 	gridlighting_t ret {};
+	if (!m_lightmap) return ret;
 	
 	qm::vec3_t direction {0, 0, 0};
 	qm::vec3_t frac;

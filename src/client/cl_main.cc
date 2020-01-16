@@ -2393,7 +2393,8 @@ void CL_InitRef( void ) {
 		Com_Error( ERR_FATAL, "Failed to load renderer\n" );
 	}
 	
-	g2Lib = Sys_LoadDll( "ghoul2.so", qfalse );
+	Com_sprintf( dllName, sizeof( dllName ), "%s_" ARCH_STRING DLL_EXT, "ghoul2" );
+	g2Lib = Sys_LoadDll( dllName, qfalse );
 
 	if ( !g2Lib ) {
 		Com_Error( ERR_FATAL, "Failed to load ghoul2\n" );

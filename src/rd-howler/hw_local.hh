@@ -784,7 +784,7 @@ namespace howler {
 			inline void append_indicies(q3worldmesh_vertexlit_proto const & other) { indicies.insert(indicies.end(), other.indicies.begin(), other.indicies.end()); }
 		};
 		
-		using q3worldmesh_proto_variant = std::variant<q3worldmesh_maplit_proto, q3worldmesh_vertexlit_proto, q3worldmesh_flare>;
+		using q3worldmesh_proto_variant = std::variant<std::monostate, q3worldmesh_maplit_proto, q3worldmesh_vertexlit_proto, q3worldmesh_flare>;
 		
 		//================================
 		// PATCH

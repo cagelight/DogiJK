@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "game/bg_local.hh"
 #include "game/bg_saga.hh"
 #include "ui/ui_shared.hh"
+#include "nav/navmap.hh"
 
 /*
 =================
@@ -305,6 +306,11 @@ static void CG_ListVehicles() {
 	Com_Printf(msg.str().c_str());
 }
 
+static void CG_NavTest_f() {
+	NavMap nmap;
+	auto points = nmap.get_points();
+}
+
 typedef struct consoleCommand_s {
 	const char	*cmd;
 	void		(*func)(void);
@@ -327,6 +333,7 @@ static consoleCommand_t	commands[] = {
 	{ "listvehs",					CG_ListVehicles },
 	{ "loaddeferred",				CG_LoadDeferredPlayers },
 	{ "loadhud",					CG_LoadHud_f },
+	{ "nav",						CG_NavTest_f },
 	{ "nextframe",					CG_TestModelNextFrame_f },
 	{ "nextskin",					CG_TestModelNextSkin_f },
 	{ "prevframe",					CG_TestModelPrevFrame_f },

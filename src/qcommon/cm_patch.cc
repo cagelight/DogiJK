@@ -332,7 +332,8 @@ static void CM_SubdivideGridColumns( cGrid_t *grid ) {
 			// generate the subdivided points
 			CM_Subdivide( prev, mid, next, grid->points[i+1][j], grid->points[i+2][j], grid->points[i+3][j] );
 		}
-
+		
+		if (grid->width >= MAX_GRID_SIZE - 2) break;
 		grid->width += 2;
 
 		// the new aproximating point at i+1 may need to be removed

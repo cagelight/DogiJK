@@ -1988,6 +1988,10 @@ void CG_SiegeRoundOver(centity_t *ent, int won);
 void CG_SiegeObjectiveCompleted(centity_t *ent, int won, int objectivenum);
 
 
+//
+// cg_debug
+//
+void CG_AddDebugEntities();
 
 //===============================================
 
