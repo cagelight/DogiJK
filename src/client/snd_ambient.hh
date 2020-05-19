@@ -22,7 +22,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
-#include "qcommon/sstring.hh"	// #include <string>
+#include <string>
 #include <vector>
 #include <map>
 
@@ -103,7 +103,7 @@ protected:
 
 	int								m_numSets;
 	std::vector < ambientSet_t * >		*m_ambientSets;
-	std::map	< sstring_t, ambientSet_t * >	*m_setMap;
+	std::map	< std::string, ambientSet_t * >	*m_setMap;
 };
 
 // Prototypes

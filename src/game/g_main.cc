@@ -429,6 +429,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			SP_info_jedimaster_start( ent );
 		}
 	}
+	
+	g_loc_man = std::make_unique<LocationManager>();
 }
 
 
@@ -441,6 +443,9 @@ G_ShutdownGame
 void G_ShutdownGame( int restart ) {
 	int i = 0;
 	gentity_t *ent;
+	
+	g_loc_man->save();
+	g_loc_man.reset();
 
 //	trap->Print ("==== ShutdownGame ====\n");
 

@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "bg_saga.hh"
 #include "qcommon/q_shared.hh"
 
+#include <meadow/aeon.hh>
+
 typedef struct shaderRemap_s {
   char oldShader[MAX_QPATH];
   char newShader[MAX_QPATH];
@@ -2169,3 +2171,70 @@ float ShortestLineSegBewteen2LineSegs( vec3_t start1, vec3_t end1, vec3_t start2
 
 	return current_dist;
 }
+
+LocationManager::LocationManager()  {
+	fileHandle_t rfh = 0;
+	auto len = trap->FS_Open("saved_locations.json", &rfh, FS_READ);
+	if (rfh) {
+		std::string json;
+		json.resize(len);
+		trap->FS_Read(json.data(), len, rfh);
+		meadow::aeon aeon;
+		bool success = true;
+		try {
+			aeon = meadow::aeon::deserialize_json(json);
+		} catch (meadow::aeon::deserialize_exception const &) {
+			success = false;
+		}
+		if (success) for (auto const & kvp : aeon.map()) {
+			auto const & vdat = kvp.second.array();
+			auto & arys = m_locations[kvp.first];
+			arys[0][0] = vdat[0].floating();
+			arys[0][1] = vdat[1].floating();
+			arys[0][2] = vdat[2].floating();
+			arys[1][0] = vdat[3].floating();
+			arys[1][1] = vdat[4].floating();
+			arys[1][2] = vdat[5].floating();
+		}
+		trap->FS_Close(rfh);
+	}
+}
+	
+bool LocationManager::save() {
+	fileHandle_t sfh = 0;
+	trap->FS_Open("saved_locations.json", &sfh, FS_WRITE);
+	if (!sfh) return false;
+	
+	meadow::aeon aeon;
+	aeon.map();
+	for (auto const & kvp : m_locations) {
+		auto & loc = aeon[kvp.first].array();
+		loc.resize(6);
+		loc[0] = kvp.second[0][0];
+		loc[1] = kvp.second[0][1];
+		loc[2] = kvp.second[0][2];
+		loc[3] = kvp.second[1][0];
+		loc[4] = kvp.second[1][1];
+		loc[5] = kvp.second[1][2];
+	}
+	std::string json = aeon.serialize_json();
+	trap->FS_Write(json.data(), json.size(), sfh);
+	trap->FS_Close(sfh);
+	return true;
+}
+	
+bool LocationManager::get(char const * name, vec3_t & ori, vec3_t & ang) {
+	auto iter = m_locations.find(name);
+	if (iter == m_locations.end()) return false;
+	VectorCopy(iter->second[0], ori);
+	VectorCopy(iter->second[1], ang);
+	return true;
+}
+
+void LocationManager::set(char const * name, vec3_t const & ori, vec3_t const & ang) {
+	auto & vecs = m_locations[name];
+	VectorCopy(ori, vecs[0]);
+	VectorCopy(ang, vecs[1]);
+}
+
+std::unique_ptr<LocationManager> g_loc_man;

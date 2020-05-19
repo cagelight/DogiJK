@@ -1857,7 +1857,7 @@ void Cmd_Where_f( gentity_t *ent ) {
 	//JAC: This wasn't working for non-spectators since s.origin doesn't update for active players.
 	if(ent->client && ent->client->sess.sessionTeam != TEAM_SPECTATOR )
 	{//active players use currentOrigin
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", vtos( ent->r.currentOrigin ) ) );
+		trap->SendServerCommand( ent-g_entities, va("print \"%s %s\n\"", vtos( ent->r.currentOrigin ), vtos( ent->playerState->viewangles ) ) );
 	}
 	else
 	{
@@ -3374,6 +3374,18 @@ void Cmd_AddBot_f( gentity_t *ent ) {
 	trap->SendServerCommand( ent-g_entities, va( "print \"%s.\n\"", G_GetStringEdString( "MP_SVGAME", "ONLY_ADD_BOTS_AS_SERVER" ) ) );
 }
 
+void Cmd_Markpos_f( gentity_t *ent ) {
+	
+	if (trap->Argc() < 2) {
+		trap->SendServerCommand( ent-g_entities, "print \"Usage: markpos <position name>\n\"" );
+		return;
+	}
+	
+	char pos [MAX_STRING_CHARS];
+	trap->Argv(1, pos, MAX_STRING_CHARS);
+	g_loc_man->set(pos, ent->r.currentOrigin, ent->playerState->viewangles);
+}
+
 static void Cmd_Tele_f( gentity_t * ent ) {
 	
 	char cmd [MAX_STRING_CHARS];
@@ -3389,8 +3401,7 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 	
 	switch (trap->Argc()) {
 		case 1: {
-			trap->SendServerCommand( ent-g_entities, "print \"Usage 1: <player to>\nUsage 2: <player from> <player to>\nUsage 3: <X> <Y> <Z>\nUsage 4: <X> <Y> <Z> <PITCH> <YAW>\"" );
-			return;
+			trap->SendServerCommand( ent-g_entities, "print \"Usage 1: <player to>\nUsage 2: <player from> <player to>\nUsage 3: <X> <Y> <Z>\nUsage 4: <X> <Y> <Z> <PITCH> <YAW>\n\"" );
 		}
 		case 2: {
 			trap->Argv(1, player2token, MAX_NETNAME);
@@ -3401,6 +3412,10 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 				}
 			}
 			if (!player2 || !player2->client) {
+				if (g_loc_man->get(player2token, origin, angles)) {
+					TeleportPlayer(ent, origin, angles, silent);
+					return;
+				}
 				trap->SendServerCommand( ent-g_entities, "print \"<to> player not found\n\"" );
 				return;
 			}
@@ -4008,6 +4023,7 @@ command_t commands[] = {
 //	{ "kylesmash",			TryGrapple,					0 },
 	{ "levelshot",			Cmd_LevelShot_f,			CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "maplist",			Cmd_MapList_f,				CMD_NOINTERMISSION },
+	{ "markpos",			Cmd_Markpos_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "noclip",				Cmd_Noclip_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "notarget",			Cmd_Notarget_f,				CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "npc",				Cmd_NPC_f,					CMD_CHEAT|CMD_ALIVE },

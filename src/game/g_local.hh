@@ -1104,6 +1104,17 @@ void	G_TouchTriggers (gentity_t *ent);
 void	G_TouchSolids (gentity_t *ent);
 void	GetAnglesForDirection( const vec3_t p1, const vec3_t p2, vec3_t out );
 
+struct LocationManager {
+	LocationManager();
+	bool save();
+	bool get(char const * name, vec3_t & ori, vec3_t & ang);
+	void set(char const * name, vec3_t const & ori, vec3_t const & ang);
+private:
+	std::unordered_map<std::string, std::array<vec3_t, 2>> m_locations;
+};
+
+extern std::unique_ptr<LocationManager> g_loc_man;
+
 //
 // g_object.c
 //

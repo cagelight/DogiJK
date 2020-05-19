@@ -121,7 +121,7 @@ if( BUILD_CLIENT OR BUILD_SERVER )
 
 	add_library( ${GAME_MODULE} MODULE ${GAME_FILES} )
 	target_compile_definitions( ${GAME_MODULE} PUBLIC _GAME )
-	target_link_libraries( ${GAME_MODULE} PUBLIC PkgConfig::BULLET Threads::Threads )
+	target_link_libraries( ${GAME_MODULE} PUBLIC PkgConfig::BULLET Threads::Threads "-lmeadow" )
 	set_target_properties( ${GAME_MODULE} PROPERTIES PREFIX "" )
 	install( TARGETS ${GAME_MODULE} LIBRARY DESTINATION "base/" )
 	

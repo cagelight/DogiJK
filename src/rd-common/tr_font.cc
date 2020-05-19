@@ -24,7 +24,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <qcommon/qcommon.hh>
 #include <qcommon/qfiles.hh>
-#include "qcommon/sstring.hh"	// stl string class won't compile in here (MS shite), so use Gil's.
 #include "tr_local.hh"
 #include "tr_types.hh"
 #include "tr_font.hh"
@@ -102,7 +101,7 @@ struct ThaiCodes_t
 {
 	std::map <int, int>	m_mapValidCodes;
 	std::vector<int>		m_viGlyphWidths;
-	sstring_t		m_strInitFailureReason;	// so we don't have to keep retrying to work this out
+	std::string		m_strInitFailureReason;	// so we don't have to keep retrying to work this out
 
 	void Clear( void )
 	{
@@ -268,7 +267,7 @@ float RoundTenth( float fValue )
 
 int							g_iCurrentFontIndex;	// entry 0 is reserved index for missing/invalid, else ++ with each new font registered
 std::vector<CFontInfo *>			g_vFontArray;
-typedef std::map<sstring_t, int>	FontIndexMap_t;
+typedef std::map<std::string, int>	FontIndexMap_t;
 							FontIndexMap_t g_mapFontIndexes;
 int g_iNonScaledCharRange;	// this is used with auto-scaling of asian fonts, anything below this number is preserved in scale, anything above is scaled down by 0.75f
 
@@ -1708,7 +1707,7 @@ void R_ReloadFonts_f(void)
 {
 	// first, grab all the currently-registered fonts IN THE ORDER THEY WERE REGISTERED...
 	//
-	std::vector <sstring_t> vstrFonts;
+	std::vector <std::string> vstrFonts;
 
 	int iFontToFind;
 	for (iFontToFind = 1; iFontToFind < g_iCurrentFontIndex; iFontToFind++)

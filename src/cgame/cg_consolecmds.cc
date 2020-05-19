@@ -288,7 +288,7 @@ static void CG_LoadHud_f( void ) {
 
 static void CG_ListNPCs() {
 	std::vector<istring> list = BG_ListNPCs();
-	std::basic_stringstream<char, insensitive_char_traits> msg;
+	istringstream msg;
 	msg << "NPCs:\n";
 	for (istring const & str : list) {
 		msg << "\t" << str << "\n";
@@ -298,7 +298,7 @@ static void CG_ListNPCs() {
 
 static void CG_ListVehicles() {
 	std::vector<istring> list = BG_ListVehicles();
-	std::basic_stringstream<char, insensitive_char_traits> msg;
+	istringstream msg;
 	msg << "Vehicles:\n";
 	for (istring const & str : list) {
 		msg << "\t" << str << "\n";
@@ -392,6 +392,7 @@ static const char *gcmds[] = {
 	"kill",
 	"levelshot",
 	"loaddefered",
+	"markpos",
 	"noclip",
 	"notarget",
 	"NPC",
@@ -403,10 +404,14 @@ static const char *gcmds[] = {
 	"siegeclass",
 	"stats",
 	//"stopfollow",
+	"target",
 	"team",
 	"teamtask",
 	"teamvote",
+	"tele",
+	"teles",
 	"tell",
+	"traceshader",
 	"voice_cmd",
 	"vote",
 	"where",

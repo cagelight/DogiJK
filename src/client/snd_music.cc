@@ -28,7 +28,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include <string>
 
 #include "qcommon/q_shared.hh"
-#include "qcommon/sstring.hh"
 #include "qcommon/GenericParser2.hh"
 
 #include "snd_local.hh"
@@ -62,8 +61,8 @@ extern qboolean S_FileExists( const char *psFilename );
 #define MUSIC_PARSE_WARNING(_string)	Music_Parse_Warning(_string)
 
 typedef struct MusicExitPoint_s {
-	sstring_t	sNextFile;
-	sstring_t	sNextMark;		// blank if used for an explore piece, name of marker point to enter new file at
+	std::string	sNextFile;
+	std::string	sNextMark;		// blank if used for an explore piece, name of marker point to enter new file at
 
 } MusicExitPoint_t;
 
@@ -81,23 +80,23 @@ struct MusicExitTime_t	// need to declare this way for operator < below
 //
 typedef std::vector	<MusicExitPoint_t>	MusicExitPoints_t;
 typedef std::vector	<MusicExitTime_t>	MusicExitTimes_t;
-typedef std::map	<sstring_t, float>	MusicEntryTimes_t;	// key eg "marker1"
+typedef std::map	<std::string, float>	MusicEntryTimes_t;	// key eg "marker1"
 
 typedef struct MusicFile_s {
-	sstring_t			sFileNameBase;
+	std::string			sFileNameBase;
 	MusicEntryTimes_t	MusicEntryTimes;
 	MusicExitPoints_t	MusicExitPoints;
 	MusicExitTimes_t	MusicExitTimes;
 
 } MusicFile_t;
 
-typedef std::map <sstring_t, MusicFile_t>	MusicData_t;			// string is "explore", "action", "boss" etc
+typedef std::map <std::string, MusicFile_t>	MusicData_t;			// string is "explore", "action", "boss" etc
 										MusicData_t* MusicData = NULL;
 // there are now 2 of these, because of the new "uses" keyword...
 //
-sstring_t	gsLevelNameForLoad;		// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
-sstring_t	gsLevelNameForCompare;	// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
-sstring_t	gsLevelNameForBossLoad;	// eg "kejim_base', special case for enabling boss music to come from a different dir - sigh....
+std::string	gsLevelNameForLoad;		// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
+std::string	gsLevelNameForCompare;	// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
+std::string	gsLevelNameForBossLoad;	// eg "kejim_base', special case for enabling boss music to come from a different dir - sigh....
 
 void Music_Free(void)
 {
@@ -142,7 +141,7 @@ static void Music_Parse_Warning(const char *psError)
 //
 static const char *Music_BuildFileName(const char *psFileNameBase, MusicState_e eMusicState )
 {
-	static sstring_t sFileName;
+	static std::string sFileName;
 
 	//HACK!
 	if (eMusicState == eBGRNDTRACK_DEATH)
@@ -408,7 +407,7 @@ static char *StripTrailingWhiteSpaceOnEveryLine(char *pText)
 //
 // This just initialises the Lucas music structs so the background music player can interrogate them...
 //
-sstring_t gsLevelNameFromServer;
+std::string gsLevelNameFromServer;
 void Music_SetLevelName(const char *psLevelName)
 {
 	gsLevelNameFromServer = psLevelName;
@@ -463,7 +462,7 @@ static qboolean Music_ParseLeveldata(const char *psLevelName)
 						// check for new USE keyword...
 						//
 						int iSanityLimit = 0;
-						sstring_t sSearchName(sLevelName);
+						std::string sSearchName(sLevelName);
 
 						while (sSearchName.c_str()[0] && iSanityLimit < 10)
 						{

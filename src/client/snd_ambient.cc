@@ -53,7 +53,7 @@ static int		parsePos		= 0;
 static char	tempBuffer[1024];
 
 //NOTENOTE: Be sure to change the mirrored code in g_spawn.cpp, and cg_main.cpp
-typedef	std::map<sstring_t, unsigned char>	namePrecache_m;
+typedef	std::map<std::string, unsigned char>	namePrecache_m;
 static namePrecache_m*	pMap = NULL;
 
 // Used for enum / string matching
@@ -90,7 +90,7 @@ static const char	*keywordNames[NUM_AS_KEYWORDS]=
 CSetGroup::CSetGroup(void)
 {
 	m_ambientSets = new std::vector<ambientSet_t*>;
-	m_setMap = new std::map<sstring_t, ambientSet_t*>;
+	m_setMap = new std::map<std::string, ambientSet_t*>;
 	m_numSets = 0;
 }
 
@@ -120,7 +120,7 @@ void CSetGroup::Free( void )
 	delete m_ambientSets;
 	delete m_setMap;
 	m_ambientSets = new std::vector<ambientSet_t*>;
-	m_setMap = new std::map<sstring_t, ambientSet_t*>;
+	m_setMap = new std::map<std::string, ambientSet_t*>;
 
 	m_numSets = 0;
 }
@@ -167,7 +167,7 @@ GetSet
 
 ambientSet_t *CSetGroup::GetSet( const char *name )
 {
-	std::map < sstring_t, ambientSet_t *>::iterator	mi;
+	std::map < std::string, ambientSet_t *>::iterator	mi;
 
 	if ( name == NULL )
 		return NULL;
