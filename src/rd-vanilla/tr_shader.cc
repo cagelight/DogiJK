@@ -44,7 +44,7 @@ static	texModInfo_t	texMods[MAX_SHADER_STAGES][TR_MAX_TEXMODS];
 #define FILE_HASH_SIZE		1024
 static	shader_t*		hashTable[FILE_HASH_SIZE];
 
-std::unordered_map<istring, std::string_view> shaderTextHashTableNew;
+std::unordered_map<istring, char const *> shaderTextHashTableNew;
 
 void KillTheShaderHashTable(void)
 {
@@ -53,7 +53,7 @@ void KillTheShaderHashTable(void)
 
 qboolean ShaderHashTableExists(void)
 {
-	return qtrue;
+	return shaderTextHashTableNew.size();
 }
 
 const int lightmapsNone[MAXLIGHTMAPS] =
@@ -3215,25 +3215,10 @@ If found, it will return a valid shader
 static const char *FindShaderInShaderText( const char *shadername ) {
 	char *token;
 	const char *p;
-
-	/*
-	int i, hash;
-
-	hash = generateHashValue(shadername, MAX_SHADERTEXT_HASH);
-
-	if ( shaderTextHashTable[hash] ) {
-		for (i = 0; shaderTextHashTable[hash][i]; i++) {
-			p = shaderTextHashTable[hash][i];
-			token = COM_ParseExt(&p, qtrue);
-			if ( !Q_stricmp( token, shadername ) )
-				return p;
-		}
-	}
-	*/
 	
 	auto iter = shaderTextHashTableNew.find(shadername);
 	if (iter != shaderTextHashTableNew.end())
-		return iter->second.data();
+		return iter->second;
 
 	p = s_shaderText;
 
