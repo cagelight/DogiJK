@@ -25,7 +25,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "tr_local.hh"
 #include "qcommon/disablewarnings.hh"
-#include <string>
 
 #include <vector>
 #include <map>
@@ -77,7 +76,7 @@ struct CachedEndianedModelBinary_s
 	}
 };
 typedef struct CachedEndianedModelBinary_s CachedEndianedModelBinary_t;
-typedef std::map <std::string,CachedEndianedModelBinary_t>	CachedModels_t;
+typedef std::map <istring,CachedEndianedModelBinary_t>	CachedModels_t;
 CachedModels_t *CachedModels = NULL;	// the important cache item.
 
 void RE_RegisterModels_StoreShaderRequest(const char *psModelFileName, const char *psShaderName, int *piShaderIndexPoke)

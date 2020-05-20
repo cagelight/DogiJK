@@ -103,7 +103,7 @@ protected:
 
 	int								m_numSets;
 	std::vector < ambientSet_t * >		*m_ambientSets;
-	std::map	< std::string, ambientSet_t * >	*m_setMap;
+	std::map	< istring, ambientSet_t * >	*m_setMap;
 };
 
 // Prototypes

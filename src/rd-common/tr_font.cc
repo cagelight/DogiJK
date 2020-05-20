@@ -101,7 +101,7 @@ struct ThaiCodes_t
 {
 	std::map <int, int>	m_mapValidCodes;
 	std::vector<int>		m_viGlyphWidths;
-	std::string		m_strInitFailureReason;	// so we don't have to keep retrying to work this out
+	istring		m_strInitFailureReason;	// so we don't have to keep retrying to work this out
 
 	void Clear( void )
 	{
@@ -267,7 +267,7 @@ float RoundTenth( float fValue )
 
 int							g_iCurrentFontIndex;	// entry 0 is reserved index for missing/invalid, else ++ with each new font registered
 std::vector<CFontInfo *>			g_vFontArray;
-typedef std::map<std::string, int>	FontIndexMap_t;
+typedef std::map<istring, int>	FontIndexMap_t;
 							FontIndexMap_t g_mapFontIndexes;
 int g_iNonScaledCharRange;	// this is used with auto-scaling of asian fonts, anything below this number is preserved in scale, anything above is scaled down by 0.75f
 
@@ -1707,7 +1707,7 @@ void R_ReloadFonts_f(void)
 {
 	// first, grab all the currently-registered fonts IN THE ORDER THEY WERE REGISTERED...
 	//
-	std::vector <std::string> vstrFonts;
+	std::vector <istring> vstrFonts;
 
 	int iFontToFind;
 	for (iFontToFind = 1; iFontToFind < g_iCurrentFontIndex; iFontToFind++)

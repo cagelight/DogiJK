@@ -61,8 +61,8 @@ extern qboolean S_FileExists( const char *psFilename );
 #define MUSIC_PARSE_WARNING(_string)	Music_Parse_Warning(_string)
 
 typedef struct MusicExitPoint_s {
-	std::string	sNextFile;
-	std::string	sNextMark;		// blank if used for an explore piece, name of marker point to enter new file at
+	istring	sNextFile;
+	istring	sNextMark;		// blank if used for an explore piece, name of marker point to enter new file at
 
 } MusicExitPoint_t;
 
@@ -80,23 +80,23 @@ struct MusicExitTime_t	// need to declare this way for operator < below
 //
 typedef std::vector	<MusicExitPoint_t>	MusicExitPoints_t;
 typedef std::vector	<MusicExitTime_t>	MusicExitTimes_t;
-typedef std::map	<std::string, float>	MusicEntryTimes_t;	// key eg "marker1"
+typedef std::map	<istring, float>	MusicEntryTimes_t;	// key eg "marker1"
 
 typedef struct MusicFile_s {
-	std::string			sFileNameBase;
+	istring			sFileNameBase;
 	MusicEntryTimes_t	MusicEntryTimes;
 	MusicExitPoints_t	MusicExitPoints;
 	MusicExitTimes_t	MusicExitTimes;
 
 } MusicFile_t;
 
-typedef std::map <std::string, MusicFile_t>	MusicData_t;			// string is "explore", "action", "boss" etc
+typedef std::map <istring, MusicFile_t>	MusicData_t;			// string is "explore", "action", "boss" etc
 										MusicData_t* MusicData = NULL;
 // there are now 2 of these, because of the new "uses" keyword...
 //
-std::string	gsLevelNameForLoad;		// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
-std::string	gsLevelNameForCompare;	// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
-std::string	gsLevelNameForBossLoad;	// eg "kejim_base', special case for enabling boss music to come from a different dir - sigh....
+istring	gsLevelNameForLoad;		// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
+istring	gsLevelNameForCompare;	// eg "kejim_base", formed from literal BSP name, but also used as dir name for music paths
+istring	gsLevelNameForBossLoad;	// eg "kejim_base', special case for enabling boss music to come from a different dir - sigh....
 
 void Music_Free(void)
 {
@@ -141,7 +141,7 @@ static void Music_Parse_Warning(const char *psError)
 //
 static const char *Music_BuildFileName(const char *psFileNameBase, MusicState_e eMusicState )
 {
-	static std::string sFileName;
+	static istring sFileName;
 
 	//HACK!
 	if (eMusicState == eBGRNDTRACK_DEATH)
@@ -407,7 +407,7 @@ static char *StripTrailingWhiteSpaceOnEveryLine(char *pText)
 //
 // This just initialises the Lucas music structs so the background music player can interrogate them...
 //
-std::string gsLevelNameFromServer;
+istring gsLevelNameFromServer;
 void Music_SetLevelName(const char *psLevelName)
 {
 	gsLevelNameFromServer = psLevelName;
@@ -462,7 +462,7 @@ static qboolean Music_ParseLeveldata(const char *psLevelName)
 						// check for new USE keyword...
 						//
 						int iSanityLimit = 0;
-						std::string sSearchName(sLevelName);
+						istring sSearchName(sLevelName);
 
 						while (sSearchName.c_str()[0] && iSanityLimit < 10)
 						{
