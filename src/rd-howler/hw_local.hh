@@ -336,7 +336,6 @@ namespace howler {
 		enum struct map_gen {
 			diffuse,
 			lightmap,
-			normals,
 			mnoise,
 			anoise,
 		} gen_map = map_gen::diffuse;
@@ -352,17 +351,30 @@ namespace howler {
 		};
 		
 		enum struct gen_type {
-			none,
 			identity,
 			constant,
 			vertex,
 			vertex_exact,
+			vertex_one_minus,
 			wave,
 			diffuse_lighting,
 			diffuse_lighting_entity,
 			specular_lighting,
 			entity,
-		} gen_rgb = gen_type::none, gen_alpha = gen_type::none;
+		} gen_rgb = gen_type::identity, gen_alpha = gen_type::identity;
+		
+		inline static std::unordered_map<istring, gen_type> gen_type_lookup = {
+			{ "identity", gen_type::identity },
+			{ "const", gen_type::constant },
+			{ "vertex", gen_type::vertex },
+			{ "exactVertex", gen_type::vertex_exact },
+			{ "oneMinusVertex", gen_type::vertex_one_minus },
+			{ "wave", gen_type::wave },
+			{ "lightingDiffuse", gen_type::diffuse_lighting },
+			{ "lightingDiffuseEntity", gen_type::diffuse_lighting_entity },
+			{ "lightingSpecular", gen_type::specular_lighting },
+			{ "entity", gen_type::entity },
+		};
 		
 		enum struct tcgen {
 			none,
@@ -432,8 +444,6 @@ namespace howler {
 			std::vector<qm::mat4_t> const * bone_weights = nullptr;
 			qm::vec3_t view_origin;
 			gridlighting_t const * gridlight;
-			bool vertex_color_override = false; // used by sprite assemblies
-			bool vertex_alpha_override = false; // used by map geometry like terrain
 		};
 		void setup_draw(setup_draw_parameters_t const &) const;
 	};
@@ -502,13 +512,13 @@ namespace howler {
 		constexpr bool operator == (T const & other) const { return other == value; }
 		constexpr T const & operator = (T const & other) { if (value != other) modified = true; value = other; return value; }
 		inline void push() { if (!modified) return; push_direct(); }
-		inline void push_direct() { modified = false; UPLOAD(location, value); }
+		inline void push_direct() { if (location != -1) { modified = false; UPLOAD(location, value); }}
 		inline void reset() { operator = (value_default); }
 		inline GLint set_location(GLint in) { location = in; return in; }
  	private:
 		T value;
 		T const value_default;
-		GLint location;
+		GLint location = -1;
 		bool modified;
 	};
 	
@@ -545,6 +555,7 @@ namespace howler {
 			void color(qm::vec4_t const &);
 			void use_vertex_colors(bool const &);
 			void use_vertex_alpha(bool const &);
+			
 			void turb(bool const &);
 			void turb_data(q3stage::tx_turb const &);
 			void lm_mode(GLuint const &);
@@ -552,8 +563,8 @@ namespace howler {
 			void viewpos(qm::vec3_t const &);
 			void tcgen(q3stage::tcgen);
 			
-			void rgbgen(q3stage::gen_type);
-			void alphagen(q3stage::gen_type);
+			void cgen(q3stage::gen_type);
+			void agen(q3stage::gen_type);
 			
 			void bone_matricies(qm::mat4_t const *, size_t num);
 			void lightstyles(lightstyles_t const &);

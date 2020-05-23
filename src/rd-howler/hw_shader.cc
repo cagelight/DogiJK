@@ -549,71 +549,67 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			q3stage::wave_func_t & wave = alpha ? stg.wave_alpha : stg.wave_rgb;
 			
 			token = COM_ParseExt(&sptr, qfalse);
-			if (!Q_stricmp("const", token)) {
-				gen = q3stage::gen_type::constant;
-				if (!alpha) {
-					vec3_t color;
-					parse_vector(&sptr, 3, color);
-					stg.const_color[0] = color[0];
-					stg.const_color[1] = color[1];
-					stg.const_color[2] = color[2];
-				} else {
-					token = COM_ParseExt(&sptr, qfalse);
-					stg.const_color[3] = strtof(token, nullptr);
-				}
-			} else if (!Q_stricmp("identity", token)) {
-				gen = q3stage::gen_type::constant;
-				if (!alpha) {
-					stg.const_color[0] = 1;
-					stg.const_color[1] = 1;
-					stg.const_color[2] = 1;
-				} else
-					stg.const_color[3] = 1;
-			} else if (!Q_stricmp("entity", token)) {
-				gen = q3stage::gen_type::entity;
-			} else if (!Q_stricmp("lightingDiffuse", token)) {
-				gen = q3stage::gen_type::diffuse_lighting;
-				stg.gridlit = true;
-			} else if (!Q_stricmp("lightingDiffuseEntity", token)) {
-				gen = q3stage::gen_type::diffuse_lighting_entity;
-				stg.gridlit = true;
-			} else if (!Q_stricmp("lightingSpecular", token)) {
-				gen = q3stage::gen_type::specular_lighting;
-				stg.gridlit = true;
-			} else if (!Q_stricmp("vertex", token)) {
-				gen = q3stage::gen_type::vertex;
-			} else if (!Q_stricmp("exactvertex", token)) {
-				gen = q3stage::gen_type::vertex_exact;
-			} else if (!Q_stricmp("wave", token)) {
-				gen = q3stage::gen_type::wave;
-				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"genfunc\" in shader (\"%s\")\n", name.c_str());
-					goto next;
-				}
-				wave.func = genfunc_str2enum(token);
-				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"base\" in shader (\"%s\")\n", name.c_str());
-					goto next;
-				}
-				wave.base = strtof(token, nullptr);
-				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"amplitude\" in shader (\"%s\")\n", name.c_str());
-					goto next;
-				}
-				wave.amplitude = strtof(token, nullptr);
-				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"phase\" in shader (\"%s\")\n", name.c_str());
-					goto next;
-				}
-				wave.phase= strtof(token, nullptr);
-				token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
-					Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"frequency\" in shader (\"%s\")\n", name.c_str());
-					goto next;
-				}
-				wave.frequency = strtof(token, nullptr);
+			
+			auto iter = q3stage::gen_type_lookup.find(token);
+			if (iter != q3stage::gen_type_lookup.end()) {
+				gen = iter->second;
 			} else {
 				Com_Printf(S_COLOR_YELLOW "WARNING: shader stage for (\"%s\") has unknown/invalid %s (\"%s\").\n", name.c_str(), alpha ? "alphaGen" : "rgbGen", token);
 				goto next;
+			}
+			
+			switch (gen) {
+				
+				default:
+					break;
+				case q3stage::gen_type::constant:
+					if (alpha) {
+						token = COM_ParseExt(&sptr, qfalse);
+						stg.const_color[3] = strtof(token, nullptr);
+					} else {
+						vec3_t color;
+						parse_vector(&sptr, 3, color);
+						stg.const_color[0] = color[0];
+						stg.const_color[1] = color[1];
+						stg.const_color[2] = color[2];
+					}
+					break;
+				case q3stage::gen_type::vertex:
+					if (!alpha && stg.gen_alpha == q3stage::gen_type::identity) 
+						stg.gen_alpha = q3stage::gen_type::vertex;
+					break;
+				case q3stage::gen_type::diffuse_lighting:
+				case q3stage::gen_type::diffuse_lighting_entity:
+				case q3stage::gen_type::specular_lighting:
+					stg.gridlit = true;
+					break;
+				case q3stage::gen_type::wave:
+					token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
+						Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"genfunc\" in shader (\"%s\")\n", name.c_str());
+						goto next;
+					}
+					wave.func = genfunc_str2enum(token);
+					token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
+						Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"base\" in shader (\"%s\")\n", name.c_str());
+						goto next;
+					}
+					wave.base = strtof(token, nullptr);
+					token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
+						Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"amplitude\" in shader (\"%s\")\n", name.c_str());
+						goto next;
+					}
+					wave.amplitude = strtof(token, nullptr);
+					token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
+						Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"phase\" in shader (\"%s\")\n", name.c_str());
+						goto next;
+					}
+					wave.phase= strtof(token, nullptr);
+					token = COM_ParseExt( &sptr, qfalse ); if (!token[0]) {
+						Com_Printf(S_COLOR_YELLOW "WARNING: missing alphaGen/rgbGen wave parm \"frequency\" in shader (\"%s\")\n", name.c_str());
+						goto next;
+					}
+					wave.frequency = strtof(token, nullptr);
+					break;
 			}
 			
 		} else if (!Q_stricmp(token, "tcGen")) {
@@ -931,8 +927,6 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->main_sampler->wrap(clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	
 	float mult;
-	bool use_vertex_colors = false;
-	bool use_vertex_alpha = false;
 	
 	qm::vec4_t q3color {1, 1, 1, 1};
 	switch (gen_rgb) {
@@ -942,16 +936,13 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 			q3color[1] = parm.shader_color[1];
 			q3color[2] = parm.shader_color[2];
 			break;
-		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
-			if (!hw_inst->m_ui_draw) {
-				use_vertex_colors = true;
-				break;
-			} else [[fallthrough]];
-		case q3stage::gen_type::none:
+		case q3stage::gen_type::vertex_exact:
+		case q3stage::gen_type::vertex_one_minus:
 			q3color = hw_inst->m_shader_color;
 			break;
 		case q3stage::gen_type::identity:
+			if (hw_inst->m_ui_draw) q3color = hw_inst->m_shader_color;
 			break;
 		case q3stage::gen_type::constant:
 			q3color = const_color;
@@ -971,16 +962,13 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 		case q3stage::gen_type::entity:
 			q3color[3] = parm.shader_color[3];
 			break;
-		case q3stage::gen_type::vertex_exact:
 		case q3stage::gen_type::vertex:
-			if (!hw_inst->m_ui_draw) {
-				use_vertex_alpha = true;
-				break;
-			} else [[fallthrough]];
-		case q3stage::gen_type::none:
+		case q3stage::gen_type::vertex_exact:
+		case q3stage::gen_type::vertex_one_minus:
 			q3color[3] = hw_inst->m_shader_color[3];
 			break;
 		case q3stage::gen_type::identity:
+			if (hw_inst->m_ui_draw) q3color[3] = hw_inst->m_shader_color[3];
 			break;
 		case q3stage::gen_type::constant:
 			q3color[3] = const_color[3];
@@ -1043,7 +1031,7 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 				[&](diffuse_cinematic_t const & cin) {
 					ri.CIN_RunCinematic(cin.handle);
 					ri.CIN_UploadCinematic(cin.handle);
-					if (cin.handle >= hw_inst->cinematic_frames.size()) return;
+					if (cin.handle >= (int)hw_inst->cinematic_frames.size()) return;
 					hw_inst->cinematic_frames[cin.handle]->bind(BINDING_DIFFUSE);
 				}
 			}, diffuse);
@@ -1055,15 +1043,21 @@ void q3stage::setup_draw(setup_draw_parameters_t const & parm) const {
 	hw_inst->q3mainprog->mvp(parm.mvp);
 	hw_inst->q3mainprog->uvm(uvm2);
 	hw_inst->q3mainprog->color(q3color);
-	hw_inst->q3mainprog->use_vertex_colors(parm.vertex_color_override || use_vertex_colors);
-	hw_inst->q3mainprog->use_vertex_alpha(parm.vertex_alpha_override || use_vertex_alpha);
 	hw_inst->q3mainprog->turb(turb);
 	hw_inst->q3mainprog->tcgen(gen_tc);
-	hw_inst->q3mainprog->mapgen((r_shownormals->integer && !parm.is_2d) ? map_gen::normals : gen_map);
+	hw_inst->q3mainprog->mapgen(gen_map);
 	hw_inst->q3mainprog->viewpos(parm.view_origin);
 	
-	hw_inst->q3mainprog->rgbgen(gen_rgb);
-	hw_inst->q3mainprog->alphagen(gen_alpha);
+	if (hw_inst->m_ui_draw && gen_rgb == gen_type::vertex) // when drawing UI elements, "vertex" is supposed to mean using the global color, not the actual vertex colors of the quad
+		hw_inst->q3mainprog->cgen(gen_type::identity);
+	else
+		hw_inst->q3mainprog->cgen(gen_rgb);
+	
+	if (hw_inst->m_ui_draw && gen_alpha == gen_type::vertex) // when drawing UI elements, "vertex" is supposed to mean using the global alpha, not the actual vertex alphas of the quad
+		hw_inst->q3mainprog->agen(gen_type::identity);
+	else
+		hw_inst->q3mainprog->agen(gen_alpha);
+	
 	hw_inst->q3mainprog->gridlighting(gridlit ? parm.gridlight : nullptr);
 	
 	if (turb) {

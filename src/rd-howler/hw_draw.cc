@@ -37,8 +37,6 @@ struct q3drawmesh {
 	qm::vec4_t shader_color = {1, 1, 1, 1};
 	std::vector<qm::mat4_t> weights;
 	gridlighting_t gridlight {};
-	bool vertex_color_override = false;
-	bool vertex_alpha_override = false;
 };
 
 struct q3drawset {
@@ -264,7 +262,6 @@ void instance::end_frame(float time) {
 					draw.gridlight = m_world->calculate_gridlight({0, 0, 0});
 				}
 				if (!dmesh.second) continue;
-				draw.vertex_alpha_override = true;
 				if (debug_enabled) debug_meshes.emplace_back(draw);
 				draw_map[dmesh.first].emplace_back(draw);
 			}
@@ -562,7 +559,6 @@ void instance::end_frame(float time) {
 		
 		for (auto & [shad, verts] : sprites_verticies) {
 			q3drawmesh sprite_draw {std::make_shared<sprite_assembly>(verts.data(), verts.size()), vp};
-			sprite_draw.vertex_color_override = true;
 			if (debug_enabled) debug_meshes.emplace_back(sprite_draw);
 			
 			q3drawset & set = additonal_draws.emplace_back();
@@ -683,8 +679,6 @@ void instance::end_frame(float time) {
 					params.bone_weights = mesh.weights.size() ? &mesh.weights : nullptr;
 					params.view_origin = view_origin;
 					params.gridlight = &mesh.gridlight;
-					params.vertex_color_override = mesh.vertex_color_override;
-					params.vertex_alpha_override = mesh.vertex_alpha_override;
 					stg.setup_draw(params);
 					mesh.mesh->draw();
 			}

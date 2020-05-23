@@ -3,7 +3,7 @@ using namespace howler;
 
 static std::string generate_vertex_shader() {
 	std::stringstream ss;
-	ss << R"GLSL(
+	ss << R"(
 	#version 450
 		
 	layout (std140) uniform BoneMatricies {
@@ -21,16 +21,16 @@ static std::string generate_vertex_shader() {
 		vec4 grid_direction;
 	};
 		
-	layout(location = )GLSL" << LAYOUT_VERTEX << R"GLSL() in vec3 vert;
-	layout(location = )GLSL" << LAYOUT_UV << R"GLSL() in vec2 uv;
-	layout(location = )GLSL" << LAYOUT_NORMAL << R"GLSL() in vec3 normal;
-	layout(location = )GLSL" << LAYOUT_BONE_GROUPS << R"GLSL() in ivec4 vertex_bg;
-	layout(location = )GLSL" << LAYOUT_BONE_WEIGHT << R"GLSL() in vec4 vertex_wgt;
-	layout(location = )GLSL" << LAYOUT_COLOR0 << R"GLSL() in vec4 color0;
-	layout(location = )GLSL" << LAYOUT_COLOR1 << R"GLSL() in vec4 color1;
-	layout(location = )GLSL" << LAYOUT_LMUV01_COLOR2 << R"GLSL() in vec4 lm_color2_uv01;
-	layout(location = )GLSL" << LAYOUT_LMUV23_COLOR3 << R"GLSL() in vec4 lm_color3_uv23;
-	layout(location = )GLSL" << LAYOUT_LMSTYLES << R"GLSL() in ivec4 lm_styles;
+	layout(location = )" << LAYOUT_VERTEX << R"() in vec3 vert;
+	layout(location = )" << LAYOUT_UV << R"() in vec2 uv;
+	layout(location = )" << LAYOUT_NORMAL << R"() in vec3 normal;
+	layout(location = )" << LAYOUT_BONE_GROUPS << R"() in ivec4 vertex_bg;
+	layout(location = )" << LAYOUT_BONE_WEIGHT << R"() in vec4 vertex_wgt;
+	layout(location = )" << LAYOUT_COLOR0 << R"() in vec4 color0;
+	layout(location = )" << LAYOUT_COLOR1 << R"() in vec4 color1;
+	layout(location = )" << LAYOUT_LMUV01_COLOR2 << R"() in vec4 lm_color2_uv01;
+	layout(location = )" << LAYOUT_LMUV23_COLOR3 << R"() in vec4 lm_color3_uv23;
+	layout(location = )" << LAYOUT_LMSTYLES << R"() in ivec4 lm_styles;
 
 	uniform float time;
 	
@@ -50,8 +50,8 @@ static std::string generate_vertex_shader() {
 	uniform uint ghoul2;
 
 	// 0 = none, 1 = diffuse, 2 = specular
-	uniform uint rgbgen;
-	uniform uint alphagen;
+	uniform uint cgen;
+	uniform uint agen;
 	// --------
 	
 	out vec2 f_uv;
@@ -167,14 +167,12 @@ static std::string generate_vertex_shader() {
 		
 		if (ghoul2 != 0) calcnorm.y = -calcnorm.y; // FIXME -- I don't know why I have to do this
 		
-		if (mapgen == 2) { // normals
-			//vcolor = vec4(calcnorm / 2 + 0.5, 1);
-			vcolor.xyz = calcnorm;
-		} else if (lm_mode != 0 && mapgen == 1) {
+		vcolor = vec4(1, 1, 1, 1);
+		
+		if (lm_mode != 0 && mapgen == )" << static_cast<int>(q3stage::map_gen::lightmap) << R"() {
 			lm_styles_frag = lm_styles;
 			switch (lm_mode) {
 				case 1: {
-					vcolor = vec4(1, 1, 1, 1);
 					lm_uv[0] = lm_color2_uv01.xy;
 					lm_uv[1] = lm_color2_uv01.zw;
 					lm_uv[2] = lm_color3_uv23.xy;
@@ -209,12 +207,6 @@ static std::string generate_vertex_shader() {
 					
 				} break;
 			}
-		} else {
-			vcolor = vec4(1, 1, 1, 1);
-			if (use_vertex_color)
-				vcolor.xyz = color0.xyz;
-			if (use_vertex_alpha)
-				vcolor.w = color0.w;
 		}
 		
 		if (tcgen == 0)
@@ -224,8 +216,7 @@ static std::string generate_vertex_shader() {
 			float d = dot(calcnorm, dir);
 			f_uv.x = 0.5 + (calcnorm.y * 2 * d - dir.y) * 0.5;
 			f_uv.y = 0.5 - (calcnorm.z * 2 * d - dir.z) * 0.5;
-		}
-		else if (tcgen == 2 && lm_mode != 2) { // lightmap
+		} else if (tcgen == 2 && lm_mode != 2) { // lightmap
 			f_uv = lm_color2_uv01.xy;
 		}
 		
@@ -236,33 +227,61 @@ static std::string generate_vertex_shader() {
 			f_uv.y += sin((vert[1]) * (turb_data.w + time * turb_data.z) / 1024.0f) * turb_data.x;
 		}
 		
-		if (rgbgen == 1 && mapgen != 2) {
-			vcolor.xyz = grid_ambient.xyz;
-			float dir_frac = dot(calcnorm, grid_direction.xyz);
-			if (dir_frac < 0) dir_frac = 0;
-			vcolor.xyz += dir_frac * grid_directed.xyz;
+		
+		switch (cgen) {
+			default:
+				break;
+			case )" << static_cast<int>(q3stage::gen_type::vertex_exact) << R"(:
+			case )" << static_cast<int>(q3stage::gen_type::vertex) << R"(:
+				vcolor.xyz = color0.xyz;
+				break;
+			case )" << static_cast<int>(q3stage::gen_type::vertex_one_minus) << R"(:
+				vcolor.xyz = 1 - color0.xyz;
+				break;
+			case )" << static_cast<int>(q3stage::gen_type::diffuse_lighting) << R"(:
+			case )" << static_cast<int>(q3stage::gen_type::diffuse_lighting_entity) << R"(:
+			{
+				vcolor.xyz = grid_ambient.xyz;
+				float dir_frac = dot(calcnorm, grid_direction.xyz);
+				if (dir_frac < 0) dir_frac = 0;
+				vcolor.xyz += dir_frac * grid_directed.xyz;
+				break;
+			}
 		}
 		
-		if (alphagen == 2 && mapgen != 2) {
-			/*
-			float dir_frac = 2 * dot(calcnorm, grid_direction.xyz);
-			vec3 reflected = calcnorm * dir_frac - grid_direction.xyz;
-			vec3 viewer = view_origin - (m * vec4(vert, 1)).xyz;
-			float l = dot(reflected, viewer) * length(viewer);
-			if (l < 0) vcolor.w = 0;
-			vcolor.w = clamp(pow(l, 3), 0, 1);
-			*/
-			vcolor.w = 0;
+		switch (agen) {
+			default:
+				break;
+			case )" << static_cast<int>(q3stage::gen_type::vertex_exact) << R"(:
+			case )" << static_cast<int>(q3stage::gen_type::vertex) << R"(:
+				vcolor.w = color0.w;
+				break;
+			case )" << static_cast<int>(q3stage::gen_type::vertex_one_minus) << R"(:
+				vcolor.w = 1 - color0.w;
+				break;
+			case )" << static_cast<int>(q3stage::gen_type::specular_lighting) << R"(:
+			{
+				/*
+				float dir_frac = 2 * dot(calcnorm, grid_direction.xyz);
+				vec3 reflected = calcnorm * dir_frac - grid_direction.xyz;
+				vec3 viewer = view_origin - (m * vec4(vert, 1)).xyz;
+				float l = dot(reflected, viewer) * length(viewer);
+				if (l < 0) vcolor.w = 0;
+				vcolor.w = clamp(pow(l, 3), 0, 1);
+				*/
+				vcolor.w = 0;
+				break;
+			}
 		}
 	}
-	)GLSL";
+	)";
 
 	return ss.str();
 }
 
 static std::string generate_fragment_shader() {
 	std::stringstream ss;
-	ss << R"GLSL(
+	ss << R"(
 	#version 450
 		
 	layout (std140) uniform LightStyles {
@@ -276,8 +295,8 @@ static std::string generate_fragment_shader() {
 	uniform uint lm_mode;
 	
 	// TEXTURE BINDINGS
-	layout(binding = )GLSL" << BINDING_DIFFUSE << R"GLSL() uniform sampler2D tex;
-	layout(binding = )GLSL" << BINDING_LIGHTMAP << R"GLSL() uniform sampler2D lm;
+	layout(binding = )" << BINDING_DIFFUSE << R"() uniform sampler2D tex;
+	layout(binding = )" << BINDING_LIGHTMAP << R"() uniform sampler2D lm;
 	
 	in vec2 f_uv;
 	in vec4 vcolor;
@@ -297,86 +316,68 @@ static std::string generate_fragment_shader() {
 	
 	void main() {
 	
-		vec4 scolor;
+		vec4 scolor = vec4(1, 1, 1, 1);
 		
-		if (mapgen != 0) {
-			switch(mapgen) {
-				case 1: { // lightmap
-					switch (lm_mode) {
-						case 1: {
-							
-							if (lm_styles_frag.x == 0) {
-								scolor = texture(lm, lm_uv[0]);
-							} else if (lm_styles_frag.x < 0xFE) {
-								scolor = texture(lm, lm_uv[0]) * lightstyles[lm_styles_frag.x];
-							} else break;
-							
-							if (lm_styles_frag.y == 0) {
-								scolor += texture(lm, lm_uv[1]);
-							} else if (lm_styles_frag.y < 0xFE) {
-								scolor += texture(lm, lm_uv[1]) * lightstyles[lm_styles_frag.y];
-							} else break;
-							
-							if (lm_styles_frag.z == 0) {
-								scolor += texture(lm, lm_uv[2]);
-							} else if (lm_styles_frag.z < 0xFE) {
-								scolor += texture(lm, lm_uv[2]) * lightstyles[lm_styles_frag.z];
-							} else break;
-							
-							if (lm_styles_frag.w == 0) {
-								scolor += texture(lm, lm_uv[3]);
-							} else if (lm_styles_frag.w < 0xFE) {
-								scolor += texture(lm, lm_uv[3]) * lightstyles[lm_styles_frag.w];
-							} else break;
-							
-						} break;
-						case 2:
-							scolor = vec4(1, 1, 1, 1);
-							break;
-					}
-				} break;
-				case 2: // normals
-					scolor = vec4(1, 1, 1, 1);
-					break; // do nothing because vertex color is used
-				default:
-				case 3: { // mnoise
-					float v = rand_value(time);
-					scolor = vec4(v, v, v, 1);
-				} break;
-				case 4: { // anoise
-					float v = rand_value(time);
-					scolor = vec4(1, 1, 1, v);
-				} break;
-			}
-		} else
-			scolor = texture(tex, f_uv);
+		switch(mapgen) {
+			case )" << static_cast<int>(q3stage::map_gen::diffuse) << R"(:
+				scolor = texture(tex, f_uv);
+				break;
+			case )" << static_cast<int>(q3stage::map_gen::lightmap) << R"(: { // lightmap
+				switch (lm_mode) {
+					case 1: {
+						
+						if (lm_styles_frag.x == 0) {
+							scolor = texture(lm, lm_uv[0]);
+						} else if (lm_styles_frag.x < 0xFE) {
+							scolor = texture(lm, lm_uv[0]) * lightstyles[lm_styles_frag.x];
+						} else break;
+						
+						if (lm_styles_frag.y == 0) {
+							scolor += texture(lm, lm_uv[1]);
+						} else if (lm_styles_frag.y < 0xFE) {
+							scolor += texture(lm, lm_uv[1]) * lightstyles[lm_styles_frag.y];
+						} else break;
+						
+						if (lm_styles_frag.z == 0) {
+							scolor += texture(lm, lm_uv[2]);
+						} else if (lm_styles_frag.z < 0xFE) {
+							scolor += texture(lm, lm_uv[2]) * lightstyles[lm_styles_frag.z];
+						} else break;
+						
+						if (lm_styles_frag.w == 0) {
+							scolor += texture(lm, lm_uv[3]);
+						} else if (lm_styles_frag.w < 0xFE) {
+							scolor += texture(lm, lm_uv[3]) * lightstyles[lm_styles_frag.w];
+						} else break;
+						
+					} break;
+					case 2:
+						scolor = vec4(1, 1, 1, 1);
+						break;
+				}
+			} break;
+			default:
+			case )" << static_cast<int>(q3stage::map_gen::mnoise) << R"(: { // mnoise
+				float v = rand_value(time);
+				scolor = vec4(v, v, v, 1);
+			} break;
+			case )" << static_cast<int>(q3stage::map_gen::anoise) << R"(: { // anoise
+				float v = rand_value(time);
+				scolor = vec4(1, 1, 1, v);
+			} break;
+		}
 		
 		color = scolor * q3color * vcolor;
 	}
-	)GLSL";
+	)";
 
 	return ss.str();
 }
 
 struct programs::q3main::private_data {
-	uniform_float m_time = 0;
-	uniform_mat4 m_mvp = qm::mat4_t::identity();
-	uniform_mat3 m_uv = qm::mat3_t::identity();
-	uniform_vec4 m_color = qm::vec4_t {1, 1, 1, 1};
-	uniform_bool m_use_vertex_colors = false;
-	uniform_bool m_use_vertex_alpha = false;
-	uniform_bool m_turb = false;
-	uniform_vec4 m_turb_data = qm::vec4_t {0, 0, 0, 0};
-	uniform_uint m_lmmode = 0;
-	uniform_uint m_bones = 0;
-	uniform_uint m_mapgen = 0;
-	uniform_vec3 m_viewpos = qm::vec3_t {0, 0, 0};
-	uniform_uint m_tcgen = 0;
-	//uniform_mat3 m_itm = qm::mat3_t::identity(); // inverse transpose model
-	uniform_mat4 m_m = qm::mat4_t::identity();
 	
-	uniform_uint m_genrgb = 0;
-	uniform_uint m_genalpha = 0;
+	#define INLProcDecl
+	#include "q3main.inl"
 	
 	GLint bone_matricies_binding;
 	GLuint bone_matricies_buffer = 0;
@@ -388,43 +389,13 @@ struct programs::q3main::private_data {
 	GLuint gridlighting_buffer = 0;
 	
 	void reset() {
-		m_time.reset();
-		m_mvp.reset();
-		m_uv.reset();
-		m_color.reset();
-		m_use_vertex_colors.reset();
-		m_use_vertex_alpha.reset();
-		m_turb.reset();
-		m_turb_data.reset();
-		m_lmmode.reset();
-		m_bones.reset();
-		m_mapgen.reset();
-		m_viewpos.reset();
-		m_tcgen.reset();
-		m_genrgb.reset();
-		m_genalpha.reset();
-		//m_itm.reset();
-		m_m.reset();
+		#define INLProcReset
+		#include "q3main.inl"
 	}
 	
 	void push() {
-		m_time.push();
-		m_mvp.push();
-		m_uv.push();
-		m_color.push();
-		m_use_vertex_colors.push();
-		m_use_vertex_alpha.reset();
-		m_turb.push();
-		m_turb_data.push();
-		m_lmmode.push();
-		m_bones.push();
-		m_mapgen.push();
-		m_viewpos.push();
-		m_tcgen.push();
-		m_genrgb.push();
-		m_genalpha.push();
-		//m_itm.push();
-		m_m.push();
+		#define INLProcPush
+		#include "q3main.inl"
 	}
 };
 
@@ -453,40 +424,8 @@ programs::q3main::q3main() : m_data(new private_data) {
 		Com_Error(ERR_FATAL, va("programs::q3main failed to link:\n%s", log.c_str()));
 	}
 	
-	if (m_data->m_time.set_location(get_location("time")) == -1)							
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"time\"");
-	if (m_data->m_mvp.set_location(get_location("mvp")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"mvp\"");
-	//if (m_data->m_itm.set_location(get_location("itm")) == -1)
-	//	Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"itm\"");
-	if (m_data->m_m.set_location(get_location("m")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"m\"");
-	if (m_data->m_uv.set_location(get_location("uvm")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"uvm\"");
-	if (m_data->m_color.set_location(get_location("q3color")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"q3color\"");
-	if (m_data->m_use_vertex_colors.set_location(get_location("use_vertex_color")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"use_vertex_color\"");
-	if (m_data->m_use_vertex_alpha.set_location(get_location("use_vertex_alpha")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"use_vertex_alpha\"");
-	if (m_data->m_turb.set_location(get_location("turb")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"turb\"");
-	if (m_data->m_turb_data.set_location(get_location("turb_data")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"turb_data\"");
-	if (m_data->m_lmmode.set_location(get_location("lm_mode")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"lm_mode\"");
-	if (m_data->m_bones.set_location(get_location("ghoul2")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"ghoul2\"");
-	if (m_data->m_mapgen.set_location(get_location("mapgen")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"mapgen\"");
-	if (m_data->m_viewpos.set_location(get_location("view_origin")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"view_origin\"");
-	if (m_data->m_tcgen.set_location(get_location("tcgen")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"tcgen\"");
-	if (m_data->m_genrgb.set_location(get_location("rgbgen")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"rgbgen\"");
-	if (m_data->m_genalpha.set_location(get_location("alphagen")) == -1)
-		Com_Error(ERR_FATAL, "programs::q3main: could not find uniform location for \"alphagen\"");
+	#define INLProcResolve
+	#include "q3main.inl"
 		
 	m_data->bone_matricies_binding = glGetUniformBlockIndex(get_handle(), "BoneMatricies");
 	if (m_data->bone_matricies_binding == -1)
@@ -554,13 +493,17 @@ void programs::q3main::color(qm::vec4_t const & v) {
 }
 
 void programs::q3main::use_vertex_colors(bool const & v) {
+	/*
 	m_data->m_use_vertex_colors = v;
 	if (is_bound()) m_data->m_use_vertex_colors.push();
+	*/
 }
 
 void programs::q3main::use_vertex_alpha(bool const & v) {
+	/*
 	m_data->m_use_vertex_alpha = v;
 	if (is_bound()) m_data->m_use_vertex_alpha.push();
+	*/
 }
 
 void programs::q3main::turb(bool const & v) {
@@ -593,35 +536,13 @@ void programs::q3main::tcgen(q3stage::tcgen v) {
 	if (is_bound()) m_data->m_tcgen.push();
 }
 
-void programs::q3main::rgbgen(q3stage::gen_type gen) {
-	switch(gen) {
-		default:
-			m_data->m_genrgb = 0;
-			break;
-		case q3stage::gen_type::diffuse_lighting:
-		case q3stage::gen_type::diffuse_lighting_entity:
-			m_data->m_genrgb = 1;
-			break;
-		case q3stage::gen_type::specular_lighting:
-			m_data->m_genrgb = 2;
-			break;
-	}
+void programs::q3main::cgen(q3stage::gen_type gen) {
+	m_data->m_genrgb = static_cast<GLuint>(gen);
 	if (is_bound()) m_data->m_genrgb.push();
 }
 
-void programs::q3main::alphagen(q3stage::gen_type gen) {
-	switch(gen) {
-		default:
-			m_data->m_genalpha = 0;
-			break;
-		case q3stage::gen_type::diffuse_lighting:
-		case q3stage::gen_type::diffuse_lighting_entity:
-			m_data->m_genalpha = 1;
-			break;
-		case q3stage::gen_type::specular_lighting:
-			m_data->m_genalpha = 2;
-			break;
-	}
+void programs::q3main::agen(q3stage::gen_type gen) {
+	m_data->m_genalpha = static_cast<GLuint>(gen);
 	if (is_bound()) m_data->m_genalpha.push();
 }
 
