@@ -16,7 +16,13 @@ gentity_t::gentity_t() : sharedEntity_t() {
 }
 
 gentity_t::~gentity_t() {
-	if (g_phys && physics) g_phys->remove_object(physics);
+	if (g_phys) {
+		GEntPhysics * physics = get_component<GEntPhysics>();
+		if (physics) {
+			g_phys->remove_object(physics->object);
+		}
+	}
+	components.clear();
 }
 
 void gentity_t::clear() {
@@ -120,20 +126,32 @@ void gentity_t::clear() {
 	}
 	
 	this->~gentity_t();
-	new (this) (gentity_t);
+	new (this) gentity_t;
 }
 
 void gentity_t::link() {
-	trap->LinkEntity ((sharedEntity_t *)this);
+	trap->LinkEntity(this);
 }
 
 void gentity_t::unlink() {
-	trap->UnlinkEntity ((sharedEntity_t *)this);
+	trap->UnlinkEntity(this);
 }
 
-bool gentity_t::add_obj_physics( char const * model_name ) {
-	this->physics = g_phys->add_object_obj(model_name);
-	if (!this->physics) return false;
+bool gentity_t::add_obj_physics( char const * model_name, qm::vec3_t const & position) {
+	auto object = g_phys->add_object_obj(model_name);
+	if (!object) return false;
+	auto physics = set_component<GEntPhysics>();
+	physics->object = object;
+	physics->object->set_origin(position);
 	this->s.eFlags |= EF_PHYSICS;
 	return true;
+}
+
+void gentity_t::set_origin(vec3_t const origin) {
+	VectorCopy( origin, s.pos.trBase );
+	s.pos.trType = TR_STATIONARY;
+	s.pos.trTime = 0;
+	s.pos.trDuration = 0;
+	VectorClear( s.pos.trDelta );
+	VectorCopy( origin, r.currentOrigin );
 }

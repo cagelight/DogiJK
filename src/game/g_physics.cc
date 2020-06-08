@@ -28,13 +28,14 @@ void G_Physics_Frame(int time) {
 
 void G_RunPhysicsProp( gentity_t * ent ) {
 	
-	if (ent->s.eFlags & EF_PHYSICS && ent->physics) {
-		qm::vec3_t new_origin = ent->physics->get_origin();
+	auto physics = ent->get_component<GEntPhysics>();
+	if (ent->s.eFlags & EF_PHYSICS && physics) {
+		qm::vec3_t new_origin = physics->object->get_origin();
 		new_origin.assign_to(ent->s.origin);
 		new_origin.assign_to(ent->r.currentOrigin);
 		new_origin.assign_to(ent->s.pos.trBase);
 		
-		qm::vec3_t new_angles = ent->physics->get_angles();
+		qm::vec3_t new_angles = physics->object->get_angles();
 		new_angles.assign_to(ent->s.angles);
 		new_angles.assign_to(ent->r.currentAngles);
 		new_angles.assign_to(ent->s.apos.trBase);

@@ -23,6 +23,9 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include "qcommon/q_shared.hh"
+#include "qcommon/q_task.hh"
+
 #define	CGAME_API_VERSION		2
 
 #define	CMD_BACKUP			64
@@ -482,6 +485,7 @@ typedef struct cgameImport_s {
 	void			(*RegisterSharedMemory)					( char *memory );
 	void			(*TrueMalloc)							( void **ptr, int size );
 	void			(*TrueFree)								( void **ptr );
+	TaskCore *		(*GetTaskCore)							( void );
 
 	// timing
 	int				(*Milliseconds)							( void );

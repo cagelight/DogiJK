@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/q_shared.hh"
 #include "sys/sys_public.hh"
+#include "q_task.hh"
 
 //============================================================================
 
@@ -1052,3 +1053,13 @@ bool PD_Store ( const char *name, const void *data, size_t size );
 const void *PD_Load ( const char *name, size_t *size );
 
 uint32_t ConvertUTF8ToUTF32( char *utf8CurrentChar, char **utf8NextChar );
+
+/*
+==============================================================
+
+TASK SYSTEM
+
+==============================================================
+*/
+
+extern std::unique_ptr<TaskCore> com_taskcore;

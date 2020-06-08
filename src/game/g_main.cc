@@ -37,7 +37,7 @@ extern int fatalErrors;
 
 int killPlayerTimer = 0;
 
-std::vector<gentity_t> g_entities_actual;
+std::unique_ptr<std::array<gentity_t, MAX_GENTITIES>> g_entities_actual;
 gentity_t * 	g_entities = nullptr;
 
 gclient_t		g_clients[MAX_CLIENTS];
@@ -177,9 +177,8 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 	vmCvar_t	ckSum;
 	char serverinfo[MAX_INFO_STRING] = {0};
 	
-	g_entities_actual.clear();
-	g_entities_actual.resize(MAX_GENTITIES);
-	g_entities = g_entities_actual.data();
+	g_entities_actual = std::make_unique<std::array<gentity_t, MAX_GENTITIES>>();
+	g_entities = g_entities_actual->data();
 
 	//Init RMG to 0, it will be autoset to 1 if there is terrain on the level.
 	trap->Cvar_Set("RMG", "0");
@@ -247,13 +246,14 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 			trap->FS_Open( SECURITY_LOG, &level.security.log, FS_APPEND_SYNC );
 
 		if ( level.security.log )
-			trap->Print( "Logging to "SECURITY_LOG"\n" );
+			trap->Print( "Logging to " SECURITY_LOG "\n" );
 		else
-			trap->Print( "WARNING: Couldn't open logfile: "SECURITY_LOG"\n" );
+			trap->Print( "WARNING: Couldn't open logfile: " SECURITY_LOG "\n" );
 	}
 	else
 		trap->Print( "Not logging security events to disk.\n" );
 
+	G_Task_Init();
 	if (g_physics.integer) G_Physics_Init();
 
 	G_LogWeaponInit();
@@ -520,8 +520,9 @@ void G_ShutdownGame( int restart ) {
 	}
 	
 	G_Physics_Shutdown();
+	G_Task_Shutdown();
 	
-	g_entities_actual.clear();
+	g_entities_actual.reset();
 
 	B_CleanupAlloc(); //clean up all allocations made with B_Alloc
 }
@@ -3068,7 +3069,8 @@ void G_RunFrame( int levelTime ) {
 	// get any cvar changes
 	G_UpdateCvars();
 
-
+	// run all pending tasks from concurrent threads
+	G_Task_Run();
 
 #ifdef _G_FRAME_PERFANAL
 	trap->PrecisionTimer_Start(&timer_ItemRun);

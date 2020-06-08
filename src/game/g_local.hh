@@ -175,17 +175,27 @@ extern void *g2SaberInstance;
 extern qboolean gEscaping;
 extern int gEscapeTime;
 
+struct GEntityComponent {
+	GEntityComponent() = default;
+	virtual ~GEntityComponent() = default;
+};
+
 struct gentity_t : public sharedEntity_t {
 	
 	gentity_t();
 	~gentity_t();
+	
+	gentity_t(gentity_t const &) = delete;
+	gentity_t(gentity_t &&) = delete;
 	
 	void clear();
 	
 	void link();
 	void unlink();
 	
-	bool add_obj_physics( char const * model_name );
+	bool add_obj_physics( char const * model_name, qm::vec3_t const & position = {0, 0, 0} );
+	
+	void set_origin(vec3_t const);
 
 	gclient_t	*client = nullptr;			// NULL if not a client
 
@@ -379,7 +389,31 @@ struct gentity_t : public sharedEntity_t {
 	// OpenJK add
 	int			useDebounceTime = 0;	// for cultist_destroyer
 	
-	physics_object_ptr physics;
+	std::vector<std::unique_ptr<GEntityComponent>> components;
+	
+	template <typename T>
+	T * get_component() {
+		for (auto & uptr : components) {
+			T * cptr = dynamic_cast<T *>(uptr.get());
+			if (cptr) return cptr;
+		}
+		return nullptr;
+	}
+	
+	template <typename T, typename ... Args>
+	T * set_component(Args && ... args) {
+		std::unique_ptr<GEntityComponent> * carrier = nullptr;
+		for (auto & uptr : components) {
+			T * cptr = dynamic_cast<T *>(uptr.get());
+			if (cptr) {
+				carrier = &uptr;
+			}
+		}
+		if (!carrier) carrier = &components.emplace_back();
+		T * c = new T { std::forward<Args>(args) ... };
+		carrier->reset(c);
+		return c;
+	}
 };
 
 void G_FreeEntity( gentity_t *e );
@@ -993,7 +1027,7 @@ typedef struct level_locals_s {
 
 
 //
-// g_spawn.c
+// g_spawn.cc
 //
 qboolean	G_SpawnString( const char *key, const char *defaultString, char const **out );
 // spawn string returns a temporary reference, you must CopyString() if you want to keep it
@@ -1005,7 +1039,7 @@ void		G_SpawnEntitiesFromString( qboolean inSubBSP );
 char *G_NewString( const char *string );
 
 //
-// g_cmds.c
+// g_cmds.cc
 //
 void Cmd_Score_f (gentity_t *ent);
 void StopFollowing( gentity_t *ent );
@@ -1018,7 +1052,7 @@ void Cmd_ToggleSaber_f(gentity_t *ent);
 void Cmd_EngageDuel_f(gentity_t *ent);
 
 //
-// g_items.c
+// g_items.cc
 //
 void ItemUse_Binoculars(gentity_t *ent);
 void ItemUse_Shield(gentity_t *ent);
@@ -1052,7 +1086,7 @@ void RegisterItem( gitem_t *item );
 void SaveRegisteredItems( void );
 
 //
-// g_utils.c
+// g_utils.cc
 //
 int		G_ModelIndex( const char *name );
 int		G_SoundIndex( const char *name );
@@ -1116,11 +1150,10 @@ private:
 extern std::unique_ptr<LocationManager> g_loc_man;
 
 //
-// g_object.c
+// g_object.cc
 //
 
 extern void G_RunObject			( gentity_t *ent );
-
 
 float	*tv (float x, float y, float z);
 char	*vtos( const vec3_t v );
@@ -1141,7 +1174,7 @@ Ghoul2 Insert End
 */
 
 //
-// g_combat.c
+// g_combat.cc
 //
 qboolean CanDamage (gentity_t *targ, vec3_t origin);
 void G_Damage (gentity_t *targ, gentity_t *inflictor, gentity_t *attacker, vec3_t dir, vec3_t point, int damage, int dflags, int mod);
@@ -1178,12 +1211,12 @@ extern int gGAvoidDismember;
 #define DAMAGE_SABER_KNOCKBACK1_B2	0x00040000	// Check the attacker's first saber for a knockbackScale2
 #define DAMAGE_SABER_KNOCKBACK2_B2	0x00080000	// Check the attacker's second saber for a knockbackScale2
 //
-// g_exphysics.c
+// g_exphysics.cc
 //
 void G_RunExPhys(gentity_t *ent, float gravity, float mass, float bounce, qboolean autoKill, int *g2Bolts, int numG2Bolts);
 
 //
-// g_missile.c
+// g_missile.cc
 //
 void G_ReflectMissile( gentity_t *ent, gentity_t *missile, vec3_t forward );
 
@@ -1198,7 +1231,7 @@ void WP_FireBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean a
 
 
 //
-// g_mover.c
+// g_mover.cc
 //
 extern int	BMS_START;
 extern int	BMS_MID;
@@ -1212,13 +1245,13 @@ void G_RunMover( gentity_t *ent );
 void Touch_DoorTrigger( gentity_t *ent, gentity_t *other, trace_t *trace );
 
 //
-// g_trigger.c
+// g_trigger.cc
 //
 void trigger_teleporter_touch (gentity_t *self, gentity_t *other, trace_t *trace );
 
 
 //
-// g_misc.c
+// g_misc.cc
 //
 #define MAX_REFNAME	32
 #define	START_TIME_LINK_ENTS		FRAMETIME*1
@@ -1249,7 +1282,7 @@ void TeleportPlayer( gentity_t *player, vec3_t origin, vec3_t angles, qboolean s
 void TeleportPlayerToPlayer(gentity_t * playerFrom, gentity_t * playerTo, qboolean silent);
 
 //
-// g_weapon.c
+// g_weapon.cc
 //
 void WP_FireTurretMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean altFire, int damage, int velocity, int mod, gentity_t *ignore );
 void WP_FireGenericBlasterMissile( gentity_t *ent, vec3_t start, vec3_t dir, qboolean altFire, int damage, int velocity, int mod );
@@ -1260,7 +1293,7 @@ qboolean CheckGauntletAttack( gentity_t *ent );
 
 
 //
-// g_client.c
+// g_client.cc
 //
 int TeamCount( int ignoreClientNum, team_t team );
 int TeamLeader( int team );
@@ -1280,37 +1313,37 @@ qboolean SpotWouldTelefrag( gentity_t *spot );
 extern gentity_t *gJMSaberEnt;
 
 //
-// g_svcmds.c
+// g_svcmds.cc
 //
 qboolean	ConsoleCommand( void );
 void G_ProcessIPBans(void);
 qboolean G_FilterPacket (char *from);
 
 //
-// g_weapon.c
+// g_weapon.cc
 //
 void FireWeapon( gentity_t *ent, qboolean altFire );
 void BlowDetpacks(gentity_t *ent);
 void RemoveDetpacks(gentity_t *ent);
 
 //
-// p_hud.c
+// p_hud.cc
 //
 void MoveClientToIntermission (gentity_t *client);
 void G_SetStats (gentity_t *ent);
 void DeathmatchScoreboardMessage (gentity_t *client);
 
 //
-// g_cmds.c
+// g_cmds.cc
 //
 
 //
-// g_pweapon.c
+// g_pweapon.cc
 //
 
 
 //
-// g_main.c
+// g_main.cc
 //
 extern vmCvar_t g_ff_objectives;
 extern qboolean gDoSlowMoDuel;
@@ -1329,7 +1362,7 @@ void SendScoreboardMessageToAllClients( void );
 const char *G_GetStringEdString(char *refSection, char *refName);
 
 //
-// g_client.c
+// g_client.cc
 //
 char *ClientConnect( int clientNum, qboolean firstTime, qboolean isBot );
 qboolean ClientUserinfoChanged( int clientNum );
@@ -1342,7 +1375,7 @@ void G_ClearVote( gentity_t *ent );
 void G_ClearTeamVote( gentity_t *ent, int team );
 
 //
-// g_active.c
+// g_active.cc
 //
 void G_CheckClientTimeouts	( gentity_t *ent );
 void ClientThink			( int clientNum, usercmd_t *ucmd );
@@ -1350,20 +1383,20 @@ void ClientEndFrame			( gentity_t *ent );
 void G_RunClient			( gentity_t *ent );
 
 //
-// g_team.c
+// g_team.cc
 //
 qboolean OnSameTeam( gentity_t *ent1, gentity_t *ent2 );
 void Team_CheckDroppedItem( gentity_t *dropped );
 
 //
-// g_mem.c
+// g_mem.cc
 //
 void *G_Alloc( int size );
 void G_InitMemory( void );
 void Svcmd_GameMem_f( void );
 
 //
-// g_session.c
+// g_session.cc
 //
 void G_ReadSessionData( gclient_t *client );
 void G_InitSessionData( gclient_t *client, char *userinfo, qboolean isBot );
@@ -1372,7 +1405,7 @@ void G_InitWorldSession( void );
 void G_WriteSessionData( void );
 
 //
-// NPC_senses.cpp
+// NPC_senses.ccpp
 //
 extern void AddSightEvent( gentity_t *owner, vec3_t position, float radius, alertEventLevel_e alertLevel, float addLight ); //addLight = 0.0f
 extern void AddSoundEvent( gentity_t *owner, vec3_t position, float radius, alertEventLevel_e alertLevel, qboolean needLOS ); //needLOS = qfalse
@@ -1386,7 +1419,7 @@ extern qboolean G_ClearLOS4( gentity_t *self, gentity_t *ent );
 extern qboolean G_ClearLOS5( gentity_t *self, const vec3_t end );
 
 //
-// g_bot.c
+// g_bot.cc
 //
 void G_InitBots( void );
 char *G_GetBotInfoByNumber( int num );
@@ -1401,7 +1434,7 @@ qboolean G_DoesMapSupportGametype(const char *mapname, int gametype);
 const char *G_RefreshNextMap(int gametype, qboolean forced);
 void G_LoadArenas( void );
 
-// w_force.c / w_saber.c
+// w_force.cc / w_saber.cc
 gentity_t *G_PreDefSound(vec3_t org, int pdSound);
 qboolean HasSetSaberOnly(void);
 void WP_ForcePowerStop( gentity_t *self, forcePowers_t forcePower );
@@ -1425,7 +1458,7 @@ void ForceThrow( gentity_t *self, qboolean pull );
 void ForceTelepathy(gentity_t *self);
 qboolean Jedi_DodgeEvasion( gentity_t *self, gentity_t *shooter, trace_t *tr, int hitLoc );
 
-// g_log.c
+// g_log.cc
 void QDECL G_LogWeaponPickup(int client, int weaponid);
 void QDECL G_LogWeaponFire(int client, int weaponid);
 void QDECL G_LogWeaponDamage(int client, int mod, int amount);
@@ -1439,7 +1472,7 @@ void QDECL G_LogWeaponOutput(void);
 void QDECL G_LogExit( const char *string );
 void QDECL G_ClearClientLog(int client);
 
-// g_siege.c
+// g_siege.cc
 void InitSiegeMode(void);
 void G_SiegeClientExData(gentity_t *msgTarg);
 
@@ -1462,14 +1495,14 @@ float NPC_GetVFOVPercentage( vec3_t spot, vec3_t from, vec3_t facing, float vFOV
 extern void G_SetEnemy (gentity_t *self, gentity_t *enemy);
 qboolean InFront( vec3_t spot, vec3_t from, vec3_t fromAngles, float threshHold );
 
-// ai_main.c
+// ai_main.cc
 #define MAX_FILEPATH			144
 
 int		OrgVisible		( vec3_t org1, vec3_t org2, int ignore);
 void	BotOrder		( gentity_t *ent, int clientnum, int ordernum);
 int		InFieldOfVision	( vec3_t viewangles, float fov, vec3_t angles);
 
-// ai_util.c
+// ai_util.cc
 void B_InitAlloc(void);
 void B_CleanupAlloc(void);
 
@@ -1490,7 +1523,7 @@ int BotAIStartFrame( int time );
 
 #include "g_team.hh" // teamplay specific stuff
 
-extern std::vector<gentity_t> g_entities_actual; // g_entities is now a vector so constructors and destructors are called appropriately vs a C-style array
+extern std::unique_ptr<std::array<gentity_t, MAX_GENTITIES>> g_entities_actual; // g_entities is now C++ified so constructors and destructors are called appropriately
 extern gentity_t * g_entities; // always maps to g_entities_actual.data(), here for compatibility reasons (laziness)
 extern level_locals_t	level;
 
@@ -1509,7 +1542,7 @@ typedef enum userinfoValidationBits_e {
 void Svcmd_ToggleUserinfoValidation_f( void );
 void Svcmd_ToggleAllowVote_f( void );
 
-// g_cvar.c
+// g_cvar.cc
 #define XCVAR_PROTO
 	#include "g_xcvar.inl"
 	#include "bg_xcvar.inl"
@@ -1517,14 +1550,45 @@ void Svcmd_ToggleAllowVote_f( void );
 void G_RegisterCvars( void );
 void G_UpdateCvars( void );
 
-// g_physics.c
+// g_physics.cc
 void G_Physics_Init();
 void G_Physics_Shutdown();
 
 void G_Physics_Frame( int time );
 void G_RunPhysicsProp( gentity_t *ent );
 
+struct GEntPhysics : public GEntityComponent {
+	physics_object_ptr object;
+};
+
 extern std::unique_ptr<physics_world_t> g_phys;
+
+// g_eegg.cc
+struct EEggConcept {
+	istring classname;
+	istring model;
+	qm::vec3_t mins, maxs;
+};
+
+struct EEggPathfinder {
+	EEggPathfinder(EEggConcept const &);
+	~EEggPathfinder();
+	
+	uint explore(qm::vec3_t start, uint divisions /*and threads*/, std::chrono::high_resolution_clock::duration time_alloted);
+	uint spawn_eggs(uint max_eggs = 1);
+	
+private:
+	struct PrivateData;
+	std::unique_ptr<PrivateData> m_data;
+};
+
+// g_task.cc
+using GTaskType = std::packaged_task<void()>;
+
+void G_Task_Init();
+void G_Task_Shutdown();
+void G_Task_Run();
+void G_Task_Enqueue(GTaskType &&);
 
 // trap
 extern gameImport_t *trap;

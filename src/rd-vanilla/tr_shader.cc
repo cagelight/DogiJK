@@ -1242,8 +1242,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		//
 		else if ( !Q_stricmp( token, "animMap" ) || !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "oneshotanimMap" ))
 		{
-			#define	MAX_IMAGE_ANIMATIONS	128
-			image_t *images[MAX_IMAGE_ANIMATIONS];
+			std::vector<image_t *> images;
 			bool bClamp = !Q_stricmp( token, "clampanimMap" );
 			bool oneShot = !Q_stricmp( token, "oneshotanimMap" );
 
@@ -1265,19 +1264,17 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 					break;
 				}
 				num = stage->bundle[0].numImageAnimations;
-				if ( num < MAX_IMAGE_ANIMATIONS ) {
-					images[num] = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT );
-					if ( !images[num] )
-					{
-						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-						return qfalse;
-					}
-					stage->bundle[0].numImageAnimations++;
+				images.emplace_back(R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT ));
+				if ( !images[num] )
+				{
+					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+					return qfalse;
 				}
+				stage->bundle[0].numImageAnimations++;
 			}
 			// Copy image ptrs into an array of ptrs
 			stage->bundle[0].image = (image_t*) Hunk_Alloc( stage->bundle[0].numImageAnimations * sizeof( image_t* ), h_low );
-			memcpy( stage->bundle[0].image,	images,			stage->bundle[0].numImageAnimations * sizeof( image_t* ) );
+			memcpy( stage->bundle[0].image,	images.data(),			stage->bundle[0].numImageAnimations * sizeof( image_t* ) );
 		}
 		else if ( !Q_stricmp( token, "videoMap" ) )
 		{

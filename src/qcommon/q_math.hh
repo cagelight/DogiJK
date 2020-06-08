@@ -54,6 +54,7 @@ void NormalToLatLong( const vec3_t normal, byte bytes[2] );
 //      RANDOM NUMBER GENERATION
 //
 ///////////////////////////////////////////////////////////////////////////
+
 float Q_random();
 float Q_crandom();
 float Q_random(int32_t & seed);

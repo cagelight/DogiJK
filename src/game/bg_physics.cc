@@ -275,17 +275,8 @@ struct bullet_world_t : public physics_world_t {
 				}
 			};
 			
-			Com_Printf("Spawning %zu threads to process BSP brushes/patches...\n", std::thread::hardware_concurrency());
-			
-			std::vector<std::thread *> threads;
-			for (size_t i = 0; i < std::thread::hardware_concurrency(); i++) {
-				threads.emplace_back( new std::thread {thread_func} );
-			}
-			for (std::thread * thread : threads) {
-				thread->join();
-				delete thread;
-			}
-			
+			Com_Printf("Compiling physics map...\n", trap->GetTaskCore()->worker_count());
+			trap->GetTaskCore()->enqueue_fill_wait(thread_func);
 			Com_Printf("...done\n\n");
 
 			shape_solid->recalculateLocalAabb();

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libbsp/reader.hh>
+
 #include "tr_local.hh"
 #include "glad.hh"
 
@@ -731,13 +733,8 @@ namespace howler {
 		istring m_basename;
 		istring m_entity_string;
 		char const * m_entity_parse_point = nullptr;
-		
-		bool m_base_allocated = false;
-		union {
-			byte * m_base = nullptr;
-			dheader_t const * m_header;
-		};
-		template <typename T> T const * base(size_t offs) const { return reinterpret_cast<T const *>(m_base + offs); }
+		BSP::Reader m_bspr;
+		std::vector<uint8_t> m_bspr_alloc;
 		
 		//================================
 		// MESH SPECIALIZATIONS
@@ -829,7 +826,7 @@ namespace howler {
 		//================================
 		
 		struct q3worldsurface {
-			dsurface_t const * info;
+			BSP::Surface const * info;
 			q3shader_ptr shader;
 			q3worldmesh_proto_variant proto;
 			uint32_t index_start = 0;
@@ -877,15 +874,13 @@ namespace howler {
 		//================================
 		
 		// MAP DATA POINTERS
-		dshader_t const * m_shaders;
-		int32_t m_shaders_count;
+		BSP::Reader::ShaderArray m_shaders;
 		
-		dmodel_t const * dmodels;
+		BSP::Reader::ModelArray m_models;
+
+		BSP::Reader::LightgridArray m_lightgrid;
+		BSP::Reader::LightArray m_lightarray;
 		
-		lightgrid_t const * m_lightgrid;
-		int32_t m_lightgrid_num;
-		uint16_t const * m_lightgrid_array;
-		int32_t m_lightgrid_array_num;
 		qm::vec3_t m_lightgrid_size;
 		qm::vec3_t m_lightgrid_origin;
 		int32_t m_lightgrid_bounds [3];
@@ -899,8 +894,12 @@ namespace howler {
 		int32_t m_lightmap_span = -1;
 		q3texture_ptr m_lightmap = nullptr;
 		
+		/*
 		int32_t m_max_cluster = 0;
 		std::unique_ptr<q3vis> m_vis = nullptr;
+		BSP::VisibilityHeader a;
+		*/
+		std::unique_ptr<BSP::Reader::Visibility> m_vis;
 		//----------------
 		
 		//std::unordered_map<int32_t, q3model_ptr> m_vis_cache;
@@ -923,6 +922,9 @@ namespace howler {
 		void load_entities();
 		void load_lightgrid();
 		void load_lightgridarray();
+		
+		// for debugging
+		void load_debug();
 		
 		//================================
 		struct q3worldrendermesh;

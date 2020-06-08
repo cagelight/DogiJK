@@ -933,7 +933,7 @@ Marks the entity as free
 =================
 */
 void G_FreeEntity( gentity_t * ent ) {
-	ent->clear();
+	if (ent) ent->clear();
 }
 
 /*
@@ -1819,13 +1819,7 @@ Sets the pos trajectory for a fixed position
 ================
 */
 void G_SetOrigin( gentity_t *ent, vec3_t origin ) {
-	VectorCopy( origin, ent->s.pos.trBase );
-	ent->s.pos.trType = TR_STATIONARY;
-	ent->s.pos.trTime = 0;
-	ent->s.pos.trDuration = 0;
-	VectorClear( ent->s.pos.trDelta );
-
-	VectorCopy( origin, ent->r.currentOrigin );
+	ent->set_origin(origin);
 }
 
 qboolean G_CheckInSolid (gentity_t *self, qboolean fix)

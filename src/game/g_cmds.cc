@@ -3912,12 +3912,11 @@ static void Prop_Spawn( gentity_t * player, qm::vec3_t location, char const * mo
 	//ent->r.svFlags |= SVF_USE_CURRENT_ORIGIN;
 	
 	ent->s.modelindex = G_ModelIndex(model);
-	if (!ent->add_obj_physics(model)) {
+	if (!ent->add_obj_physics(model, location)) {
 		trap->SendServerCommand( player-g_entities, va( "print \"could not spawn prop, OBJ model '%s' not found or was invalid\n\"", model ) );
 		ent->clear();
 		return;
 	}
-	ent->physics->set_origin(location);
 	ent->link();
 }
 
@@ -3977,6 +3976,88 @@ static void Cmd_TraceShader_f(gentity_t * player) {
 	}
 }
 
+// ================================================================
+// EASTER EGG
+// ================================================================
+
+static void Cmd_EEgg_f(gentity_t * player) {
+	
+	if (trap->Argc() <= 1) {
+		// TODO -- print usage
+		return;
+	}
+	
+	std::array<char, 16> cmdbuf;
+	trap->Argv(1, cmdbuf.data(), cmdbuf.size());
+	istring cmd { cmdbuf.data() };
+	
+	if (cmd == "list") {
+		uint count = 0;
+		for (gentity_t & ent : *g_entities_actual) if (ent.classname == "easter_egg")
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: Egg %u: (%f, %f, %f)\n\"", count++, ent.r.currentOrigin[0], ent.r.currentOrigin[1], ent.r.currentOrigin[2]) );
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u Eggs listed.\n\"", count++) );
+		return;
+	}
+	
+	if (cmd == "clear") {
+		for (gentity_t & ent : *g_entities_actual)
+			if (ent.classname == "easter_egg") ent.clear();
+		return;
+	}
+	
+	struct EEggCMDPers {
+		EEggPathfinder path;
+		uint locs = 0, eggs = 0;
+	};
+	
+	static std::unique_ptr<EEggCMDPers> pers;
+	
+	if (cmd == "place") {
+		if (pers) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current placement operation must finish before a new one can be started.\n\"") );
+			return;
+		}
+		
+		EEggConcept conc;
+		conc.classname = "easter_egg";
+		conc.model = "models/dogijk/testbox.obj";
+		conc.mins = {-16, -16, -16};
+		conc.maxs = {16, 16, 16};
+		
+		uint num_eggs = 20;
+		std::chrono::high_resolution_clock::duration allotted_time = std::chrono::milliseconds(500);
+		
+		if (trap->Argc() > 2) {
+			std::array<char, 8> buf;
+			trap->Argv(2, buf.data(), buf.size());
+			num_eggs = std::strtol(buf.data(), nullptr, 10);
+		}
+		
+		if (trap->Argc() > 3) {
+			std::array<char, 8> buf;
+			trap->Argv(3, buf.data(), buf.size());
+			allotted_time = std::chrono::milliseconds(std::strtol(buf.data(), nullptr, 10));
+		}
+		
+		pers = std::make_unique<EEggCMDPers>(conc);
+		
+		trap->GetTaskCore()->enqueue([player, allotted_time, num_eggs](){
+			pers->locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->worker_count(), allotted_time);
+			GTaskType task { [player, num_eggs](){
+				pers->eggs = pers->path.spawn_eggs(num_eggs);
+				trap->SendServerCommand( player - g_entities, va("print \"eegg: placement operation complete -- %u locations scored, %u eggs placed.\n\"", pers->locs, pers->eggs) );
+				pers.reset();
+			}};
+			G_Task_Enqueue(std::move(task));
+		});
+		
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: placement operation started -- set to run for %li milliseconds.\n\"", std::chrono::duration_cast<std::chrono::milliseconds>(allotted_time).count()) );
+		return;
+	}
+	
+	trap->SendServerCommand( player - g_entities, va("print \"eegg: unknown subcommand.\n\"") );
+}
+
 /*
 =================
 ClientCommand
@@ -4008,6 +4089,7 @@ command_t commands[] = {
 	{ "debugBMove_Up",		Cmd_BotMoveUp_f,			CMD_CHEAT|CMD_ALIVE },
 	{ "dropsaber",			Cmd_DropSaber_f,			CMD_ALIVE },
 	{ "duelteam",			Cmd_DuelTeam_f,				CMD_NOINTERMISSION },
+	{ "eegg",				Cmd_EEgg_f,					CMD_CHEAT|CMD_ALIVE|CMD_NOINTERMISSION },
 	{ "follow",				Cmd_Follow_f,				CMD_NOINTERMISSION },
 	{ "follownext",			Cmd_FollowNext_f,			CMD_NOINTERMISSION },
 	{ "followprev",			Cmd_FollowPrev_f,			CMD_NOINTERMISSION },

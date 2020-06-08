@@ -830,7 +830,7 @@ void CG_AddRadarEnt(centity_t *cent)
 	static const size_t numRadarEnts = ARRAY_LEN( cg.radarEntities );
 	if (cg.radarEntityCount >= numRadarEnts)
 	{
-#ifdef _DEBUG
+#if 0
 		Com_Printf("^3Warning: CG_AddRadarEnt full. (%d max)\n", numRadarEnts);
 #endif
 		return;

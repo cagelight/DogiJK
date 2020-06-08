@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <array>
 #include <ctgmath>
+#include <random>
 
 #if QMATH2_PRINT_FUNCTIONS == 1
 #include <string>
@@ -121,6 +122,60 @@ namespace qm {
 	using mat3_t = meta::mat3_t<float>;
 	using mat4_t = meta::mat4_t<float>;
 	
+	template <typename T>
+	struct xorshift32 {
+		
+		using result_type = T;
+		static_assert(sizeof(result_type) == 4);
+		
+		static constexpr void next(T & value) {
+			
+			value ^= value << 13;
+			value ^= value >> 17;
+			value ^= value << 5;
+		}
+		
+		xorshift32(result_type const & r) : a(r) {}
+		result_type operator() () {
+			next(a);
+			return a;
+		}
+		
+		result_type & state() { return a; }
+		
+		static constexpr result_type min() { return std::numeric_limits<result_type>().min(); }
+		static constexpr result_type max() { return std::numeric_limits<result_type>().max(); }
+	private:
+		result_type a;
+	};
+	
+	template <typename T>
+	struct xorshift128plus {
+		
+		using result_type = T;
+		static_assert(sizeof(result_type) == 8);
+		
+		xorshift128plus(result_type const & r) : a(r), b(~r) {}
+		result_type operator() () {
+			result_type t = a;
+			result_type const s = b;
+			a = s;
+			t ^= t << 23;
+			t ^= t >> 17;
+			t ^= s ^ (s >> 26);
+			b = t;
+			return t + s;
+		}
+		
+		static constexpr result_type min() { return std::numeric_limits<result_type>().min(); }
+		static constexpr result_type max() { return std::numeric_limits<result_type>().max(); }
+	private:
+		result_type a, b;
+	};
+	
+	//using random_engine = std::mt19937_64;
+	using random_engine = xorshift128plus<uint64_t>;
+	static inline random_engine rng { std::random_device {}() };
 }
 
 //================================================================
@@ -299,11 +354,17 @@ struct qm::meta::vec3_t {
 	static constexpr T dot(vec3_t const & A, vec3_t const & B) noexcept {
 		return A[0] * B[0] + A[1] * B[1] + A[2] * B[2];
 	}
-	constexpr T dot(vec3_t const & other) const noexcept { return vec3_t::dot(*this, other); }
+	constexpr T dot(vec3_t const & other) const noexcept {
+		return vec3_t::dot(*this, other);
+	}
+	
+	constexpr vec3_t move_along(vec3_t const & dir, T dist) const noexcept {
+		return *this + dir * dist;
+	}
 	
 	// SPECIAL
 	
-	static constexpr vec3_t cross(vec3_t const & A, vec3_t<T> const & B) noexcept {
+	static constexpr vec3_t cross(vec3_t const & A, vec3_t const & B) noexcept {
 		return {
 			A[1] * B[2] - A[2] * B[1],
 			A[2] * B[0] - A[0] * B[2],
@@ -561,6 +622,17 @@ struct qm::meta::quat_t {
 	
 	static constexpr quat_t identity() noexcept {
 		return { static_cast<T>(0), static_cast<T>(0), static_cast<T>(0), static_cast<T>(1) };
+	}
+	
+	static quat_t random() noexcept {
+		static std::uniform_real_distribution<T> dist {0, 1};
+		T u = dist(rng), v = dist(rng), w = dist(rng);
+		return {
+			std::sqrt(1 - u) * std::sin(2 * qm::meta::pi<T> * v),
+			std::sqrt(1 - u) * std::cos(2 * qm::meta::pi<T> * v),
+			std::sqrt(u)     * std::sin(2 * qm::meta::pi<T> * w),
+			std::sqrt(u)     * std::cos(2 * qm::meta::pi<T> * w)
+		};
 	}
 	
 	// COMMON
@@ -1056,6 +1128,13 @@ namespace qm::meta {
 			v[0] * m[2][0] + v[1] * m[2][1] + v[2] * m [2][2] + v[3] * m[2][3],
 			v[0] * m[3][0] + v[1] * m[3][1] + v[2] * m [3][2] + v[3] * m[3][3],
 		};
+	}
+
+	template <typename T>
+	constexpr vec3_t<T> operator * (quat_t<T> const & q, vec3_t<T> v) noexcept {
+		vec3_t<T> qv {q[0], q[1], q[2]};
+		vec3_t<T> t = static_cast<T>(2) * vec3_t<T>::cross(qv, v);
+		return v + q[3] * t + vec3_t<T>::cross(qv, t);
 	}
 }
 

@@ -536,27 +536,25 @@ static float VectorDistance(vec3_t p1, vec3_t p2)
 #endif
 
 static void SV_ClipMoveToEntities( moveclip_t *clip ) {
-	static int	touchlist[MAX_GENTITIES];
+	int	touchlist[MAX_GENTITIES];
 	int			i, num;
 	sharedEntity_t *touch;
-	int			passOwnerNum;
-	trace_t		trace, oldTrace= {0};
+	int			passOwnerNum = -1;
+	trace_t		trace, oldTrace= {};
 	clipHandle_t	clipHandle;
 	float		*origin, *angles;
 	int			thisOwnerShared = 1;
 
 	num = SV_AreaEntities( clip->boxmins, clip->boxmaxs, touchlist, MAX_GENTITIES);
 
-	if ( clip->passEntityNum != ENTITYNUM_NONE ) {
+	if ( clip->passEntityNum >= 0 && clip->passEntityNum != ENTITYNUM_NONE ) {
 		passOwnerNum = ( SV_GentityNum( clip->passEntityNum ) )->r.ownerNum;
 		if ( passOwnerNum == ENTITYNUM_NONE ) {
 			passOwnerNum = -1;
 		}
-	} else {
-		passOwnerNum = -1;
 	}
 
-	if ( SV_GentityNum(clip->passEntityNum)->r.svFlags & SVF_OWNERNOTSHARED )
+	if ( clip->passEntityNum >= 0 && SV_GentityNum(clip->passEntityNum)->r.svFlags & SVF_OWNERNOTSHARED )
 	{
 		thisOwnerShared = 0;
 	}
@@ -571,6 +569,9 @@ static void SV_ClipMoveToEntities( moveclip_t *clip ) {
 		if ( clip->passEntityNum != ENTITYNUM_NONE ) {
 			if ( touchlist[i] == clip->passEntityNum ) {
 				continue;	// don't clip against the pass entity
+			}
+			if ( clip->passEntityNum < 0 && touchlist[i] != ENTITYNUM_WORLD ) {
+				continue; // less than 0 -> ignore all except world
 			}
 			if ( touch->r.ownerNum == clip->passEntityNum) {
 				if (touch->r.svFlags & SVF_OWNERNOTSHARED)
@@ -705,7 +706,7 @@ Ghoul2 Insert Start
 		//this must be done somewhat differently.
 		if ((clip->traceFlags & G2TRFLAG_DOGHOULTRACE) && trace.entityNum == touch->s.number && touch->ghoul2 && ((clip->traceFlags & G2TRFLAG_HITCORPSES) || !(touch->s.eFlags & EF_DEAD)))
 		{ //standard behavior will be to ignore g2 col on dead ents, but if traceFlags is set to allow, then we'll try g2 col on EF_DEAD people too.
-			static G2Trace_t G2Trace;
+			G2Trace_t G2Trace {};
 			vec3_t angles;
 			float fRadius = 0.0f;
 			int tN = 0;

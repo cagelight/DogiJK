@@ -21,13 +21,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 ===========================================================================
 */
 
-#include "q_math.hh"
+#include "q_math2.hh"
 #include <assert.h>
 #include <float.h>
 #include <math.h>
 #include <stdlib.h>
-
-#include <random>
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -200,66 +198,10 @@ void NormalToLatLong( const vec3_t normal, byte bytes[2] )
 //
 ///////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-struct xorshift32 {
-	
-	using result_type = T;
-	static_assert(sizeof(result_type) == 4);
-	
-	static constexpr void next(T & value) {
-		
-		value ^= value << 13;
-		value ^= value >> 17;
-		value ^= value << 5;
-	}
-	
-	xorshift32(result_type const & r) : a(r) {}
-	result_type operator() () {
-		next(a);
-		return a;
-	}
-	
-	result_type & state() { return a; }
-	
-	static constexpr result_type min() { return std::numeric_limits<result_type>().min(); }
-	static constexpr result_type max() { return std::numeric_limits<result_type>().max(); }
-private:
-	result_type a;
-};
-
-template <typename T>
-struct xorshift128plus {
-	
-	using result_type = T;
-	static_assert(sizeof(result_type) == 8);
-	
-	xorshift128plus(result_type const & r) : a(r), b(~r) {}
-	result_type operator() () {
-		result_type t = a;
-		result_type const s = b;
-		a = s;
-		t ^= t << 23;
-		t ^= t >> 17;
-		t ^= s ^ (s >> 26);
-		b = t;
-		return t + s;
-	}
-	
-	static constexpr result_type min() { return std::numeric_limits<result_type>().min(); }
-	static constexpr result_type max() { return std::numeric_limits<result_type>().max(); }
-private:
-	result_type a, b;
-};
-
-//using random_engine = std::mt19937_64;
-using random_engine = xorshift128plus<uint64_t>;
-
-static random_engine rng { std::random_device {}() };
-
 float Q_random( int32_t & seed )
 {
 	static std::uniform_real_distribution<float> dist {0, 1};
-	xorshift32<int32_t> rng2 {seed};
+	qm::xorshift32<int32_t> rng2 {seed};
 	float ret = dist(rng2);
 	seed = rng2.state();
 	return ret;
@@ -268,7 +210,7 @@ float Q_random( int32_t & seed )
 float Q_crandom( int32_t & seed )
 {
 	static std::uniform_real_distribution<float> dist {-0.5, 0.5};
-	xorshift32<int32_t> rng2 {seed};
+	qm::xorshift32<int32_t> rng2 {seed};
 	float ret = dist(rng2);
 	seed = rng2.state();
 	return ret;
@@ -277,23 +219,23 @@ float Q_crandom( int32_t & seed )
 float Q_random()
 {
 	static std::uniform_real_distribution<float> dist {0, 1};
-	return dist(rng);
+	return dist(qm::rng);
 }
 
 float Q_crandom()
 {
 	static std::uniform_real_distribution<float> dist {-0.5, 0.5};
-	return dist(rng);
+	return dist(qm::rng);
 }
 
 float Q_flrand( float min, float max )
 {
-	return std::uniform_real_distribution<float> {min, max} (rng);
+	return std::uniform_real_distribution<float> {min, max} (qm::rng);
 }
 
 int32_t Q_irand( int32_t min, int32_t max )
 {
-	return std::uniform_int_distribution<int32_t> {min, max} (rng);
+	return std::uniform_int_distribution<int32_t> {min, max} (qm::rng);
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -1849,7 +1849,7 @@ void R_LoadLightGridArray( lump_t *l, world_t &worldData ) {
 	w->numGridArrayElements = w->lightGridBounds[0] * w->lightGridBounds[1] * w->lightGridBounds[2];
 
 	if ( (unsigned)l->filelen != w->numGridArrayElements * sizeof(*w->lightGridArray) ) {
-		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: light grid array mismatch: expected %lu, found %u", w->numGridArrayElements * sizeof(*w->lightGridArray), l->filelen);
+		ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: light grid array mismatch: expected %lu, found %u\n", w->numGridArrayElements * sizeof(*w->lightGridArray), l->filelen);
 		w->lightGridData = NULL;
 		return;
 	}

@@ -1637,6 +1637,7 @@ void SV_BindGame( void ) {
 	gi.TrueMalloc							= VM_Shifted_Alloc;
 	gi.TrueFree								= VM_Shifted_Free;
 	gi.SnapVector							= Sys_SnapVector;
+	gi.GetTaskCore							= *[](){ return com_taskcore.get(); };
 	gi.Cvar_Register						= Cvar_Register;
 	gi.Cvar_Set								= GVM_Cvar_Set;
 	gi.Cvar_Update							= Cvar_Update;

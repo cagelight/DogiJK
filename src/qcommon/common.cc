@@ -83,6 +83,8 @@ char	com_errorMessage[MAXPRINTMSG] = {0};
 
 void Com_WriteConfig_f( void );
 
+std::unique_ptr<TaskCore> com_taskcore;
+
 //============================================================================
 
 static char	*rd_buffer;
@@ -1282,6 +1284,8 @@ void Com_Init( char *commandLine ) {
 
 		// make sure single player is off by default
 		Cvar_Set("ui_singlePlayerActive", "0");
+		
+		com_taskcore = std::make_unique<TaskCore>();
 
 		com_fullyInitialized = qtrue;
 		Com_Printf ("--- Common Initialization Complete ---\n");
@@ -1651,6 +1655,8 @@ Com_Shutdown
 void MSG_shutdownHuffman();
 void Com_Shutdown (void)
 {
+	com_taskcore.reset();
+	
 	CM_ClearMap();
 
 	if (logfile) {

@@ -27,6 +27,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "qcommon/q_shared.hh"
 #include "qcommon/qfiles.hh"
+#include "qcommon/q_task.hh"
 
 #define Q3_INFINITE			16777216
 
@@ -770,6 +771,7 @@ typedef struct gameImport_s {
 	void		(*TrueMalloc)							( void **ptr, int size );
 	void		(*TrueFree)								( void **ptr );
 	void		(*SnapVector)							( float *v );
+	TaskCore *  (*GetTaskCore)							( void );
 
 	// cvar
 	void		(*Cvar_Register)						( vmCvar_t *vmCvar, const char *varName, const char *defaultValue, uint32_t flags );

@@ -7,7 +7,7 @@ option( BUILD_SERVER "Build server executable and required modules." ON )
 enable_language( CXX )
 set( CMAKE_CONFIGURATION_TYPES "Debug;Release;Native" )
 
-set( CMAKE_CXX_FLAGS         "-std=c++17" )
+set( CMAKE_CXX_FLAGS         "-std=c++20" )
 set( CMAKE_CXX_FLAGS_DEBUG   "-Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -Og -march=core2 -mtune=native -ggdb3 -D_DEBUG" )
 set( CMAKE_CXX_FLAGS_RELEASE "-w -O2 -march=core2 -mtune=generic -DNDEBUG -DFINAL_BUILD" )
 set( CMAKE_CXX_FLAGS_NATIVE  "-w -Ofast -march=native -mtune=native -DNDEBUG -DFINAL_BUILD" )
@@ -115,6 +115,7 @@ if( BUILD_CLIENT OR BUILD_SERVER )
 		"src/qcommon/q_math.cc"
 		"src/qcommon/q_string.cc"
 		"src/qcommon/q_shared.cc"
+		"src/qcommon/q_task.cc"
 		"src/game/*.cc"
 		"src/nav/*.cc"
 	)
@@ -137,6 +138,7 @@ if( BUILD_CLIENT )
 		"src/qcommon/q_math.cc"
 		"src/qcommon/q_string.cc"
 		"src/qcommon/q_shared.cc"
+		"src/qcommon/q_task.cc"
 		"src/cgame/*.cc"
 		"src/game/bg_*.cc"
 		"src/game/AnimalNPC.cc"
@@ -242,7 +244,7 @@ if( BUILD_CLIENT )
 
 	add_library( ${RDHOW_MODULE} MODULE ${RDHOW_FILES} )
 	target_include_directories( ${RDHOW_MODULE} PUBLIC "src/rd-howler" )
-	target_link_libraries( ${RDHOW_MODULE} PUBLIC Threads::Threads PkgConfig::JPEG PkgConfig::PNG PkgConfig::WEBP )
+	target_link_libraries( ${RDHOW_MODULE} PUBLIC Threads::Threads PkgConfig::JPEG PkgConfig::PNG PkgConfig::WEBP "-lbsp" )
 	set_target_properties( ${RDHOW_MODULE} PROPERTIES PREFIX "" )
 	install( TARGETS ${RDHOW_MODULE} LIBRARY DESTINATION "." )
 

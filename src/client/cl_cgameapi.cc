@@ -756,6 +756,7 @@ void CL_BindCGame( void ) {
 	cgi.RegisterSharedMemory				= RegisterSharedMemory;
 	cgi.TrueMalloc							= VM_Shifted_Alloc;
 	cgi.TrueFree							= VM_Shifted_Free;
+	cgi.GetTaskCore							= *[](){ return com_taskcore.get(); };
 	cgi.Milliseconds						= CL_Milliseconds;
 	cgi.RealTime							= Com_RealTime;
 	cgi.PrecisionTimerStart					= CL_PrecisionTimerStart;
