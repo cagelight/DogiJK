@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "g_local.hh"
 #include "bg_saga.hh"
+#include "g_components.hh"
 
 int gTrigFallSound;
 
@@ -76,12 +77,22 @@ void multi_trigger_run( gentity_t *ent )
 
 		ent->genericValue4 = 0;
 	}
-
-	G_UseTargets (ent, ent->activator);
-	if ( ent->noise_index )
-	{
-		G_Sound( ent->activator, CHAN_AUTO, ent->noise_index );
-	}
+	
+	
+	auto use_func = [ent](gentity_t * activator){
+		G_UseTargets (ent, activator);
+		if ( ent->noise_index )
+		{
+			G_Sound( activator, CHAN_AUTO, ent->noise_index );
+		}
+	};
+	
+	auto mact = ent->get_component<GEntComponentMultiActivator>();
+	if (mact) {
+		for (gentity_t * activator : mact->activators) use_func(activator);
+		mact->activators.clear();
+	} else
+		use_func(ent->activator);
 
 	if ( ent->target2 && ent->target2[0] && ent->wait >= 0 )
 	{
@@ -346,6 +357,9 @@ void multi_trigger( gentity_t *ent, gentity_t *activator )
 		return;
 	}
 
+	auto mact = ent->get_component<GEntComponentMultiActivator>();
+	if (mact) 
+		mact->activators.insert(activator);
 	ent->activator = activator;
 
 	if(ent->delay && ent->painDebounceTime < (level.time + ent->delay) )
@@ -666,6 +680,8 @@ void SP_trigger_multiple( gentity_t *ent )
 	ent->touch = Touch_Multi;
 	ent->use   = Use_Multi;
 
+	ent->set_component<GEntComponentMultiActivator>();
+	
 	if ( ent->team && ent->team[0] )
 	{
 		ent->alliedTeam = atoi(ent->team);
@@ -1298,6 +1314,10 @@ NO_PROTECTION	*nothing* stops the damage
 If dmg is set to -1 this brush will use the fade-kill method
 
 */
+struct GEntComponentHurtTracker : public GEntityComponent {
+	std::unordered_map<gentity_t *, int> activator_times;
+};
+
 void hurt_use( gentity_t *self, gentity_t *other, gentity_t *activator ) {
 	if (activator && activator->inuse && activator->client)
 	{
@@ -1350,8 +1370,13 @@ void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 	if ( !other->takedamage ) {
 		return;
 	}
+	
+	auto hurt_track = self->get_component<GEntComponentHurtTracker>();
+	auto hact = hurt_track->activator_times.find(other);
+	if (hact == hurt_track->activator_times.end())
+		hact = hurt_track->activator_times.emplace(other, 0).first;
 
-	if ( self->timestamp > level.time ) {
+	if ( hact->second > level.time ) {
 		return;
 	}
 
@@ -1368,9 +1393,9 @@ void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 	}
 
 	if ( self->spawnflags & 16 ) {
-		self->timestamp = level.time + 1000;
+		hact->second = level.time + 1000;
 	} else {
-		self->timestamp = level.time + FRAMETIME;
+		hact->second = level.time;
 	}
 
 	// play sound
@@ -1412,7 +1437,7 @@ void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 			G_EntitySound(other, CHAN_VOICE, G_SoundIndex("*falling1.wav"));
 		}
 
-		self->timestamp = 0; //do not ignore others
+		hact->second = 0; //do not ignore others
 	}
 	else
 	{
@@ -1421,7 +1446,7 @@ void hurt_touch( gentity_t *self, gentity_t *other, trace_t *trace ) {
 		if (dmg == -1)
 		{ //so fall-to-blackness triggers destroy evertyhing
 			dmg = 99999;
-			self->timestamp = 0;
+			hact->second = 0;
 		}
 		if (self->activator && self->activator->inuse && self->activator->client)
 		{
@@ -1451,6 +1476,8 @@ void SP_trigger_hurt( gentity_t *self ) {
 	if ( self->spawnflags & 2 ) {
 		self->use = hurt_use;
 	}
+	
+	self->set_component<GEntComponentHurtTracker>();
 
 	// link in to the world if starting active
 	if ( ! (self->spawnflags & 1) ) {

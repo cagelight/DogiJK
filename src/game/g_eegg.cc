@@ -18,6 +18,8 @@ static constexpr size_t MAX_PROSPECTS = MAX_LOCATION_BUFFER / sizeof(EEggProspec
 
 struct EEggPathfinder::PrivateData {
 	EEggConcept conc;
+	uint spawn_group = 0;
+	std::vector<std::pair<uint, EEggProspect>> approved_prospects;
 	std::vector<EEggProspect> prospects;
 	std::mutex prospect_mut;
 };
@@ -128,25 +130,29 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		
 		gentity_t * ent = G_Spawn();
 		ent->classname = conc.classname;
-		ent->clipmask = MASK_PLAYERSOLID;
+		ent->clipmask = MASK_SOLID;
+		ent->use = conc.use;
 		
 		ent->s.modelindex = G_ModelIndex(conc.model.data());
 		ent->s.eType = ET_GENERAL;
 		
 		VectorCopy(conc.mins, ent->r.mins);
 		VectorCopy(conc.maxs, ent->r.maxs);
-		ent->r.contents = CONTENTS_NONE;
+		ent->r.contents = CONTENTS_SOLID;
+		if (conc.use)
+			ent->r.svFlags |= SVF_PLAYER_USABLE;
 		
 		ent->set_origin(pos.ptr());
 		ent->link();
 	};
 	
-	std::vector<EEggProspect> approved_prospects;
+	static constexpr float social_distancing_curgrp = 1024;
+	static constexpr float social_distancing_othgrp = 256;
 	
-	static constexpr float social_distancing = 1024; // TODO -- concept
+	uint approved = 0;
 	
 	for (EEggProspect const & p : m_data->prospects) {
-		if (approved_prospects.size() == egg_target) break;
+		if (approved == egg_target) break;
 		
 		// never place these
 		if (p.score >= Q3_INFINITE) break;
@@ -155,8 +161,8 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		bool dealbreaker = false;
 		
 		// social distancing
-		for (EEggProspect const & ap : approved_prospects) {
-			if ((ap.location - p.location).magnitude() < social_distancing) {
+		for (auto const & [grp, ap] : m_data->approved_prospects) {
+			if ((ap.location - p.location).magnitude() < (grp == m_data->spawn_group ? social_distancing_curgrp : social_distancing_othgrp)) {
 				dealbreaker = true;
 				break;
 			}
@@ -185,8 +191,10 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		
 		// ==== GOOD TO GO ====
 		create_egg(p.location);
-		approved_prospects.push_back(p);
+		m_data->approved_prospects.emplace_back(m_data->spawn_group, p);
+		approved++;
 	}
 	
-	return approved_prospects.size();
+	m_data->spawn_group++;
+	return approved;
 }

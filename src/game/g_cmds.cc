@@ -4007,14 +4007,32 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	
 	struct EEggCMDPers {
 		EEggPathfinder path;
-		uint locs = 0, eggs = 0;
+		std::atomic_bool exploring { false };
 	};
 	
 	static std::unique_ptr<EEggCMDPers> pers;
 	
-	if (cmd == "place") {
-		if (pers) {
-			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current placement operation must finish before a new one can be started.\n\"") );
+	if (cmd == "reset") {
+		pers.reset();
+		return;
+	}
+	
+	if (!pers) {
+		EEggConcept conc;
+		conc.classname = "easter_egg";
+		conc.model = "models/dogijk/testbox.obj";
+		conc.mins = {-16, -16, -16};
+		conc.maxs = {16, 16, 16};
+		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
+			self->clear();
+			AddScore(activator, activator->r.currentOrigin, 1);
+		};
+		pers = std::make_unique<EEggCMDPers>(conc);
+	}
+	
+	if (cmd == "explore") {
+		if (pers->exploring) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current explore operation must finish before a new one can be started.\n\"") );
 			return;
 		}
 		
@@ -4023,9 +4041,39 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		conc.model = "models/dogijk/testbox.obj";
 		conc.mins = {-16, -16, -16};
 		conc.maxs = {16, 16, 16};
+		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
+			self->clear();
+			AddScore(activator, activator->r.currentOrigin, 1);
+		};
+		
+		std::chrono::high_resolution_clock::duration allotted_time = std::chrono::seconds(5);
+		
+		if (trap->Argc() > 2) {
+			std::array<char, 8> buf;
+			trap->Argv(2, buf.data(), buf.size());
+			allotted_time = std::chrono::milliseconds(std::strtol(buf.data(), nullptr, 10));
+		}
+		
+		trap->GetTaskCore()->enqueue([player, allotted_time](){
+			uint locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->worker_count(), allotted_time);
+			pers->exploring = false;
+			GTaskType task { [player, locs](){
+				trap->SendServerCommand( player - g_entities, va("print \"eegg: explore operation complete -- %u locations scored.\n\"", locs) );
+			}};
+			G_Task_Enqueue(std::move(task));
+		});
+		
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: explore operation started -- set to run for %li milliseconds.\n\"", std::chrono::duration_cast<std::chrono::milliseconds>(allotted_time).count()) );
+		return;
+	}
+	
+	if (cmd == "place") {
+		if (pers->exploring) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current explore operation must finish before a new one can be started.\n\"") );
+			return;
+		}
 		
 		uint num_eggs = 20;
-		std::chrono::high_resolution_clock::duration allotted_time = std::chrono::milliseconds(500);
 		
 		if (trap->Argc() > 2) {
 			std::array<char, 8> buf;
@@ -4033,25 +4081,8 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			num_eggs = std::strtol(buf.data(), nullptr, 10);
 		}
 		
-		if (trap->Argc() > 3) {
-			std::array<char, 8> buf;
-			trap->Argv(3, buf.data(), buf.size());
-			allotted_time = std::chrono::milliseconds(std::strtol(buf.data(), nullptr, 10));
-		}
-		
-		pers = std::make_unique<EEggCMDPers>(conc);
-		
-		trap->GetTaskCore()->enqueue([player, allotted_time, num_eggs](){
-			pers->locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->worker_count(), allotted_time);
-			GTaskType task { [player, num_eggs](){
-				pers->eggs = pers->path.spawn_eggs(num_eggs);
-				trap->SendServerCommand( player - g_entities, va("print \"eegg: placement operation complete -- %u locations scored, %u eggs placed.\n\"", pers->locs, pers->eggs) );
-				pers.reset();
-			}};
-			G_Task_Enqueue(std::move(task));
-		});
-		
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: placement operation started -- set to run for %li milliseconds.\n\"", std::chrono::duration_cast<std::chrono::milliseconds>(allotted_time).count()) );
+		uint eggs = pers->path.spawn_eggs(num_eggs);
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: placement operation complete -- %u eggs placed.\n\"", eggs) );
 		return;
 	}
 	

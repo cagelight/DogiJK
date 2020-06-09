@@ -1567,7 +1567,8 @@ extern std::unique_ptr<physics_world_t> g_phys;
 struct EEggConcept {
 	istring classname;
 	istring model;
-	qm::vec3_t mins, maxs;
+	qm::vec3_t mins {}, maxs {};
+	void (*use) (gentity_t *, gentity_t *, gentity_t *) = nullptr;
 };
 
 struct EEggPathfinder {
