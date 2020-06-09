@@ -8,18 +8,18 @@ struct TaskCore {
 	
 	using Task = std::packaged_task<void()>;
 	
+	static uint system_ideal_task_count() {
+		return std::thread::hardware_concurrency();
+	}
+	
 	static uint default_worker_count() {
-		uint hwc = std::thread::hardware_concurrency();
-		if (hwc < 2) return 2;
-		return hwc;
+		return system_ideal_task_count() * 2;
 	}
 	
 	TaskCore(uint worker_count = default_worker_count());
 	~TaskCore();
 	
 	TaskCore(TaskCore const &) = delete;
-	
-	inline uint worker_count() const { return m_worker_count; }
 	
 	void enqueue_direct(Task &&);
 	
@@ -53,7 +53,7 @@ struct TaskCore {
 	
 	template <typename T, typename R = typename std::result_of<T()>::type>
 	std::vector<std::future<R>> enqueue_fill(T const & func) {
-		return enqueue_fill<T, R>(func, m_worker_count);
+		return enqueue_fill<T, R>(func, system_ideal_task_count());
 	}
 	
 	template <typename T>
@@ -63,7 +63,7 @@ struct TaskCore {
 	
 	template <typename T>
 	void enqueue_fill_wait(T const & func) {
-		enqueue_fill_wait<T>(func, m_worker_count);
+		enqueue_fill_wait<T>(func, system_ideal_task_count());
 	}
 	
 private:

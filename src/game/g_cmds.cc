@@ -3983,7 +3983,23 @@ static void Cmd_TraceShader_f(gentity_t * player) {
 static void Cmd_EEgg_f(gentity_t * player) {
 	
 	if (trap->Argc() <= 1) {
-		// TODO -- print usage
+		std::vector<std::pair<std::string, std::string>> subcmd {
+			{ "clear", "Clear all currently spawned eggs." },
+			{ "explore", "Randomly fly around the map and score locations for egg placement." },
+			{ "list", "List currently spawned egg locations." },
+			{ "place", "Place eggs based on scores from the 'explore' phase." },
+			{ "reset", "Reset the current eegg state to default." },
+			{ "stats", "Show stats about the current state." },
+		};
+		std::stringstream ss;
+		for (auto const & [sub, desc] : subcmd) {
+			ss << "    ";
+			ss << sub;
+			ss << ": ";
+			ss << desc;
+			ss << "\n";
+		}
+		trap->SendServerCommand( player - g_entities, va("print \"eegg usage: eegg\n%s\"", ss.str().data()) );
 		return;
 	}
 	
@@ -4007,7 +4023,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	
 	struct EEggCMDPers {
 		EEggPathfinder path;
-		std::atomic_bool exploring { false };
+		std::atomic_bool working { false };
 	};
 	
 	static std::unique_ptr<EEggCMDPers> pers;
@@ -4017,60 +4033,64 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		return;
 	}
 	
+	if (cmd == "stats") {
+		if (!pers) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: no data available.\n\"") );
+			return;
+		}
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u eggs have been placed this session, %u locations are currently on file, and %u locations have been scored in total.\n\"", 
+			pers->path.locations_used(), 
+			pers->path.locations_valid(), 
+			pers->path.locations_scored()
+		));
+		return;
+	}
+	
 	if (!pers) {
-		EEggConcept conc;
+		pers = std::make_unique<EEggCMDPers>();
+		EEggConcept & conc = pers->path.m_concept;
 		conc.classname = "easter_egg";
 		conc.model = "models/dogijk/testbox.obj";
-		conc.mins = {-16, -16, -16};
-		conc.maxs = {16, 16, 16};
+		conc.mins = {-20, -20, -20};
+		conc.maxs = {20, 20, 20};
 		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
 			self->clear();
 			AddScore(activator, activator->r.currentOrigin, 1);
 		};
-		pers = std::make_unique<EEggCMDPers>(conc);
+		
 	}
 	
 	if (cmd == "explore") {
-		if (pers->exploring) {
-			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current explore operation must finish before a new one can be started.\n\"") );
+		if (pers->working) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
 			return;
 		}
-		
-		EEggConcept conc;
-		conc.classname = "easter_egg";
-		conc.model = "models/dogijk/testbox.obj";
-		conc.mins = {-16, -16, -16};
-		conc.maxs = {16, 16, 16};
-		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
-			self->clear();
-			AddScore(activator, activator->r.currentOrigin, 1);
-		};
 		
 		std::chrono::high_resolution_clock::duration allotted_time = std::chrono::seconds(5);
 		
 		if (trap->Argc() > 2) {
 			std::array<char, 8> buf;
 			trap->Argv(2, buf.data(), buf.size());
-			allotted_time = std::chrono::milliseconds(std::strtol(buf.data(), nullptr, 10));
+			allotted_time = std::chrono::seconds(std::strtol(buf.data(), nullptr, 10));
 		}
 		
-		pers->exploring = true;
+		pers->working = true;
 		trap->GetTaskCore()->enqueue([player, allotted_time](){
-			uint locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->worker_count(), allotted_time);
-			pers->exploring = false;
-			GTaskType task { [player, locs](){
-				trap->SendServerCommand( player - g_entities, va("print \"eegg: explore operation complete -- %u locations scored.\n\"", locs) );
+			uint locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->system_ideal_task_count(), allotted_time);
+			pers->working = false;
+			GTaskType task { [locs](){
+				trap->SendServerCommand( -1, va("print \"eegg: explore operation complete -- %u locations scored.\n\"", locs) );
 			}};
 			G_Task_Enqueue(std::move(task));
 		});
 		
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: explore operation started -- set to run for %li milliseconds.\n\"", std::chrono::duration_cast<std::chrono::milliseconds>(allotted_time).count()) );
+		trap->SendServerCommand( -1, va("print \"eegg: explore operation started -- set to run for %li seconds.\n\"", std::chrono::duration_cast<std::chrono::seconds>(allotted_time).count()) );
 		return;
 	}
 	
 	if (cmd == "place") {
-		if (pers->exploring) {
-			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current explore operation must finish before a new one can be started.\n\"") );
+		if (pers->working) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
 			return;
 		}
 		
@@ -4082,8 +4102,17 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			num_eggs = std::strtol(buf.data(), nullptr, 10);
 		}
 		
-		uint eggs = pers->path.spawn_eggs(num_eggs);
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: placement operation complete -- %u eggs placed.\n\"", eggs) );
+		pers->working = true;
+		trap->GetTaskCore()->enqueue([num_eggs](){
+			uint eggs = pers->path.spawn_eggs(num_eggs);
+			pers->working = false;
+			GTaskType task { [eggs](){
+				trap->SendServerCommand( -1, va("print \"eegg: placement operation complete -- %u eggs placed.\n\"", eggs) );
+			}};
+			G_Task_Enqueue(std::move(task));
+		});
+		
+		trap->SendServerCommand( -1, va("print \"eegg: placement operation started -- placing a maximum of %u eggs.\n\"", num_eggs) );
 		return;
 	}
 	

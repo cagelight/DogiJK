@@ -1565,18 +1565,24 @@ extern std::unique_ptr<physics_world_t> g_phys;
 
 // g_eegg.cc
 struct EEggConcept {
-	istring classname;
-	istring model;
-	qm::vec3_t mins {}, maxs {};
+	istring classname = "generic_easter_egg";
+	istring model = "models/dogijk/testbox.obj";
+	qm::vec3_t mins {-20, -20, -20}, maxs {20, 20, 20};
 	void (*use) (gentity_t *, gentity_t *, gentity_t *) = nullptr;
 };
 
 struct EEggPathfinder {
-	EEggPathfinder(EEggConcept const &);
+	EEggPathfinder();
 	~EEggPathfinder();
+	
+	EEggConcept m_concept {};
 	
 	uint explore(qm::vec3_t start, uint divisions /*and threads*/, std::chrono::high_resolution_clock::duration time_alloted);
 	uint spawn_eggs(uint max_eggs = 1);
+	
+	uint locations_scored() const;
+	uint locations_valid() const;
+	uint locations_used() const;
 	
 private:
 	struct PrivateData;

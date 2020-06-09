@@ -275,7 +275,7 @@ struct bullet_world_t : public physics_world_t {
 				}
 			};
 			
-			Com_Printf("Compiling physics map...\n", trap->GetTaskCore()->worker_count());
+			Com_Printf("Compiling physics map...\n", trap->GetTaskCore()->system_ideal_task_count());
 			trap->GetTaskCore()->enqueue_fill_wait(thread_func);
 			Com_Printf("...done\n\n");
 

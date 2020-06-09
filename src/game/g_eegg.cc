@@ -13,20 +13,15 @@ struct EEggProspect {
 	}
 };
 
-static constexpr size_t MAX_LOCATION_BUFFER = 200 * 1024 * 1024; // 200 MiB
-static constexpr size_t MAX_PROSPECTS = MAX_LOCATION_BUFFER / sizeof(EEggProspect);
-
 struct EEggPathfinder::PrivateData {
-	EEggConcept conc;
 	uint spawn_group = 0;
+	std::atomic_uint64_t locations_scored = 0;
 	std::vector<std::pair<uint, EEggProspect>> approved_prospects;
 	std::vector<EEggProspect> prospects;
 	std::mutex prospect_mut;
 };
 
-EEggPathfinder::EEggPathfinder(EEggConcept const & conc) : m_data { new PrivateData } {
-	m_data->conc = conc;
-}
+EEggPathfinder::EEggPathfinder() : m_concept { }, m_data { new PrivateData } {}
 
 EEggPathfinder::~EEggPathfinder() = default;
 
@@ -42,27 +37,53 @@ static constexpr qm::vec3_t intercardinal_xpyn {  0.707, -0.707, 0 };
 static constexpr qm::vec3_t intercardinal_xnyp { -0.707,  0.707, 0 };
 static constexpr qm::vec3_t intercardinal_xnyn { -0.707, -0.707, 0 };
 
+static constexpr qm::vec3_t player_mins { -16, -16, DEFAULT_MINS_2 };
+static constexpr qm::vec3_t player_maxs {  16,  16, DEFAULT_MAXS_2 };
+
+static qm::vec3_t center_sink(qm::vec3_t const & outer_mins, qm::vec3_t const & outer_maxs, qm::vec3_t const & inner_mins, qm::vec3_t const & inner_maxs) {
+	qm::vec3_t v;
+	v[0] = 0; // TODO
+	v[1] = 0; // TODO
+	v[2] = outer_mins[2] - inner_mins[2];
+	return v;
+}
+
 uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high_resolution_clock::duration time_alloted) {
 	
 	auto deadline = std::chrono::high_resolution_clock::now() + time_alloted;
 	
-	auto settle = [this](qm::vec3_t const & pos, qm::vec3_t const & dir, qm::vec3_t & out) -> qm::vec3_t {
+	qm::vec3_t mins, maxs;
+	qm::vec3_t loc_ofs;
+	
+	if (0) {
+		mins = player_mins;
+		maxs = player_maxs;
+		loc_ofs = center_sink(player_mins, player_maxs, m_concept.mins, m_concept.maxs);
+	} else {
+		mins = m_concept.mins;
+		maxs = m_concept.maxs;
+		loc_ofs = {0, 0, 0};
+	}
+	
+	auto settle = [&](qm::vec3_t const & pos, qm::vec3_t const & dir, qm::vec3_t & out) -> qm::vec3_t {
 		trace_t tr {};
 		qm::vec3_t origin, dest;
 		dest = origin.move_along(dir, Q3_INFINITE);
-		trap->Trace(&tr, pos.ptr(), m_data->conc.mins.ptr(), m_data->conc.maxs.ptr(), dest, -1, MASK_SOLID, qfalse, 0 ,0);
+		trap->Trace(&tr, pos.ptr(), mins, maxs, dest, -1, MASK_SOLID, qfalse, 0 ,0);
 		out = tr.endpos;
 		return tr.plane.normal;
 	};
 	
 	auto score_location = [&](qm::vec3_t const & pos) -> float {
 		
+		m_data->locations_scored++;
+		
 		float score = 0;
 		auto dir_dist = [&](qm::vec3_t dir) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
 			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
-			trap->Trace(&tr, pos, m_data->conc.mins.ptr(), m_data->conc.maxs.ptr(), dest, 0, MASK_PLAYERSOLID | CONTENTS_WATER | CONTENTS_LAVA, qfalse, 0 ,0);
+			trap->Trace(&tr, pos, mins, maxs, dest, 0, MASK_PLAYERSOLID | CONTENTS_WATER | CONTENTS_LAVA, qfalse, 0 ,0);
 			if (tr.startsolid) return Q3_INFINITE;
 			dest = tr.endpos;
 			return (dest - pos).magnitude();
@@ -97,7 +118,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		while (std::chrono::high_resolution_clock::now() < deadline) {
 			qm::vec3_t dest = origin.move_along(qm::quat_t::random() * qm::vec3_t {0, 0, 1}, Q3_INFINITE);
 			trace_t tr {};
-			trap->Trace(&tr, origin, m_data->conc.mins.ptr(), m_data->conc.maxs.ptr(), dest, -1, MASK_SOLID, qfalse, 0 ,0);
+			trap->Trace(&tr, origin, mins, maxs, dest, -1, MASK_SOLID, qfalse, 0 ,0);
 			origin = qm::lerp<qm::vec3_t>(origin, tr.endpos, Q_flrand(0.4, 0.9));
 			
 			EEggProspect p;
@@ -106,27 +127,30 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			
 			// severely penalize by slope
 			if (norm[2] != 1) {
-				if (!norm[2]) 
+				if (norm[2] <= 0) 
 					p.score = Q3_INFINITE;
 				else
-					p.score /= std::abs(norm[2] * norm[2] * norm[2]);
+					p.score /= norm[2] * norm[2] * norm[2];
 			}
 			
+			// reject these
+			if (p.score >= Q3_INFINITE) continue;
+			
 			std::lock_guard lock { m_data->prospect_mut };
-			if (m_data->prospects.size() >= MAX_PROSPECTS) return;
+			if (m_data->prospects.size() >= (static_cast<size_t>(g_eegg_bufferMiB.integer) * 1024 * 1024) / sizeof(EEggProspect)) return;
 			m_data->prospects.push_back(p);
 		}
 	};
 	
 	trap->GetTaskCore()->enqueue_fill_wait(explore_task, divisions);
+	std::sort(m_data->prospects.begin(), m_data->prospects.end(), EEggProspect::compare);
 	return m_data->prospects.size() - old_count;
 }
 
 uint EEggPathfinder::spawn_eggs(uint egg_target) {
-	std::sort(m_data->prospects.begin(), m_data->prospects.end(), EEggProspect::compare);
 	
 	auto create_egg = [this](qm::vec3_t const & pos){
-		auto & conc = m_data->conc;
+		auto & conc = m_concept;
 		
 		gentity_t * ent = G_Spawn();
 		ent->classname = conc.classname;
@@ -146,23 +170,17 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		ent->link();
 	};
 	
-	static constexpr float social_distancing_curgrp = 1024;
-	static constexpr float social_distancing_othgrp = 256;
-	
 	uint approved = 0;
 	
 	for (EEggProspect const & p : m_data->prospects) {
 		if (approved == egg_target) break;
-		
-		// never place these
-		if (p.score >= Q3_INFINITE) break;
 		
 		// ==== DEALBREAKING ====
 		bool dealbreaker = false;
 		
 		// social distancing
 		for (auto const & [grp, ap] : m_data->approved_prospects) {
-			if ((ap.location - p.location).magnitude() < (grp == m_data->spawn_group ? social_distancing_curgrp : social_distancing_othgrp)) {
+			if ((ap.location - p.location).magnitude() < (grp == m_data->spawn_group ? g_eegg_sdintra.value : g_eegg_sdinter.value)) {
 				dealbreaker = true;
 				break;
 			}
@@ -171,13 +189,13 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		
 		// forbid if too close to steep ledge
 		{
-			float vtest_allowance = (m_data->conc.maxs[2] - m_data->conc.mins[2]) / 4;
-			float xcenter = (m_data->conc.maxs[0] + m_data->conc.mins[0]) / 2;
-			float ycenter = (m_data->conc.maxs[1] + m_data->conc.mins[1]) / 2;
+			float vtest_allowance = (m_concept.maxs[2] - m_concept.mins[2]) / 4;
+			float xcenter = (m_concept.maxs[0] + m_concept.mins[0]) / 2;
+			float ycenter = (m_concept.maxs[1] + m_concept.mins[1]) / 2;
 			trace_t tr {};
 			qm::vec3_t dest = p.location.move_along(cardinal_zn, Q3_INFINITE);
-			qm::vec3_t hmins = { xcenter, ycenter, m_data->conc.mins[2] };
-			qm::vec3_t hmaxs = { xcenter, ycenter, m_data->conc.maxs[2] };
+			qm::vec3_t hmins = { xcenter, ycenter, m_concept.mins[2] };
+			qm::vec3_t hmaxs = { xcenter, ycenter, m_concept.maxs[2] };
 			trap->Trace(&tr, p.location, hmins.ptr(), hmaxs.ptr(), dest, 0, MASK_PLAYERSOLID, qfalse, 0 ,0);
 			if (std::abs(tr.endpos[2] - p.location[2]) > vtest_allowance) continue;
 		}
@@ -185,16 +203,29 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		// don't hurt players who find this
 		{
 			trace_t tr {};
-			trap->Trace(&tr, p.location, m_data->conc.mins.ptr(), m_data->conc.maxs.ptr(), p.location, ENTITYNUM_WORLD, CONTENTS_TRIGGER, qfalse, 0, 0);
+			trap->Trace(&tr, p.location, m_concept.mins.ptr(), m_concept.maxs.ptr(), p.location, ENTITYNUM_WORLD, CONTENTS_TRIGGER, qfalse, 0, 0);
 			if (tr.startsolid && g_entities[tr.entityNum].damage) continue;
 		}
 		
 		// ==== GOOD TO GO ====
-		create_egg(p.location);
+		GTaskType task { std::bind(create_egg, p.location) };
+		G_Task_Enqueue(std::move(task));
 		m_data->approved_prospects.emplace_back(m_data->spawn_group, p);
 		approved++;
 	}
 	
 	m_data->spawn_group++;
 	return approved;
+}
+
+uint EEggPathfinder::locations_scored() const {
+	return m_data->locations_scored;
+}
+
+uint EEggPathfinder::locations_valid() const {
+	return m_data->prospects.size();
+}
+
+uint EEggPathfinder::locations_used() const {
+	return m_data->approved_prospects.size();
 }

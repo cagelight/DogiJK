@@ -394,7 +394,7 @@ void target_laser_start (gentity_t *self)
 	if (self->target) {
 		ent = G_Find (NULL, [self](gentity_t * ent){ return !Q_stricmp(ent->targetname, self->target); });
 		if (!ent) {
-			trap->Print ("%s at %s: %s is a bad target\n", self->classname, vtos(self->s.origin), self->target);
+			trap->Print ("%s at %s: %s is a bad target\n", self->classname.data(), vtos(self->s.origin), self->target);
 		}
 		self->enemy = ent;
 	} else {
@@ -446,7 +446,7 @@ The activator will be teleported away.
 */
 void SP_target_teleporter( gentity_t *self ) {
 	if (!self->targetname)
-		trap->Print("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
+		trap->Print("untargeted %s at %s\n", self->classname.data(), vtos(self->s.origin));
 
 	self->use = target_teleporter_use;
 }
