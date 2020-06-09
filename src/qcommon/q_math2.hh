@@ -2,10 +2,6 @@
 
 #include "q_math.hh"
 
-#ifndef QMATH2_PRINT_FUNCTIONS
-#define QMATH2_PRINT_FUNCTIONS 1
-#endif
-
 #ifndef QMATH2_HASH_FUNCTIONS
 #define QMATH2_HASH_FUNCTIONS 1
 #endif
@@ -14,10 +10,6 @@
 #include <array>
 #include <ctgmath>
 #include <random>
-
-#if QMATH2_PRINT_FUNCTIONS == 1
-#include <string>
-#endif
 
 #if QMATH2_HASH_FUNCTIONS == 1
 #include <functional>
@@ -1140,6 +1132,31 @@ namespace qm::meta {
 
 //================================================================
 //----------------------------------------------------------------
+// CONSTANTS
+//----------------------------------------------------------------
+//================================================================
+
+
+namespace qm {
+	static inline constexpr vec3_t origin {  0,  0,  0 };
+
+	static inline constexpr vec3_t cardinal_xp {  1,  0,  0 };
+	static inline constexpr vec3_t cardinal_xn { -1,  0,  0 };
+	static inline constexpr vec3_t cardinal_yp {  0,  1,  0 };
+	static inline constexpr vec3_t cardinal_yn {  0, -1,  0 };
+	static inline constexpr vec3_t cardinal_zp {  0,  0,  1 };
+	static inline constexpr vec3_t cardinal_zn {  0,  0, -1 };
+	
+	static inline constexpr vec3_t intercardinal_xpyp {  0.707,  0.707, 0 };
+	static inline constexpr vec3_t intercardinal_xpyn {  0.707, -0.707, 0 };
+	static inline constexpr vec3_t intercardinal_xnyp { -0.707,  0.707, 0 };
+	static inline constexpr vec3_t intercardinal_xnyn { -0.707, -0.707, 0 };
+}
+
+//================================================================
+//----------------------------------------------------------------
+// TESTS
+//----------------------------------------------------------------
 //================================================================
 
 
@@ -1157,64 +1174,16 @@ static_assert( sizeof(qm::meta::vec4_t<QMATH2_ASSERT_TEST_TYPE>) == sizeof(QMATH
 static_assert( sizeof(qm::meta::mat4_t<QMATH2_ASSERT_TEST_TYPE>) == sizeof(QMATH2_ASSERT_TEST_TYPE) * 16 );
 
 // POD asserts
-static_assert( std::is_pod<qm::meta::vec2_t<QMATH2_ASSERT_TEST_TYPE>>() );
-static_assert( std::is_pod<qm::meta::vec3_t<QMATH2_ASSERT_TEST_TYPE>>() );
-static_assert( std::is_pod<qm::meta::vec4_t<QMATH2_ASSERT_TEST_TYPE>>() );
+static_assert( std::is_standard_layout<qm::meta::vec2_t<QMATH2_ASSERT_TEST_TYPE>>() && std::is_trivial<qm::meta::vec2_t<QMATH2_ASSERT_TEST_TYPE>>() );
+static_assert( std::is_standard_layout<qm::meta::vec3_t<QMATH2_ASSERT_TEST_TYPE>>() && std::is_trivial<qm::meta::vec3_t<QMATH2_ASSERT_TEST_TYPE>>() );
+static_assert( std::is_standard_layout<qm::meta::vec4_t<QMATH2_ASSERT_TEST_TYPE>>() && std::is_trivial<qm::meta::vec4_t<QMATH2_ASSERT_TEST_TYPE>>() );
+static_assert( std::is_standard_layout<qm::meta::mat4_t<QMATH2_ASSERT_TEST_TYPE>>() && std::is_trivial<qm::meta::mat4_t<QMATH2_ASSERT_TEST_TYPE>>() );
+
 //static_assert( std::is_pod<qm::meta::rect_t<QMATH2_ASSERT_TEST_TYPE>>() );
 //static_assert( std::is_pod<qm::meta::quat_t<QMATH2_ASSERT_TEST_TYPE>>() );
 //static_assert( std::is_pod<qm::meta::mat3_t<QMATH2_ASSERT_TEST_TYPE>>() );
-static_assert( std::is_pod<qm::meta::mat4_t<QMATH2_ASSERT_TEST_TYPE>>() );
 
 #undef QMATH2_ASSERT_TEST_TYPE
-
-#if QMATH2_PRINT_FUNCTIONS == 1
-namespace std {
-	template <typename T> std::string to_string(qm::meta::vec2_t<T> const & v) {
-		return "V2[" + std::to_string(v[0]) + ", " + std::to_string(v[1]) + "]";
-	}
-	template <typename T> std::string to_string(qm::meta::vec3_t<T> const & v) {
-		return "V3[" + std::to_string(v[0]) + ", " + std::to_string(v[1]) + ", " + std::to_string(v[2]) + "]";
-	}
-	template <typename T> std::string to_string(qm::meta::vec4_t<T> const & v) {
-		return "V4[" + std::to_string(v[0]) + ", " + std::to_string(v[1]) + ", " + std::to_string(v[2]) + ", " + std::to_string(v[3]) + "]";
-	}
-	/*
-	template <typename T> std::string to_string(qm::meta::rect_t<T> const & v) {
-		return v.to_string();
-	}
-	*/
-	template <typename T> std::string to_string(qm::meta::quat_t<T> const & v) {
-		return "Q[" + std::to_string(v[0]) + ", " + std::to_string(v[1]) + ", " + std::to_string(v[2]) + ", " + std::to_string(v[3]) + "]";
-	}
-	/*
-	template <typename T> std::string to_string(qm::meta::mat3_t<T> const & v) {
-		return v.to_string();
-	}
-	*/
-	template <typename T> std::string to_string(qm::meta::mat4_t<T> const & v) {
-		std::string out = "M4[";
-		for (int x = 0; x < 4; x++) {
-			if (x > 0) out += ", ";
-			out += "[";
-			for (int y = 0; y < 4; y++) {
-				if (y > 0) out += ", ";
-				out += std::to_string(v[x][y]);
-			}
-			out += "]";
-		}
-		out += "]";
-		return out;
-	}
-	/*
-	template <typename T> std::string to_string(qm::meta::la::ray_t<T> const & v) {
-		return v.to_string();
-	}
-	template <typename T> std::string to_string(qm::meta::la::plane_t<T> const & v) {
-		return v.to_string();
-	}
-	*/
-}
-#endif
 
 #if QMATH2_HASH_FUNCTIONS == 1
 namespace std {
@@ -1263,3 +1232,7 @@ namespace std {
 	};
 }
 #endif
+
+//================================================================
+//----------------------------------------------------------------
+//================================================================

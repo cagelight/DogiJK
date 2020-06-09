@@ -25,18 +25,6 @@ EEggPathfinder::EEggPathfinder() : m_concept { }, m_data { new PrivateData } {}
 
 EEggPathfinder::~EEggPathfinder() = default;
 
-static constexpr qm::vec3_t cardinal_xp {  1,  0,  0 };
-static constexpr qm::vec3_t cardinal_xn { -1,  0,  0 };
-static constexpr qm::vec3_t cardinal_yp {  0,  1,  0 };
-static constexpr qm::vec3_t cardinal_yn {  0, -1,  0 };
-static constexpr qm::vec3_t cardinal_zp {  0,  0,  1 };
-static constexpr qm::vec3_t cardinal_zn {  0,  0, -1 };
-
-static constexpr qm::vec3_t intercardinal_xpyp {  0.707,  0.707, 0 };
-static constexpr qm::vec3_t intercardinal_xpyn {  0.707, -0.707, 0 };
-static constexpr qm::vec3_t intercardinal_xnyp { -0.707,  0.707, 0 };
-static constexpr qm::vec3_t intercardinal_xnyn { -0.707, -0.707, 0 };
-
 static constexpr qm::vec3_t player_mins { -16, -16, DEFAULT_MINS_2 };
 static constexpr qm::vec3_t player_maxs {  16,  16, DEFAULT_MAXS_2 };
 
@@ -79,7 +67,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		m_data->locations_scored++;
 		
 		float score = 0;
-		auto dir_dist = [&](qm::vec3_t dir) -> float {
+		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
 			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
@@ -89,24 +77,25 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			return (dest - pos).magnitude();
 		};
 		
+		auto score_axis = [&](qm::vec3_t const & axis, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
+			float p = dir_dist( axis, mins, maxs);
+			float n = dir_dist(-axis, mins, maxs);
+			// score uses total distances on the two horizontal axis, and the closest wall
+			return (p + n) + (p < n ? p : n);
+		};
+		
 		// score ceiling
-		score = dir_dist(cardinal_zp) * 3; // this one is extra penalized (heuristic)
+		score = dir_dist(qm::cardinal_zp, mins, maxs) * 3; // this one is extra penalized (heuristic)
 		if (score == Q3_INFINITE) return score; // early short circuit for bad loation
 		
 		// score by nearby walls
-		float sxp = dir_dist(cardinal_xp);
-		float sxn = dir_dist(cardinal_xn);
-		float syp = dir_dist(cardinal_yp);
-		float syn = dir_dist(cardinal_yn);
+		score += score_axis(qm::cardinal_xp, mins, maxs);
+		score += score_axis(qm::cardinal_yp, mins, maxs);
 		
-		float sxd = sxp + sxn;
-		float syd = syp + syn;
-		
-		// score uses total distances on the two horizontal axis, and the closest wall
-		score += sxd;
-		score += syd;
-		score += sxp < sxn ? sxp : sxn;
-		score += syp < syn ? syp : syn;
+		if (g_eegg_intercardinal.integer) {
+			score += score_axis(qm::intercardinal_xpyp, qm::vec3_t { 0, 0, mins[2] }, qm::vec3_t { 0, 0, maxs[2] }) / 2;
+			score += score_axis(qm::intercardinal_xpyn, qm::vec3_t { 0, 0, mins[2] }, qm::vec3_t { 0, 0, maxs[2] }) / 2;
+		}
 		
 		return score;
 	};
@@ -122,16 +111,17 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			origin = qm::lerp<qm::vec3_t>(origin, tr.endpos, Q_flrand(0.4, 0.9));
 			
 			EEggProspect p;
-			auto norm = settle(origin, cardinal_zn, p.location);
-			p.score = score_location(p.location);
+			auto norm = settle(origin, qm::cardinal_zn, p.location);
+			
+			// reject these
+			if (norm[2] <= 0)
+				continue;
+			
+			p.score = score_location(p.location + qm::vec3_t {0, 0, 0.5});
 			
 			// severely penalize by slope
-			if (norm[2] != 1) {
-				if (norm[2] <= 0) 
-					p.score = Q3_INFINITE;
-				else
-					p.score /= norm[2] * norm[2] * norm[2];
-			}
+			if (norm[2] != 1)
+				p.score /= norm[2] * norm[2] * norm[2];
 			
 			// reject these
 			if (p.score >= Q3_INFINITE) continue;
@@ -193,7 +183,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 			float xcenter = (m_concept.maxs[0] + m_concept.mins[0]) / 2;
 			float ycenter = (m_concept.maxs[1] + m_concept.mins[1]) / 2;
 			trace_t tr {};
-			qm::vec3_t dest = p.location.move_along(cardinal_zn, Q3_INFINITE);
+			qm::vec3_t dest = p.location.move_along(qm::cardinal_zn, Q3_INFINITE);
 			qm::vec3_t hmins = { xcenter, ycenter, m_concept.mins[2] };
 			qm::vec3_t hmaxs = { xcenter, ycenter, m_concept.maxs[2] };
 			trap->Trace(&tr, p.location, hmins.ptr(), hmaxs.ptr(), dest, 0, MASK_PLAYERSOLID, qfalse, 0 ,0);

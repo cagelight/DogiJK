@@ -180,6 +180,7 @@ XCVAR_DEF( g_physics,					"0",			NULL,				CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATC
 XCVAR_DEF( g_eegg_sdintra,				"1024",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_sdinter,				"256",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_bufferMiB,			"200",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_intercardinal,		"0",			NULL,				CVAR_ARCHIVE,									qtrue )
 
 XCVAR_DEF( weap_all_lifemult,			"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( weap_conc_bounce,			"0",			NULL,				CVAR_ARCHIVE,									qtrue )
