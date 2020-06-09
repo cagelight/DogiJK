@@ -3995,7 +3995,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		uint count = 0;
 		for (gentity_t & ent : *g_entities_actual) if (ent.classname == "easter_egg")
 			trap->SendServerCommand( player - g_entities, va("print \"eegg: Egg %u: (%f, %f, %f)\n\"", count++, ent.r.currentOrigin[0], ent.r.currentOrigin[1], ent.r.currentOrigin[2]) );
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u Eggs listed.\n\"", count++) );
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u Eggs listed.\n\"", count) );
 		return;
 	}
 	
@@ -4054,6 +4054,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			allotted_time = std::chrono::milliseconds(std::strtol(buf.data(), nullptr, 10));
 		}
 		
+		pers->exploring = true;
 		trap->GetTaskCore()->enqueue([player, allotted_time](){
 			uint locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->worker_count(), allotted_time);
 			pers->exploring = false;

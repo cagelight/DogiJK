@@ -8,7 +8,13 @@ struct TaskCore {
 	
 	using Task = std::packaged_task<void()>;
 	
-	TaskCore(uint worker_count = std::thread::hardware_concurrency());
+	static uint default_worker_count() {
+		uint hwc = std::thread::hardware_concurrency();
+		if (hwc < 2) return 2;
+		return hwc;
+	}
+	
+	TaskCore(uint worker_count = default_worker_count());
 	~TaskCore();
 	
 	TaskCore(TaskCore const &) = delete;
