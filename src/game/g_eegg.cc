@@ -137,6 +137,56 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 	return m_data->prospects.size() - old_count;
 }
 
+static void HSVtoRGB( float h, float s, float v, float rgb[3] )
+{
+	int i;
+	float f;
+	float p, q, t;
+
+	h *= 5;
+
+	i = floor( h );
+	f = h - i;
+
+	p = v * ( 1 - s );
+	q = v * ( 1 - s * f );
+	t = v * ( 1 - s * ( 1 - f ) );
+
+	switch ( i )
+	{
+	case 0:
+		rgb[0] = v;
+		rgb[1] = t;
+		rgb[2] = p;
+		break;
+	case 1:
+		rgb[0] = q;
+		rgb[1] = v;
+		rgb[2] = p;
+		break;
+	case 2:
+		rgb[0] = p;
+		rgb[1] = v;
+		rgb[2] = t;
+		break;
+	case 3:
+		rgb[0] = p;
+		rgb[1] = q;
+		rgb[2] = v;
+		break;
+	case 4:
+		rgb[0] = t;
+		rgb[1] = p;
+		rgb[2] = v;
+		break;
+	case 5:
+		rgb[0] = v;
+		rgb[1] = p;
+		rgb[2] = q;
+		break;
+	}
+}
+
 uint EEggPathfinder::spawn_eggs(uint egg_target) {
 	
 	auto create_egg = [this](qm::vec3_t const & pos){
@@ -149,6 +199,15 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		
 		ent->s.modelindex = G_ModelIndex(conc.model.data());
 		ent->s.eType = ET_GENERAL;
+		
+		if (conc.random_entity_color) {
+			float rgb[3];
+			HSVtoRGB(Q_flrand(0, 1), 1.0, 1.0, rgb);
+			ent->s.customRGBA[0] = rgb[0] * 255;
+			ent->s.customRGBA[1] = rgb[1] * 255;
+			ent->s.customRGBA[2] = rgb[2] * 255;
+			ent->s.customRGBA[3] = 255;
+		}
 		
 		VectorCopy(conc.mins, ent->r.mins);
 		VectorCopy(conc.maxs, ent->r.maxs);

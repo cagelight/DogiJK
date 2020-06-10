@@ -1569,6 +1569,7 @@ struct EEggConcept {
 	istring model = "models/dogijk/testbox.obj";
 	qm::vec3_t mins {-20, -20, -20}, maxs {20, 20, 20};
 	void (*use) (gentity_t *, gentity_t *, gentity_t *) = nullptr;
+	bool random_entity_color = false;
 };
 
 struct EEggPathfinder {

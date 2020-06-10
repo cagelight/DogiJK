@@ -4050,14 +4050,14 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		pers = std::make_unique<EEggCMDPers>();
 		EEggConcept & conc = pers->path.m_concept;
 		conc.classname = "easter_egg";
-		conc.model = "models/dogijk/testbox.obj";
-		conc.mins = {-20, -20, -20};
-		conc.maxs = {20, 20, 20};
+		conc.model = "models/dogijk/egg.obj";
+		conc.mins = {-10, -10, 0};
+		conc.maxs = {10, 10, 30};
 		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
 			self->clear();
 			AddScore(activator, activator->r.currentOrigin, 1);
 		};
-		
+		conc.random_entity_color = true;
 	}
 	
 	if (cmd == "explore") {
