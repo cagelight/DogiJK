@@ -1566,7 +1566,7 @@ extern std::unique_ptr<physics_world_t> g_phys;
 // g_eegg.cc
 struct EEggConcept {
 	istring classname = "generic_easter_egg";
-	istring model = "models/dogijk/testbox.obj";
+	std::vector<istring> models = { "models/dogijk/testbox.obj" };
 	qm::vec3_t mins {-20, -20, -20}, maxs {20, 20, 20};
 	void (*use) (gentity_t *, gentity_t *, gentity_t *) = nullptr;
 	bool random_entity_color = false;

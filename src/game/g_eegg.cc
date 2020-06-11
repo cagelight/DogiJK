@@ -197,7 +197,8 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		ent->clipmask = MASK_SOLID;
 		ent->use = conc.use;
 		
-		ent->s.modelindex = G_ModelIndex(conc.model.data());
+		std::uniform_int_distribution<size_t> dist { 0, conc.models.size() - 1 };
+		ent->s.modelindex = G_ModelIndex(conc.models[dist(qm::rng)].data());
 		ent->s.eType = ET_GENERAL;
 		
 		if (conc.random_entity_color) {

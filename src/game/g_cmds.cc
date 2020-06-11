@@ -4050,9 +4050,15 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		pers = std::make_unique<EEggCMDPers>();
 		EEggConcept & conc = pers->path.m_concept;
 		conc.classname = "easter_egg";
-		conc.model = "models/dogijk/egg.obj";
-		conc.mins = {-10, -10, 0};
-		conc.maxs = {10, 10, 30};
+		conc.models = {
+			"models/dogijk/egg1.obj",
+			"models/dogijk/egg2.obj",
+			"models/dogijk/egg3.obj",
+			"models/dogijk/egg4.obj",
+			"models/dogijk/egg5.obj",
+		};
+		conc.mins = {-9, -9,  0};
+		conc.maxs = { 9,  9, 26};
 		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
 			self->clear();
 			AddScore(activator, activator->r.currentOrigin, 1);
@@ -4118,6 +4124,30 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	
 	trap->SendServerCommand( player - g_entities, va("print \"eegg: unknown subcommand.\n\"") );
 }
+
+// ================================================================
+// DOGI ADMIN
+// ================================================================
+
+using DA_Func = void(*)(gentity_t * player, std::vector<istring> const & args);
+
+static void Cmd_DA_f(gentity_t * player) {
+	
+	if (trap->Argc() < 2) {
+		// TODO -- current status and available commands
+		trap->SendServerCommand( player - g_entities, va("print \"da: IMPLEMENT ME, FOOL.\n\"") );
+		return;
+	}
+	
+	std::vector<istring> args;
+	for (int i = 1; i < trap->Argc(); i++) {
+		static std::array<char, 4096> buf;
+		trap->Argv(i, buf.data(), 4096);
+		args.emplace_back(buf.data());
+	}
+}
+
+// ================================================================
 
 /*
 =================
