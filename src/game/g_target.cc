@@ -652,6 +652,8 @@ void SP_target_counter (gentity_t *self)
 	}
 
 	self->use = target_counter_use;
+	
+	G_SpawnInt("bounceCount", "0", &self->bounceCount);
 }
 
 /*QUAKED target_random (.5 .5 .5) (-4 -4 -4) (4 4 4) USEONCE

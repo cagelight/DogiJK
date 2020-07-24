@@ -28,39 +28,66 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 typedef struct cNode_s {
 	cplane_t	*plane;
-	int			children[2];		// negative numbers are leafs
+	int32_t		children[2];		// negative numbers are leafs
 } cNode_t;
 
 typedef struct cLeaf_s {
-	int			cluster;
-	int			area;
+	int32_t		cluster;
+	int32_t		area;
 
 	ptrdiff_t	firstLeafBrush;
-	int			numLeafBrushes;
+	int32_t		numLeafBrushes;
 
 	ptrdiff_t	firstLeafSurface;
-	int			numLeafSurfaces;
+	int32_t		numLeafSurfaces;
 } cLeaf_t;
 
 typedef struct cmodel_s {
 	vec3_t		mins, maxs;
 	cLeaf_t		leaf;			// submodels don't reference the main tree
-	int			firstNode;		// only for cmodel[0] (for the main and bsp instances)
+	int32_t		firstNode;		// only for cmodel[0] (for the main and bsp instances)
 } cmodel_t;
 
 typedef struct cbrushside_s {
 	cplane_t	*plane;
-	int			shaderNum;
+	int32_t		shaderNum;
+	int32_t		surfNum;
 } cbrushside_t;
 
 typedef struct cbrush_s {
-	int					shaderNum;		// the shader that determined the contents
-	int					contents;
+	int32_t				shaderNum;		// the shader that determined the contents
+	int32_t				contents;
 	vec3_t				bounds[2];
 	cbrushside_t		*sides;
 	unsigned short		numsides;
 	unsigned short		checkcount;		// to avoid repeated testings
 } cbrush_t;
+
+// a trace is returned when a box is swept through the world
+typedef struct trace_s {
+	byte			allsolid;	// if true, plane is not valid
+	byte			startsolid;	// if true, the initial point was in a solid area
+	int16_t			entityNum;	// entity the contacted sirface is a part of
+
+	float			fraction;	// time completed, 1.0 = didn't hit anything
+	vec3_t			endpos;		// final position
+	cplane_t		plane;		// surface normal at impact, transformed to world space
+	cbrushside_t *	brushside;
+	int32_t			surfaceFlags;	// surface hit
+	int32_t			brushNum;
+	int32_t			contents;	// contents on other side of surface hit
+/*
+Ghoul2 Insert Start
+*/
+	//rww - removed this for now, it's just wasting space in the trace structure.
+//	CollisionRecord_t G2CollisionMap[MAX_G2_COLLISIONS];	// map that describes all of the parts of ghoul2 models that got hit
+/*
+Ghoul2 Insert End
+*/
+} trace_t;
+
+// trace->entityNum can also be 0 to (MAX_GENTITIES-1)
+// or ENTITYNUM_NONE, ENTITYNUM_WORLD
 
 class CCMShader
 {

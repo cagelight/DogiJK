@@ -201,18 +201,18 @@ void NormalToLatLong( const vec3_t normal, byte bytes[2] )
 float Q_random( int32_t & seed )
 {
 	static std::uniform_real_distribution<float> dist {0, 1};
-	qm::xorshift32<int32_t> rng2 {seed};
+	qm::random_engine rng2 {static_cast<qm::random_engine::result_type>(seed)};
 	float ret = dist(rng2);
-	seed = rng2.state();
+	seed = rng2();
 	return ret;
 }
 
 float Q_crandom( int32_t & seed )
 {
 	static std::uniform_real_distribution<float> dist {-0.5, 0.5};
-	qm::xorshift32<int32_t> rng2 {seed};
+	qm::random_engine rng2 {static_cast<qm::random_engine::result_type>(seed)};
 	float ret = dist(rng2);
-	seed = rng2.state();
+	seed = rng2();
 	return ret;
 }
 

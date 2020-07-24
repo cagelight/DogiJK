@@ -106,6 +106,7 @@ namespace howler {
 		
 		void setup_render_md3();
 		void setup_render_mdxm();
+		void setup_render_obj();
 	};
 	
 	// MESH

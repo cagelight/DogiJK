@@ -55,8 +55,8 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 	
 	auto settle = [&](qm::vec3_t const & pos, qm::vec3_t const & dir, qm::vec3_t & out) -> qm::vec3_t {
 		trace_t tr {};
-		qm::vec3_t origin, dest;
-		dest = origin.move_along(dir, Q3_INFINITE);
+		qm::vec3_t dest;
+		dest = pos.move_along(dir, Q3_INFINITE);
 		trap->Trace(&tr, pos.ptr(), mins, maxs, dest, -1, MASK_SOLID, qfalse, 0 ,0);
 		out = tr.endpos;
 		return tr.plane.normal;
@@ -108,6 +108,10 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			qm::vec3_t dest = origin.move_along(qm::quat_t::random() * qm::vec3_t {0, 0, 1}, Q3_INFINITE);
 			trace_t tr {};
 			trap->Trace(&tr, origin, mins, maxs, dest, -1, MASK_SOLID, qfalse, 0 ,0);
+			if (tr.startsolid || tr.allsolid) {
+				origin = start;
+				continue;
+			}
 			origin = qm::lerp<qm::vec3_t>(origin, tr.endpos, Q_flrand(0.4, 0.9));
 			
 			EEggProspect p;
@@ -196,6 +200,9 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		ent->classname = conc.classname;
 		ent->clipmask = MASK_SOLID;
 		ent->use = conc.use;
+		ent->pain = conc.pain;
+		
+		ent->s.iModelScale = conc.modelscalepercent;
 		
 		std::uniform_int_distribution<size_t> dist { 0, conc.models.size() - 1 };
 		ent->s.modelindex = G_ModelIndex(conc.models[dist(qm::rng)].data());
@@ -213,8 +220,14 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		VectorCopy(conc.mins, ent->r.mins);
 		VectorCopy(conc.maxs, ent->r.maxs);
 		ent->r.contents = CONTENTS_SOLID;
+		
 		if (conc.use)
 			ent->r.svFlags |= SVF_PLAYER_USABLE;
+		
+		if (conc.pain) {
+			ent->takedamage = true;
+			ent->maxHealth = ent->health = 100;
+		}
 		
 		ent->set_origin(pos.ptr());
 		ent->link();
@@ -266,6 +279,10 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 	
 	m_data->spawn_group++;
 	return approved;
+}
+
+void EEggPathfinder::forget()  {
+	m_data->approved_prospects.clear();
 }
 
 uint EEggPathfinder::locations_scored() const {

@@ -1240,11 +1240,12 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		//
 		// animMap <frequency> <image1> .... <imageN>
 		//
-		else if ( !Q_stricmp( token, "animMap" ) || !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "oneshotanimMap" ))
+		else if ( !Q_stricmp( token, "animMap" ) || !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "oneshotanimMap" ) || !Q_stricmp( token, "shuffleMap" ) || !Q_stricmp( token, "clampshuffleMap" ))
 		{
 			std::vector<image_t *> images;
-			bool bClamp = !Q_stricmp( token, "clampanimMap" );
+			bool bClamp = !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "clampshuffleMap" );
 			bool oneShot = !Q_stricmp( token, "oneshotanimMap" );
+			bool shuffle = !Q_stricmp( token, "shuffleanimMap" ) || !Q_stricmp( token, "shuffleMap" );
 
 			token = COM_ParseExt( text, qfalse );
 			if ( !token[0] )
@@ -1254,6 +1255,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			}
 			stage->bundle[0].imageAnimationSpeed = atof( token );
 			stage->bundle[0].oneShotAnimMap = oneShot;
+			stage->bundle[0].shuffleAnimMap = shuffle;
 
 			// parse up to MAX_IMAGE_ANIMATIONS animations
 			while ( 1 ) {
@@ -4067,7 +4069,9 @@ static void ScanAndLoadShaderFiles( void )
 			continue;
 		}
 		
-		shaderTextHashTableNew[token] = p;
+		// overriding shaders not allowed (why???) -- vanilla behavior, issues with JA assets otherwise
+		if (shaderTextHashTableNew.find(token) == shaderTextHashTableNew.end())
+			shaderTextHashTableNew[token] = p;
 		SkipBracedSection( &p, 0 );
 	}
 

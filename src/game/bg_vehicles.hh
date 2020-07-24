@@ -23,6 +23,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #pragma once
 
 #include "qcommon/q_shared.hh"
+#include "qcommon/cm_public.hh"
 
 typedef struct Vehicle_s Vehicle_t;
 typedef struct bgEntity_s bgEntity_t;

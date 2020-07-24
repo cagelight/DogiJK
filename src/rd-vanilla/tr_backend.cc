@@ -1792,8 +1792,8 @@ void RB_ShowImages( void ) {
 	   				 R_Images_StartIteration();
 	while ( (image = R_Images_GetNextIteration()) != NULL)
 	{
-		w = glConfig.vidWidth / 20;
-		h = glConfig.vidHeight / 15;
+		w = 640 / 20;
+		h = 480 / 15;
 		x = i % 20 * w;
 		y = i / 20 * h;
 

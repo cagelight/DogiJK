@@ -447,6 +447,7 @@ static void CMod_LoadBrushSides (const lump_t *l, clipMap_t &cm)
 		num = LittleLong( in->planeNum );
 		out->plane = &cm.planes[num];
 		out->shaderNum = LittleLong( in->shaderNum );
+		out->surfNum= in->drawSurfNum;
 		if ( out->shaderNum < 0 || out->shaderNum >= cm.numShaders ) {
 			Com_Error( ERR_DROP, "CMod_LoadBrushSides: bad shaderNum: %i", out->shaderNum );
 		}

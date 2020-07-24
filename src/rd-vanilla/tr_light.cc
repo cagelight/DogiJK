@@ -341,11 +341,15 @@ void R_SetupEntityLighting( const trRefdef_t *refdef, trRefEntity_t *ent ) {
 	}
 
 	// bonus items and view weapons have a fixed minimum add
-	if ( 1 /* ent->e.renderfx & RF_MINLIGHT */ ) {
+	if ( r_gridlight_mode->integer == 0 /* ent->e.renderfx & RF_MINLIGHT */ ) {
 		// give everything a minimum light add
-		ent->ambientLight[0] += tr.identityLight * 32;
-		ent->ambientLight[1] += tr.identityLight * 32;
-		ent->ambientLight[2] += tr.identityLight * 32;
+		ent->ambientLight[0] += tr.identityLight * r_gridlight_min->value;
+		ent->ambientLight[1] += tr.identityLight * r_gridlight_min->value;
+		ent->ambientLight[2] += tr.identityLight * r_gridlight_min->value;
+	} else if ( r_gridlight_mode->integer == 1 ) {
+		ent->ambientLight[0] += (ent->directedLight[0] / 255) * r_gridlight_min->value;
+		ent->ambientLight[1] += (ent->directedLight[1] / 255) * r_gridlight_min->value;
+		ent->ambientLight[2] += (ent->directedLight[2] / 255) * r_gridlight_min->value;
 	}
 
 	if (ent->e.renderfx & RF_MINLIGHT)

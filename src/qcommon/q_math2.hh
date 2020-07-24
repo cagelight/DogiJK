@@ -114,6 +114,7 @@ namespace qm {
 	using mat3_t = meta::mat3_t<float>;
 	using mat4_t = meta::mat4_t<float>;
 	
+	/*
 	template <typename T>
 	struct xorshift32 {
 		
@@ -135,8 +136,8 @@ namespace qm {
 		
 		result_type & state() { return a; }
 		
-		static constexpr result_type min() { return std::numeric_limits<result_type>().min(); }
-		static constexpr result_type max() { return std::numeric_limits<result_type>().max(); }
+		static constexpr result_type min() { return std::numeric_limits<result_type>::min(); }
+		static constexpr result_type max() { return std::numeric_limits<result_type>::max(); }
 	private:
 		result_type a;
 	};
@@ -164,9 +165,10 @@ namespace qm {
 	private:
 		result_type a, b;
 	};
+	*/
 	
-	//using random_engine = std::mt19937_64;
-	using random_engine = xorshift128plus<uint64_t>;
+	using random_engine = std::mt19937_64;
+	//using random_engine = xorshift128plus<uint64_t>;
 	static inline random_engine rng { std::random_device {}() };
 }
 

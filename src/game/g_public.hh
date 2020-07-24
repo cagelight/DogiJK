@@ -28,6 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/q_shared.hh"
 #include "qcommon/qfiles.hh"
 #include "qcommon/q_task.hh"
+#include "qcommon/cm_public.hh"
 
 #define Q3_INFINITE			16777216
 

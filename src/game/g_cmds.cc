@@ -3969,10 +3969,10 @@ static void Cmd_TraceShader_f(gentity_t * player) {
 	trace_t tr;
 	static constexpr int32_t surfmask = MASK_PLAYERSOLID | MASK_WATER;
 	trap->Trace( &tr, start, NULL, NULL, end, player - g_entities, surfmask, qfalse, 0, 0 );
-	if (tr.shaderNum >= 0) {
+	if (tr.brushside && tr.brushside->shaderNum >= 0) {
 		clipMap_t const * clip = reinterpret_cast<clipMap_t const *>(trap->CM_Get());
-		char const * shaderName = clip->shaders[tr.shaderNum].shader;
-		trap->SendServerCommand( player - g_entities, va("print \"shader name: %s\n\"", shaderName) );
+		char const * shaderName = clip->shaders[tr.brushside->shaderNum].shader;
+		trap->SendServerCommand( player - g_entities, va("print \"shader: [%i] %s\nsurface index: %i\nbrush index: %i\n\"", tr.brushside->shaderNum, shaderName, tr.brushside->surfNum, tr.brushNum) );
 	}
 }
 
@@ -3986,10 +3986,11 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		std::vector<std::pair<std::string, std::string>> subcmd {
 			{ "clear", "Clear all currently spawned eggs." },
 			{ "explore", "Randomly fly around the map and score locations for egg placement." },
+			{ "init", "Initialize the eegg system, or reset the current eegg state to default." },
 			{ "list", "List currently spawned egg locations." },
 			{ "place", "Place eggs based on scores from the 'explore' phase." },
-			{ "reset", "Reset the current eegg state to default." },
 			{ "stats", "Show stats about the current state." },
+			{ "tele", "Teleport to an egg (for debugging, etc.)" },
 		};
 		std::stringstream ss;
 		for (auto const & [sub, desc] : subcmd) {
@@ -4015,6 +4016,25 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		return;
 	}
 	
+	if (cmd == "tele") {
+		
+		uint telenum = 0;
+		
+		if (trap->Argc() > 2) {
+			std::array<char, 8> buf;
+			trap->Argv(2, buf.data(), buf.size());
+			telenum = std::strtol(buf.data(), nullptr, 10);
+		}
+		
+		for (gentity_t & ent : *g_entities_actual) if (ent.classname == "easter_egg" && !(telenum--)) {
+			TeleportPlayer(player, ent.r.currentOrigin, player->r.currentAngles, true);
+			return;
+		}
+		
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: Egg not found.\n\"") );
+		return;
+	}
+	
 	if (cmd == "clear") {
 		for (gentity_t & ent : *g_entities_actual)
 			if (ent.classname == "easter_egg") ent.clear();
@@ -4028,26 +4048,17 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	
 	static std::unique_ptr<EEggCMDPers> pers;
 	
-	if (cmd == "reset") {
-		pers.reset();
-		return;
-	}
-	
-	if (cmd == "stats") {
+	if (cmd == "init") {
+		
 		if (!pers) {
-			trap->SendServerCommand( player - g_entities, va("print \"eegg: no data available.\n\"") );
-			return;
+			// not sure why I have to do this, sometimes the first explore is really, really, really inefficient
+			// FIXME -- figure out why
+			pers = std::make_unique<EEggCMDPers>();
+			pers->path.explore(player->r.currentOrigin, 1, std::chrono::milliseconds(50));
 		}
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u eggs have been placed this session, %u locations are currently on file, and %u locations have been scored in total.\n\"", 
-			pers->path.locations_used(), 
-			pers->path.locations_valid(), 
-			pers->path.locations_scored()
-		));
-		return;
-	}
-	
-	if (!pers) {
+		
 		pers = std::make_unique<EEggCMDPers>();
+		
 		EEggConcept & conc = pers->path.m_concept;
 		conc.classname = "easter_egg";
 		conc.models = {
@@ -4057,13 +4068,52 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			"models/dogijk/egg4.obj",
 			"models/dogijk/egg5.obj",
 		};
-		conc.mins = {-9, -9,  0};
-		conc.maxs = { 9,  9, 26};
+		
+		if (g_eegg_hardmode.integer) {
+			conc.modelscalepercent = 25;
+			conc.mins = {-2.25, -2.25,  0};
+			conc.maxs = { 2.25,  2.25, 6.5};
+		} else {
+			conc.modelscalepercent = 100;
+			conc.mins = {-9, -9,  0};
+			conc.maxs = { 9,  9, 26};
+		}
+		
 		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
+			if (!activator) return;
+			if (!activator->client) return;
 			self->clear();
 			AddScore(activator, activator->r.currentOrigin, 1);
 		};
+		
+		conc.pain = *[](gentity_t * self, gentity_t * attacker, int){
+			if (!attacker) return;
+			if (!attacker->client) return;
+			self->clear();
+			AddScore(attacker, attacker->r.currentOrigin, 1);
+		};
+		
 		conc.random_entity_color = true;
+		return;
+	}
+	
+	if (!pers) {
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: eegg not initialized, please run 'eegg init'.\n\"") );
+		return;
+	}
+	
+	if (cmd == "forget") {
+		pers->path.forget();
+		return;
+	}
+	
+	if (cmd == "stats") {
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u eggs have been placed this session, %u locations are currently on file, and %u locations have been scored in total.\n\"", 
+			pers->path.locations_used(), 
+			pers->path.locations_valid(), 
+			pers->path.locations_scored()
+		));
+		return;
 	}
 	
 	if (cmd == "explore") {

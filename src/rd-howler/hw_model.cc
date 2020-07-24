@@ -106,6 +106,9 @@ void q3basemodel::setup_render() {
 		case MOD_MDXM:
 			setup_render_mdxm();
 			break;
+		case MOD_OBJ:
+			setup_render_obj();
+			break;
 	}
 }
 
@@ -196,6 +199,10 @@ void q3basemodel::setup_render_md3() {
 		surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );
 	}
 }
+
+//================================================================
+// MDXM
+//================================================================
 
 struct mdxm_animated_mesh : public q3mesh_basic {
 	
@@ -321,6 +328,104 @@ void q3basemodel::setup_render_mdxm() {
 		model->meshes.emplace_back( hw_inst->shaders.get(surfH->shaderIndex), std::make_shared<mdxm_animated_mesh>(verticies.data(), verticies.size()) );
 	}
 }
+
+//================================================================
+// OBJ
+//================================================================
+
+struct q3objmesh : public q3mesh_basic {
+	struct vertex_t {
+		qm::vec3_t vert;
+		qm::vec2_t uv;
+		qm::vec3_t normal;
+	};
+	
+	q3objmesh(vertex_t const * data, size_t num) : q3mesh_basic(mode::triangles) {
+		
+		static constexpr uint_fast16_t offsetof_verts = 0;
+		static constexpr uint_fast16_t sizeof_verts = sizeof(vertex_t::vert);
+		static constexpr uint_fast16_t offsetof_uv = offsetof_verts + sizeof_verts;
+		static constexpr uint_fast16_t sizeof_uv = sizeof(vertex_t::uv);
+		static constexpr uint_fast16_t offsetof_normal = offsetof_uv + sizeof_uv;
+		static constexpr uint_fast16_t sizeof_normal = sizeof(vertex_t::normal);
+		static constexpr uint_fast16_t sizeof_all = offsetof_normal + sizeof_normal;
+		static_assert(sizeof_all == sizeof(vertex_t));
+		
+		m_size = num;
+		glCreateBuffers(1, &m_vbo);
+		glNamedBufferData(m_vbo, num * sizeof_all, data, GL_STATIC_DRAW);
+		
+		glVertexArrayVertexBuffer(m_handle, 0, m_vbo, 0, sizeof_all);
+		
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_VERTEX);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_UV);
+		glEnableVertexArrayAttrib(m_handle, LAYOUT_NORMAL);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_VERTEX, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_UV, 0);
+		glVertexArrayAttribBinding(m_handle, LAYOUT_NORMAL, 0);
+		
+		glVertexArrayAttribFormat(m_handle, LAYOUT_VERTEX, 3, GL_FLOAT, GL_FALSE, offsetof_verts);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_UV, 2, GL_FLOAT, GL_FALSE, offsetof_uv);
+		glVertexArrayAttribFormat(m_handle, LAYOUT_NORMAL, 3, GL_FLOAT, GL_FALSE, offsetof_normal);
+		
+	}
+	
+	~q3objmesh() {
+		glDeleteBuffers(1, &m_vbo);
+	}
+private:
+	GLuint m_vbo;
+};
+
+void q3basemodel::setup_render_obj() {
+	model = make_q3model();
+	
+	for (int32_t i = 0; i < base.obj->numSurfaces; i++) {
+		objSurface_t const & surf = base.obj->surfaces[i];
+	}
+}
+
+/*
+void q3basemodel::setup_render_md3() {
+	model = make_q3model();
+	
+	md3Header_t * header = base.md3[0];
+	
+	md3Surface_t * surf = (md3Surface_t *)( (byte *)header + header->ofsSurfaces );
+	for (int32_t s = 0; s < header->numSurfaces; s++) {
+		
+		md3XyzNormal_t * verts = (md3XyzNormal_t *) ((byte *)surf + surf->ofsXyzNormals);
+		md3St_t * uvs = (md3St_t *) ((byte *)surf + surf->ofsSt);
+		md3Triangle_t * triangles = (md3Triangle_t *) ((byte *)surf + surf->ofsTriangles);
+		
+		std::vector<q3md3mesh::vertex_t> vert_data;
+		
+		for (int32_t i = 0; i < surf->numTriangles; i++) {
+			for (size_t j = 0; j < 3; j++) {
+				auto const & v = verts[triangles[i].indexes[j]];
+				auto const & u = uvs[triangles[i].indexes[j]];
+				
+				float lat = ((v.normal >> 8) & 0xFF) * (2 * qm::pi) / 255.0f;
+				float lng = (v.normal & 0xFF) * (2 * qm::pi) / 255.0f;
+				
+				vert_data.emplace_back( q3md3mesh::vertex_t {
+					qm::vec3_t { (float)v.xyz[1], (float)v.xyz[2], (float)v.xyz[0] } / 64.0,
+					qm::vec2_t { u.st[0], u.st[1] },
+					qm::vec3_t { -std::sin(lat) * std::sin(lng), -std::cos(lng), -std::cos(lat) * std::sin(lng) }.normalized(),
+				});
+			}
+		}
+		
+		std::shared_ptr<q3md3mesh> mesh = std::make_shared<q3md3mesh>(vert_data.data(), vert_data.size());
+		
+		assert(surf->numShaders == 1); // how can there ever be more than 1? that makes no sense...
+		md3Shader_t * shader = (md3Shader_t *) ( (byte *)surf + surf->ofsShaders );
+		model->meshes.emplace_back( hw_inst->shaders.get(shader->shaderIndex), mesh );
+		
+		surf = (md3Surface_t *)( (byte *)surf + surf->ofsEnd );
+	}
+}
+*/
 
 //================================================================
 

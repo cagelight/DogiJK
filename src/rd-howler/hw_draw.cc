@@ -694,6 +694,7 @@ void instance::end_frame(float time) {
 	gl::cull(false);
 	
 	main_sampler->bind(BINDING_DIFFUSE);
+	main_sampler->bind(BINDING_LIGHTMAP);
 	
 	m_ui_draw = true;
 	m_shader_color = {1, 1, 1, 1};

@@ -1568,7 +1568,9 @@ struct EEggConcept {
 	istring classname = "generic_easter_egg";
 	std::vector<istring> models = { "models/dogijk/testbox.obj" };
 	qm::vec3_t mins {-20, -20, -20}, maxs {20, 20, 20};
-	void (*use) (gentity_t *, gentity_t *, gentity_t *) = nullptr;
+	int modelscalepercent = 100;
+	void (*use) (gentity_t * self, gentity_t * activator, gentity_t *) = nullptr;
+	void (*pain) (gentity_t * self, gentity_t * attacker, int damage) = nullptr;
 	bool random_entity_color = false;
 };
 
@@ -1580,6 +1582,7 @@ struct EEggPathfinder {
 	
 	uint explore(qm::vec3_t start, uint divisions /*and threads*/, std::chrono::high_resolution_clock::duration time_alloted);
 	uint spawn_eggs(uint max_eggs = 1);
+	void forget(); // keep all location data, but pretend like no eggs have ever been placed
 	
 	uint locations_scored() const;
 	uint locations_valid() const;

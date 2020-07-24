@@ -65,6 +65,8 @@ cvar_t	*r_drawworld;
 cvar_t	*r_drawfog;
 cvar_t	*r_speeds;
 cvar_t	*r_fullbright;
+cvar_t  *r_gridlight_min;
+cvar_t  *r_gridlight_mode;
 cvar_t	*r_novis;
 cvar_t	*r_nocull;
 cvar_t	*r_facePlaneCull;
@@ -1518,6 +1520,8 @@ void R_Register( void )
 	ri.Cvar_CheckRange( r_subdivisions, 0, 80, qfalse );
 
 	r_fullbright						= ri.Cvar_Get( "r_fullbright",						"0",						CVAR_CHEAT, "" );
+	r_gridlight_min						= ri.Cvar_Get( "r_gridlight_min",						"32",						CVAR_ARCHIVE_ND, "" );
+	r_gridlight_mode					= ri.Cvar_Get( "r_gridlight_mode",						"0",						CVAR_ARCHIVE_ND, "" );
 	r_intensity							= ri.Cvar_Get( "r_intensity",						"1",						CVAR_LATCH, "" );
 	r_singleShader						= ri.Cvar_Get( "r_singleShader",					"0",						CVAR_CHEAT|CVAR_LATCH, "" );
 	r_lodCurveError						= ri.Cvar_Get( "r_lodCurveError",					"250",						CVAR_ARCHIVE_ND, "" );

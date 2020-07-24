@@ -44,6 +44,9 @@ q3sampler::q3sampler(float aniso) {
 	glSamplerParameteri(m_handle, GL_TEXTURE_WRAP_S, m_current_wrap);
 	glSamplerParameteri(m_handle, GL_TEXTURE_WRAP_T, m_current_wrap);
 	
+	glSamplerParameteri(m_handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glSamplerParameteri(m_handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	
 	if (aniso < 0 || aniso > glConfig.maxTextureFilterAnisotropy)
 		aniso = glConfig.maxTextureFilterAnisotropy;
 	if (aniso)

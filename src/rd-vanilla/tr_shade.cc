@@ -260,20 +260,18 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 			index = 0;	// may happen with shader time offsets
 		}
 	}
-
-	if ( bundle->oneShotAnimMap )
-	{
+	
+	if ( bundle->shuffleAnimMap ) {
+		index = Q_random(index) * bundle->numImageAnimations;
+	} else if ( bundle->oneShotAnimMap ) {
 		if ( index >= bundle->numImageAnimations )
 		{
 			// stick on last frame
 			index = bundle->numImageAnimations - 1;
 		}
 	}
-	else
-	{
-		// loop
-		index %= bundle->numImageAnimations;
-	}
+	
+	index %= bundle->numImageAnimations;
 
 	GL_Bind( *((image_t**)bundle->image + index) );
 }
