@@ -1015,6 +1015,8 @@ static void CG_General( centity_t *cent ) {
 	ent.shaderRGBA[1] = cent->currentState.customRGBA[1];
 	ent.shaderRGBA[2] = cent->currentState.customRGBA[2];
 	ent.shaderRGBA[3] = cent->currentState.customRGBA[3];
+	
+	ent.shaderRNG = cent->currentState.rng_seed;
 
 	if (cent->currentState.modelGhoul2 >= G2_MODELPART_HEAD &&
 		cent->currentState.modelGhoul2 <= G2_MODELPART_RLEG &&

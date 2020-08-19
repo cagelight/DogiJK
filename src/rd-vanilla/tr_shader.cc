@@ -1155,6 +1155,27 @@ static void ParseSurfaceSpritesOptional( const char *param, const char *_text, s
 ParseStage
 ===================
 */
+
+struct shader_map_setup_t {
+	bool animated = false;
+	bool clamped = false;
+	bool entity = false;
+	bool one_shot = false;
+	bool shuffle = false;
+};
+
+static std::unordered_map<istring, shader_map_setup_t> const shader_map_setups {
+	{ "Map",             shader_map_setup_t { } },
+	{ "ClampMap",        shader_map_setup_t { .clamped = true } },
+	{ "AnimMap",         shader_map_setup_t { .animated = true } },
+	{ "ClampAnimMap",    shader_map_setup_t { .animated = true, .clamped = true } },
+	{ "OneShotAnimMap",  shader_map_setup_t { .animated = true, .one_shot = true } },
+	{ "ShuffleMap",      shader_map_setup_t { .animated = true, .shuffle = true } },
+	{ "ClampShuffleMap", shader_map_setup_t { .animated = true, .clamped = true, .shuffle = true } },
+	{ "EntityMap",       shader_map_setup_t { .animated = true, .entity = true } },
+	{ "ClampEntityMap",  shader_map_setup_t { .animated = true, .clamped = true, .entity = true } },
+};
+
 static qboolean ParseStage( shaderStage_t *stage, const char **text )
 {
 	char *token;
@@ -1176,108 +1197,88 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 		{
 			break;
 		}
-		//
-		// map <name>
-		//
-		else if ( !Q_stricmp( token, "map" ) )
-		{
-			token = COM_ParseExt( text, qfalse );
-			if ( !token[0] )
-			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'map' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-
-			if ( !Q_stricmp( token, "$whiteimage" ) )
-			{
-				stage->bundle[0].image = tr.whiteImage;
-				continue;
-			}
-			else if ( !Q_stricmp( token, "$lightmap" ) )
-			{
-				stage->bundle[0].isLightmap = qtrue;
-				if ( shader.lightmapIndex[0] < 0 || shader.lightmapIndex[0] >= tr.numLightmaps )
-				{
-#ifndef FINAL_BUILD
-					ri.Printf( PRINT_ALL, S_COLOR_RED"Lightmap requested but none available for shader %s\n", shader.name);
-#endif
-					stage->bundle[0].image = tr.whiteImage;
-				}
-				else
-				{
-					stage->bundle[0].image = tr.lightmaps[shader.lightmapIndex[0]];
-				}
-				continue;
-			}
-			else
-			{
-				stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_REPEAT );
-				if ( !stage->bundle[0].image )
-				{
-					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-					return qfalse;
-				}
-			}
-		}
-		//
-		// clampmap <name>
-		//
-		else if ( !Q_stricmp( token, "clampmap" ) )
-		{
-			token = COM_ParseExt( text, qfalse );
-			if ( !token[0] )
-			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'clampmap' keyword in shader '%s'\n", shader.name );
-				return qfalse;
-			}
-			stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, GL_CLAMP );
-			if ( !stage->bundle[0].image )
-			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
-				return qfalse;
-			}
-		}
-		//
-		// animMap <frequency> <image1> .... <imageN>
-		//
-		else if ( !Q_stricmp( token, "animMap" ) || !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "oneshotanimMap" ) || !Q_stricmp( token, "shuffleMap" ) || !Q_stricmp( token, "clampshuffleMap" ))
-		{
-			std::vector<image_t *> images;
-			bool bClamp = !Q_stricmp( token, "clampanimMap" ) || !Q_stricmp( token, "clampshuffleMap" );
-			bool oneShot = !Q_stricmp( token, "oneshotanimMap" );
-			bool shuffle = !Q_stricmp( token, "shuffleanimMap" ) || !Q_stricmp( token, "shuffleMap" );
-
-			token = COM_ParseExt( text, qfalse );
-			if ( !token[0] )
-			{
-				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for '%s' keyword in shader '%s'\n", (bClamp ? "animMap":"clampanimMap"), shader.name );
-				return qfalse;
-			}
-			stage->bundle[0].imageAnimationSpeed = atof( token );
-			stage->bundle[0].oneShotAnimMap = oneShot;
-			stage->bundle[0].shuffleAnimMap = shuffle;
-
-			// parse up to MAX_IMAGE_ANIMATIONS animations
-			while ( 1 ) {
-				int		num;
-
+		
+		// MAP
+		auto map_iter = shader_map_setups.find(token);
+		if (map_iter != shader_map_setups.end()) {
+			auto const &parms = map_iter->second;
+			
+			if (!parms.animated) {
+				
 				token = COM_ParseExt( text, qfalse );
 				if ( !token[0] ) {
-					break;
-				}
-				num = stage->bundle[0].numImageAnimations;
-				images.emplace_back(R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, bClamp?GL_CLAMP:GL_REPEAT ));
-				if ( !images[num] )
-				{
-					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+					ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for '%s' keyword in shader '%s'\n", map_iter->first.data(), shader.name );
 					return qfalse;
 				}
-				stage->bundle[0].numImageAnimations++;
+	
+				if ( !Q_stricmp( token, "$whiteimage" ) ) {
+					stage->bundle[0].image = tr.whiteImage;
+					continue;
+				}
+				
+				else if ( !Q_stricmp( token, "$lightmap" ) ) {
+					stage->bundle[0].isLightmap = qtrue;
+					if ( shader.lightmapIndex[0] < 0 || shader.lightmapIndex[0] >= tr.numLightmaps ) {
+						#ifndef FINAL_BUILD
+						ri.Printf( PRINT_ALL, S_COLOR_RED"Lightmap requested but none available for shader %s\n", shader.name);
+						#endif
+						stage->bundle[0].image = tr.whiteImage;
+					}
+					else
+						stage->bundle[0].image = tr.lightmaps[shader.lightmapIndex[0]];
+					
+					continue;
+				}
+				
+				else {
+					stage->bundle[0].image = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, parms.clamped ? GL_CLAMP : GL_REPEAT );
+					if ( !stage->bundle[0].image ) {
+						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+						return qfalse;
+					}
+				}
+				
+			} else {
+				
+				std::vector<image_t *> images;
+	
+				if (!parms.entity) {
+					token = COM_ParseExt( text, qfalse );
+					if ( !token[0] )
+					{
+						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for '%s' keyword in shader '%s'\n", map_iter->first.data(), shader.name );
+						return qfalse;
+					}
+					stage->bundle[0].imageAnimationSpeed = atof( token );
+				}
+				
+				stage->bundle[0].oneShotAnimMap = parms.one_shot;
+				stage->bundle[0].shuffleAnimMap = parms.shuffle;
+				stage->bundle[0].entityAnimMap = parms.entity;
+	
+				while ( 1 ) {
+					int		num;
+	
+					token = COM_ParseExt( text, qfalse );
+					if ( !token[0] ) {
+						break;
+					}
+					num = stage->bundle[0].numImageAnimations;
+					images.emplace_back(R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, parms.clamped ? GL_CLAMP : GL_REPEAT ));
+					if ( !images[num] )
+					{
+						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
+						return qfalse;
+					}
+					stage->bundle[0].numImageAnimations++;
+				}
+				// Copy image ptrs into an array of ptrs
+				stage->bundle[0].image = (image_t*) Hunk_Alloc( stage->bundle[0].numImageAnimations * sizeof( image_t* ), h_low );
+				memcpy( stage->bundle[0].image,	images.data(),			stage->bundle[0].numImageAnimations * sizeof( image_t* ) );
+				
 			}
-			// Copy image ptrs into an array of ptrs
-			stage->bundle[0].image = (image_t*) Hunk_Alloc( stage->bundle[0].numImageAnimations * sizeof( image_t* ), h_low );
-			memcpy( stage->bundle[0].image,	images.data(),			stage->bundle[0].numImageAnimations * sizeof( image_t* ) );
 		}
+		
 		else if ( !Q_stricmp( token, "videoMap" ) )
 		{
 			token = COM_ParseExt( text, qfalse );
@@ -1286,7 +1287,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: missing parameter for 'videoMap' keyword in shader '%s'\n", shader.name );
 				return qfalse;
 			}
-			stage->bundle[0].videoMapHandle = ri.CIN_PlayCinematic( token, 0, 0, 256, 256, (CIN_loop | CIN_silent | CIN_shader));
+			stage->bundle[0].videoMapHandle = ri.CIN_PlayCinematic( token, 0, 0, 512, 512, (CIN_loop | CIN_silent | CIN_shader));
 			if (stage->bundle[0].videoMapHandle != -1) {
 				stage->bundle[0].isVideoMap = qtrue;
 				assert (stage->bundle[0].videoMapHandle<NUM_SCRATCH_IMAGES);

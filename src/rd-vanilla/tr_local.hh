@@ -358,6 +358,7 @@ typedef struct textureBundle_s {
 	bool			isLightmap;
 	bool			oneShotAnimMap;
 	bool			shuffleAnimMap;
+	bool			entityAnimMap;
 	bool			vertexLightmap;
 	bool			isVideoMap;
 
@@ -1230,6 +1231,9 @@ extern	cvar_t	*r_debugSort;
 extern	cvar_t	*r_marksOnTriangleMeshes;
 
 extern	cvar_t	*r_aspectCorrectFonts;
+
+// DOGIJK
+extern  cvar_t  *r_distanceCullOverride;
 
 /*
 Ghoul2 Insert Start

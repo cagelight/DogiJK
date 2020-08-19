@@ -1,7 +1,3 @@
-#include <thread>
-
-#include <btBulletDynamicsCommon.h>
-
 #include "bg_local.hh"
 #include "bg_physics.hh"
 
@@ -9,6 +5,11 @@
 #include "qcommon/sync.hh"
 
 #include "qcommon/cm_patch.hh"
+
+#include <btBulletDynamicsCommon.h>
+
+#include <thread>
+#include <unordered_set>
 
 static inline btVector3 q2b( qm::vec3_t const & v ) { return { static_cast<btScalar>(v[0]), static_cast<btScalar>(v[1]), static_cast<btScalar>(v[2]) }; }
 static inline qm::vec3_t b2q( btVector3 const & v ) { return { static_cast<float>(v[0]), static_cast<float>(v[1]), static_cast<float>(v[2]) }; }
@@ -58,8 +59,6 @@ static std::vector<qm::vec3_t> calculate_brush_hull_points(cbrush_t const & brus
 	
 	return hull;
 }
-
-#include <unordered_set>
 
 struct submodel_t {
 	

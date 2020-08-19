@@ -30,13 +30,11 @@ cvar_t		*cvar_vars = NULL;
 cvar_t		*cvar_cheats;
 uint32_t	cvar_modifiedFlags;
 
-#define	MAX_CVARS	8192
-cvar_t		cvar_indexes[MAX_CVARS];
-int			cvar_numIndexes;
+static int cvar_handle_inc = 0;
+static std::unordered_map<istring, std::unique_ptr<cvar_t>> cvars;
+static std::unordered_map<qhandle_t, cvar_t *> cvar_handle_lookup;
 
 #define FILE_HASH_SIZE		512
-static	cvar_t*		hashTable[FILE_HASH_SIZE];
-static	qboolean cvar_sort = qfalse;
 
 static char *lastMemPool = NULL;
 static int memPoolSize;
@@ -49,27 +47,6 @@ static void Cvar_FreeString(char *string)
 			string >= lastMemPool + memPoolSize) {
 		Z_Free(string);
 	}
-}
-
-/*
-================
-return a hash value for the filename
-================
-*/
-static long generateHashValue( const char *fname ) {
-	int		i;
-	long	hash;
-	char	letter;
-
-	hash = 0;
-	i = 0;
-	while (fname[i] != '\0') {
-		letter = tolower((unsigned char)fname[i]);
-		hash+=(long)(letter)*(i+119);
-		i++;
-	}
-	hash &= (FILE_HASH_SIZE-1);
-	return hash;
 }
 
 /*
@@ -99,18 +76,8 @@ Cvar_FindVar
 ============
 */
 static cvar_t *Cvar_FindVar( const char *var_name ) {
-	cvar_t	*var;
-	long hash;
-
-	hash = generateHashValue(var_name);
-
-	for (var=hashTable[hash] ; var ; var=var->hashNext) {
-		if (!Q_stricmp(var_name, var->name)) {
-			return var;
-		}
-	}
-
-	return NULL;
+	auto iter = cvars.find(var_name);
+	return (iter == cvars.end()) ? nullptr : iter->second.get();
 }
 
 /*
@@ -336,7 +303,6 @@ The flags will be or'ed in if the variable exists.
 */
 cvar_t *Cvar_Get( const char *var_name, const char *var_value, uint32_t flags, const char *var_desc ) {
 	cvar_t	*var;
-	long	hash;
 	int		index;
 
     if ( !var_name || ! var_value ) {
@@ -441,26 +407,11 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, uint32_t flags, c
 	//
 	// allocate a new cvar
 	//
-
-	// find a free cvar
-	for(index = 0; index < MAX_CVARS; index++)
-	{
-		if(!cvar_indexes[index].name)
-			break;
-	}
-
-	if(index >= MAX_CVARS)
-	{
-		if(!com_errorEntered)
-			Com_Error(ERR_FATAL, "Error: Too many cvars, cannot create a new one!");
-
-		return NULL;
-	}
-
-	var = &cvar_indexes[index];
-
-	if(index >= cvar_numIndexes)
-		cvar_numIndexes = index + 1;
+	
+	index = cvars.size();
+	var = cvars.emplace( var_name, std::make_unique<cvar_t>() ).first->second.get();
+	var->handle = cvar_handle_inc++;
+	cvar_handle_lookup[var->handle] = var;
 
 	var->name = CopyString (var_name);
 	var->string = CopyString (var_value);
@@ -486,20 +437,7 @@ cvar_t *Cvar_Get( const char *var_name, const char *var_value, uint32_t flags, c
 	var->flags = flags;
 	// note what types of cvars have been modified (userinfo, archive, serverinfo, systeminfo)
 	cvar_modifiedFlags |= var->flags;
-
-	hash = generateHashValue(var_name);
-	var->hashIndex = hash;
-
-	var->hashNext = hashTable[hash];
-	if(hashTable[hash])
-		hashTable[hash]->hashPrev = var;
-
-	var->hashPrev = NULL;
-	hashTable[hash] = var;
-
-	// sort on write
-	cvar_sort = qtrue;
-
+	
 	return var;
 }
 
@@ -529,41 +467,6 @@ static void Cvar_QSortByName( cvar_t **a, int n )
 
 	if ( j > 0 ) Cvar_QSortByName( a, j );
 	if ( n > i ) Cvar_QSortByName( a+i, n-i );
-}
-
-
-static void Cvar_Sort( void ) 
-{
-	cvar_t *list[ MAX_CVARS ], *var;
-	int count;
-	int i;
-
-	for ( count = 0, var = cvar_vars; var; var = var->next ) {
-		if ( var->name ) {
-			list[ count++ ] = var;
-		} else {
-			Com_Error( ERR_FATAL, "Cvar_Sort: NULL cvar name" );
-		}
-	}
-
-	if ( count < 2 ) {
-		return; // nothing to sort
-	}
-
-	Cvar_QSortByName( &list[0], count-1 );
-	
-	cvar_vars = NULL;
-
-	// relink cvars
-	for ( i = 0; i < count; i++ ) {
-		var = list[ i ];
-		// link the variable in
-		var->next = cvar_vars;
-		if ( cvar_vars )
-			cvar_vars->prev = var;
-		var->prev = NULL;
-		cvar_vars = var;
-	}
 }
 
 /*
@@ -1156,12 +1059,6 @@ void Cvar_WriteVariables( fileHandle_t f ) {
 	cvar_t	*var;
 	char buffer[1024];
 
-	if ( cvar_sort ) {
-		Com_DPrintf( "Cvar_Sort: sort cvars\n" );
-		cvar_sort = qfalse;
-		Cvar_Sort();
-	}
-
 	for ( var = cvar_vars; var; var = var->next )
 	{
 		if ( !var->name || Q_stricmp( var->name, "cl_cdkey" ) == 0 )
@@ -1232,8 +1129,6 @@ void Cvar_List_f( void ) {
 	}
 
 	Com_Printf( "\n%i total cvars\n", i );
-	if ( i != cvar_numIndexes )
-		Com_Printf( "%i cvar indexes\n", cvar_numIndexes );
 }
 
 void Cvar_ListModified_f( void ) {
@@ -1312,13 +1207,6 @@ cvar_t *Cvar_Unset(cvar_t *cv)
 		cvar_vars = cv->next;
 	if(cv->next)
 		cv->next->prev = cv->prev;
-
-	if(cv->hashPrev)
-		cv->hashPrev->hashNext = cv->hashNext;
-	else
-		hashTable[cv->hashIndex] = cv->hashNext;
-	if(cv->hashNext)
-		cv->hashNext->hashPrev = cv->hashPrev;
 
 	memset(cv, 0, sizeof(*cv));
 
@@ -1517,7 +1405,7 @@ void	Cvar_Register( vmCvar_t *vmCvar, const char *varName, const char *defaultVa
 	if ( !vmCvar ) {
 		return;
 	}
-	vmCvar->handle = cv - cvar_indexes;
+	vmCvar->handle = cv->handle;
 	vmCvar->modificationCount = -1;
 	Cvar_Update( vmCvar );
 }
@@ -1534,11 +1422,12 @@ void	Cvar_Update( vmCvar_t *vmCvar ) {
 	cvar_t	*cv = NULL;
 	assert(vmCvar);
 
-	if ( (unsigned)vmCvar->handle >= (unsigned)cvar_numIndexes ) {
+	auto iter = cvar_handle_lookup.find(vmCvar->handle);
+	if ( iter == cvar_handle_lookup.end() ) {
 		Com_Error( ERR_DROP, "Cvar_Update: handle %u out of range", (unsigned)vmCvar->handle );
 	}
-
-	cv = cvar_indexes + vmCvar->handle;
+	
+	cv = iter->second;
 
 	if ( cv->modificationCount == vmCvar->modificationCount ) {
 		return;
@@ -1580,8 +1469,9 @@ Reads in all archived cvars
 ============
 */
 void Cvar_Init (void) {
-	memset( cvar_indexes, 0, sizeof( cvar_indexes ) );
-	memset( hashTable, 0, sizeof( hashTable ) );
+	cvars.clear();
+	cvar_handle_lookup.clear();
+	cvar_handle_inc = 0;
 
 	cvar_cheats = Cvar_Get( "sv_cheats", "1", CVAR_ROM|CVAR_SYSTEMINFO, "Allow cheats on server if set to 1" );
 

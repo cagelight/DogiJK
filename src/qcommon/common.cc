@@ -59,7 +59,7 @@ cvar_t	*com_G2Report;
 
 cvar_t	*com_version;
 cvar_t	*com_buildScript;	// for automated data building scripts
-cvar_t	*com_bootlogo;
+//cvar_t	*com_bootlogo;
 cvar_t	*cl_paused;
 cvar_t	*sv_paused;
 cvar_t	*com_cameraMode;
@@ -115,20 +115,14 @@ void Com_EndRedirect (void)
 
 /*
 =============
-Com_Printf
-
-Both client and server can use this, and it will output
-to the appropriate place.
-
-A raw string should NEVER be passed as fmt, because of "%f" type crashers.
+Com_VPrintf
 =============
 */
-void QDECL Com_Printf( const char *fmt, ... ) {
-	va_list		argptr;
+
+void QDECL Com_VPrintf( const char *fmt, va_list argptr ) {
 	char		msg[MAXPRINTMSG];
 	static qboolean opening_qconsole = qfalse;
 
-	va_start (argptr,fmt);
 	Q_vsnprintf (msg, sizeof(msg), fmt, argptr);
 	va_end (argptr);
 
@@ -193,6 +187,23 @@ void QDECL Com_Printf( const char *fmt, ... ) {
 		OutputDebugString ("\n");
 	}
 #endif
+}
+
+/*
+=============
+Com_Printf
+
+Both client and server can use this, and it will output
+to the appropriate place.
+
+A raw string should NEVER be passed as fmt, because of "%f" type crashers.
+=============
+*/
+void QDECL Com_Printf( const char *fmt, ... ) {
+	va_list		argptr;
+
+	va_start (argptr,fmt);
+	Com_VPrintf(fmt, argptr);
 }
 
 
@@ -1237,8 +1248,6 @@ void Com_Init( char *commandLine ) {
 
 		com_busyWait = Cvar_Get( "com_busyWait", "0", CVAR_ARCHIVE_ND );
 
-		com_bootlogo = Cvar_Get( "com_bootlogo", "1", CVAR_ARCHIVE_ND, "Show intro movies" );
-
 		s = va("%s %s %s", JK_VERSION_OLD, PLATFORM_STRING, SOURCE_DATE );
 		com_version = Cvar_Get ("version", s, CVAR_ROM | CVAR_SERVERINFO );
 
@@ -1265,17 +1274,7 @@ void Com_Init( char *commandLine ) {
 
 
 		// add + commands from command line
-		if ( !Com_AddStartupCommands() )
-		{
-			// if the user didn't give any commands, run default action
-			if ( !com_dedicated->integer )
-			{
-				if ( com_bootlogo->integer )
-				{
-					Cbuf_AddText ("cinematic openinglogos.roq\n");
-				}
-			}
-		}
+		Com_AddStartupCommands();
 
 		// start in full screen ui mode
 		Cvar_Set("r_uiFullScreen", "1");

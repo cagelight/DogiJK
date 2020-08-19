@@ -233,9 +233,29 @@ float Q_flrand( float min, float max )
 	return std::uniform_real_distribution<float> {min, max} (qm::rng);
 }
 
+int32_t Q_irand()
+{
+	return qm::rng();
+}
+
+
 int32_t Q_irand( int32_t min, int32_t max )
 {
 	return std::uniform_int_distribution<int32_t> {min, max} (qm::rng);
+}
+
+int32_t Q_irand( int32_t & seed )
+{
+	qm::random_engine rng2 {static_cast<qm::random_engine::result_type>(seed)};
+	return seed = rng2();
+}
+
+
+int32_t Q_irand( int32_t & seed, int32_t min, int32_t max )
+{
+	qm::random_engine rng2 {static_cast<qm::random_engine::result_type>(seed)};
+	seed = rng2();
+	return std::uniform_int_distribution<int32_t> {min, max} (rng2);
 }
 
 ///////////////////////////////////////////////////////////////////////////

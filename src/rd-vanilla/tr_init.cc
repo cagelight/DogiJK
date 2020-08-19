@@ -168,6 +168,9 @@ cvar_t	*r_marksOnTriangleMeshes;
 
 cvar_t	*r_aspectCorrectFonts;
 
+// DOGIJK
+cvar_t  *r_distanceCullOverride;
+
 // the limits apply to the sum of all scenes in a frame --
 // the main view, all the 3D icons, etc
 #define	DEFAULT_MAX_POLYS		600
@@ -1599,6 +1602,9 @@ void R_Register( void )
 	r_aspectCorrectFonts				= ri.Cvar_Get( "r_aspectCorrectFonts",				"0",						CVAR_ARCHIVE, "" );
 	r_maxpolys							= ri.Cvar_Get( "r_maxpolys",						XSTRING( DEFAULT_MAX_POLYS ),		CVAR_NONE, "" );
 	r_maxpolyverts						= ri.Cvar_Get( "r_maxpolyverts",					XSTRING( DEFAULT_MAX_POLYVERTS ),	CVAR_NONE, "" );
+	
+	// DOGIJK
+	r_distanceCullOverride				= ri.Cvar_Get( "r_distanceCullOverride",			"0",					CVAR_NONE, "" );
 /*
 Ghoul2 Insert Start
 */

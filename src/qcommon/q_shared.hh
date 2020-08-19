@@ -767,9 +767,8 @@ typedef struct cvar_s {
 	qboolean		integral;
 	float			min, max;
 
+	qhandle_t       handle;
 	struct cvar_s	*next, *prev;
-	struct cvar_s	*hashNext, *hashPrev;
-	int				hashIndex;
 } cvar_t;
 
 #define	MAX_CVAR_VALUE_STRING	256
@@ -1712,6 +1711,9 @@ typedef struct entityState_s {
 
 	//If non-0, this is the index of the vehicle a player/NPC is riding.
 	int		m_iVehicleNum;
+	
+	// DOGIJK -- for client-server parity on random operations involving this object
+	int32_t rng_seed;
 
 	//rww - spare values specifically for use by mod authors.
 	//See netf_overrides.txt if you want to increase the send

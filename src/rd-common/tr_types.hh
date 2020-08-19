@@ -141,6 +141,7 @@ struct miniRefEntity_t {
 	// misc
 	byte				shaderRGBA[4];		// colors used by rgbgen entity shaders
 	vec2_t				shaderTexCoord;		// texture coordinates used by tcMod entity modifiers
+	int32_t				shaderRNG;
 
 	// extra sprite information
 	float				radius;

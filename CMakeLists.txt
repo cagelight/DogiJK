@@ -100,7 +100,7 @@ if( BUILD_CLIENT )
 	)
 
 	add_executable( dogijk ${CLIENT_SERVER_COMMON_FILES} ${CLIENT_FILES} )
-	target_link_libraries( dogijk PUBLIC botlib Threads::Threads PkgConfig::SDL2 PkgConfig::MINIZIP ${CMAKE_DL_LIBS} )
+	target_link_libraries( dogijk PUBLIC botlib Threads::Threads PkgConfig::SDL2 PkgConfig::MINIZIP ${CMAKE_DL_LIBS} "-lavcodec -lavformat -lavutil -lswscale" )
 	install( TARGETS dogijk RUNTIME DESTINATION "." )
 
 endif()

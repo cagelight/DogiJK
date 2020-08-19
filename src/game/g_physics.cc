@@ -23,7 +23,10 @@ void G_Physics_Shutdown() {
 
 void G_Physics_Frame(int time) {
 	if (!g_phys) return;
-	g_phys->advance( time / 1000.0f );
+	float adv = time / 1000.0f;
+	if (adv <= 0) return;
+	if (adv > 1) adv = 1;
+	g_phys->advance( adv );
 }
 
 void G_RunPhysicsProp( gentity_t * ent ) {

@@ -632,6 +632,8 @@ void CL_ShutdownAll( qboolean shutdownRef ) {
 		re->Shutdown( qfalse, qfalse );		// don't destroy window or context
 	}
 	
+	CIN_CloseAllVideos();
+	
 	if ( g2api && g2api->Shutdown ) g2api->Shutdown(qfalse);
 
 	cls.uiStarted = qfalse;

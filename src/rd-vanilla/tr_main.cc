@@ -469,10 +469,15 @@ static void SetFarClip( void )
 			farthestCornerDistance = distance;
 		}
 	}
-	// Bring in the zFar to the distanceCull distance
-	// The sky renders at zFar so need to move it out a little
-	// ...and make sure there is a minimum zfar to prevent problems
-	tr.viewParms.zFar = Com_Clamp(2048.0f, tr.distanceCull * (1.732), sqrtf( farthestCornerDistance ));
+	
+	if (r_distanceCullOverride->value) {
+		tr.viewParms.zFar = r_distanceCullOverride->value;
+	} else {
+		// Bring in the zFar to the distanceCull distance
+		// The sky renders at zFar so need to move it out a little
+		// ...and make sure there is a minimum zfar to prevent problems
+		tr.viewParms.zFar = Com_Clamp(2048.0f, tr.distanceCull * (1.732), sqrtf( farthestCornerDistance ));
+	}
 
 	/*
 	if (r_shadows->integer == 2)

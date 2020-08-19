@@ -705,6 +705,7 @@ void G_InitGentity( gentity_t *e ) {
 	e->s.number = e - g_entities;
 	e->r.ownerNum = ENTITYNUM_NONE;
 	e->s.modelGhoul2 = 0; //assume not
+	e->s.rng_seed = Q_irand();
 
 	trap->ICARUS_FreeEnt( (sharedEntity_t *)e );	//ICARUS information must be added after this point
 }

@@ -510,7 +510,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			
 			token = COM_ParseExt(&sptr, qfalse);
 			q3stage::diffuse_cinematic_t & cin = stg.diffuse.emplace<q3stage::diffuse_cinematic_t>();
-			cin.handle = ri.CIN_PlayCinematic( token, 0, 0, 256, 256, (CIN_loop | CIN_silent | CIN_shader));
+			cin.handle = ri.CIN_PlayCinematic( token, 0, 0, 512, 512, (CIN_loop | CIN_silent | CIN_shader));
 			
 		//================================
 			

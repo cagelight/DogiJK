@@ -61,7 +61,11 @@ float Q_random(int32_t & seed);
 float Q_crandom(int32_t & seed);
 
 float Q_flrand(float min, float max);
+
+int32_t Q_irand();
+int32_t Q_irand(int32_t & seed);
 int32_t Q_irand(int32_t min, int32_t max);
+int32_t Q_irand(int32_t & seed, int32_t min, int32_t max);
 
 ///////////////////////////////////////////////////////////////////////////
 //

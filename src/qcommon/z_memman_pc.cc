@@ -787,10 +787,6 @@ void Hunk_Clear( void ) {
 #endif
 	SV_ShutdownGameProgs();
 
-#ifndef DEDICATED
-	CIN_CloseAllVideos();
-#endif
-
 	hunk_tag = TAG_HUNK_MARK1;
 	Z_TagFree(TAG_HUNK_MARK1);
 	Z_TagFree(TAG_HUNK_MARK2);

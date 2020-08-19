@@ -69,6 +69,14 @@ namespace qm {
 	template <typename T>
 	constexpr T lerp(T const & A, T const & B, float v) { return meta::lerp<T, float>(A, B, v); }
 	
+	template <typename T> constexpr T min(T const & A, T const & B) {
+		return A < B ? A : B;
+	}
+	
+	template <typename T> constexpr T max(T const & A, T const & B) {
+		return A > B ? A : B;
+	}
+	
 	template <typename T> constexpr T clamp(T const & value, T const & min, T const & max) {
 		if (value < min) return min;
 		if (value > max) return max;
@@ -169,7 +177,7 @@ namespace qm {
 	
 	using random_engine = std::mt19937_64;
 	//using random_engine = xorshift128plus<uint64_t>;
-	static inline random_engine rng { std::random_device {}() };
+	inline thread_local random_engine rng { std::random_device {}() };
 }
 
 //================================================================

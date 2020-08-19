@@ -244,6 +244,13 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 		GL_Bind( bundle->image );
 		return;
 	}
+	
+	if (bundle->entityAnimMap) {
+		int32_t seed = backEnd.currentEntity->e.shaderRNG;
+		index = Q_irand(seed, 0, bundle->numImageAnimations - 1);
+		GL_Bind( *((image_t**)bundle->image + index) );
+		return;
+	}
 
 	if (backEnd.currentEntity->e.renderfx & RF_SETANIMINDEX )
 	{

@@ -749,6 +749,7 @@ void 		NORETURN QDECL Com_Error( int code, const char *fmt, ... );
 
 void 		QDECL Com_DPrintf( const char *fmt, ... );
 void		QDECL Com_OPrintf( const char *fmt, ...); // Outputs to the VC / Windows Debug window (only in debug compile)
+void		QDECL Com_VPrintf( const char *fmt, va_list); // Outputs to the VC / Windows Debug window (only in debug compile)
 void 		NORETURN Com_Quit_f( void );
 int			Com_EventLoop( void );
 int			Com_Milliseconds( void );	// will be journaled properly

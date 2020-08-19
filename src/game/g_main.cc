@@ -223,13 +223,13 @@ void G_InitGame( int levelTime, int randomSeed, int restart ) {
 
 	//trap->SP_RegisterServer("mp_svgame");
 
-	if ( g_log.string[0] )
+	if ( g_logFile.string[0] )
 	{
-		trap->FS_Open( g_log.string, &level.logFile, g_logSync.integer ? FS_APPEND_SYNC : FS_APPEND );
+		trap->FS_Open( g_logFile.string, &level.logFile, g_logSync.integer ? FS_APPEND_SYNC : FS_APPEND );
 		if ( level.logFile )
-			trap->Print( "Logging to %s\n", g_log.string );
+			trap->Print( "Logging to %s\n", g_logFile.string );
 		else
-			trap->Print( "WARNING: Couldn't open logfile: %s\n", g_log.string );
+			trap->Print( "WARNING: Couldn't open logfile: %s\n", g_logFile.string );
 	}
 	else
 		trap->Print( "Not logging game events to disk.\n" );

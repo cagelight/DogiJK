@@ -975,6 +975,9 @@ netField_t	entityStateFields[] =
 { NETF(boneAngles4[1]), 0 },
 { NETF(boneAngles4[2]), 0 },
 
+// DOGIJK
+{ NETF(rng_seed), 4 },
+
 //rww - for use by mod authors only
 { NETF(userInt1), 1 },
 { NETF(userInt2), 1 },
