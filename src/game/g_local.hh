@@ -193,7 +193,8 @@ struct gentity_t : public sharedEntity_t {
 	void link();
 	void unlink();
 	
-	bool add_obj_physics( char const * model_name, qm::vec3_t const & position = {0, 0, 0} );
+	bool add_obj_physics( char const * model_name, qm::vec3_t const & position = {0, 0, 0}, qm::vec3_t const & angles = { 0, 0, 0 } );
+	bool add_bmodel_physics();
 	
 	void set_origin(vec3_t const);
 
@@ -1556,6 +1557,7 @@ void G_Physics_Shutdown();
 
 void G_Physics_Frame( int time );
 void G_RunPhysicsProp( gentity_t *ent );
+void G_RunPhysicsMover( gentity_t *ent );
 
 struct GEntPhysics : public GEntityComponent {
 	physics_object_ptr object;

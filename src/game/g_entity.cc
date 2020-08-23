@@ -137,12 +137,25 @@ void gentity_t::unlink() {
 	trap->UnlinkEntity(this);
 }
 
-bool gentity_t::add_obj_physics( char const * model_name, qm::vec3_t const & position) {
+bool gentity_t::add_obj_physics( char const * model_name, qm::vec3_t const & position, qm::vec3_t const & angles) {
 	auto object = g_phys->add_object_obj(model_name);
 	if (!object) return false;
 	auto physics = set_component<GEntPhysics>();
 	physics->object = object;
 	physics->object->set_origin(position);
+	physics->object->set_angles(angles);
+	this->s.eFlags |= EF_PHYSICS;
+	return true;
+}
+
+bool gentity_t::add_bmodel_physics() {
+	if (!model || model[0] != '*') return false;
+	auto subm = std::strtol(model + 1, nullptr, 10);
+	auto object = g_phys->add_object_bmodel(subm);
+	auto physics = set_component<GEntPhysics>();
+	physics->object = object;
+	physics->object->set_origin(r.currentOrigin);
+	physics->object->set_angles(r.currentAngles);
 	this->s.eFlags |= EF_PHYSICS;
 	return true;
 }

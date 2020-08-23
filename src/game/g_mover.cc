@@ -1031,6 +1031,8 @@ void InitMover( gentity_t *ent )
 	trap->LinkEntity( (sharedEntity_t *)ent );
 
 	InitMoverTrData( ent );
+	
+	ent->add_bmodel_physics();
 }
 
 

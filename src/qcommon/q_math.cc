@@ -235,7 +235,7 @@ float Q_flrand( float min, float max )
 
 int32_t Q_irand()
 {
-	return qm::rng();
+	return std::uniform_int_distribution<int32_t> {std::numeric_limits<int32_t>::min(), std::numeric_limits<int32_t>::max()} (qm::rng);
 }
 
 

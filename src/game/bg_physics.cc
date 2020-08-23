@@ -6,6 +6,7 @@
 
 #include "qcommon/cm_patch.hh"
 
+#include <btBulletCollisionCommon.h>
 #include <btBulletDynamicsCommon.h>
 
 #include <thread>
@@ -176,6 +177,7 @@ struct bullet_world_t : public physics_world_t {
 		void set_origin( qm::vec3_t const & origin ) override {
 			btTransform & trans = body->getWorldTransform();
 			trans.setOrigin(q2b(origin));
+			motion->setWorldTransform(trans);
 		}
 		
 		qm::vec3_t get_origin() override {
@@ -189,6 +191,7 @@ struct bullet_world_t : public physics_world_t {
 				qm::deg2rad(angles[2]),
 				qm::deg2rad(angles[1]),
 			});
+			motion->setWorldTransform(trans);
 		}
 		
 		qm::vec3_t get_angles() override {
@@ -200,16 +203,24 @@ struct bullet_world_t : public physics_world_t {
 				static_cast<float>(qm::rad2deg(ypr[2])),
 			};
 		}
+		
+		void set_velocity( qm::vec3_t const & vector ) override {
+			body->setLinearVelocity(q2b(vector));
+			body->activate(true);
+		}
+		
+		void impulse( qm::vec3_t const & vector ) override {
+			body->applyImpulse( q2b(vector), {0, 0, 0} );
+			body->activate(true);
+		}
 	};
 	
-	struct world_shape_t {
-		
-		world_data_ptr parent;
+	struct world_object_t : public physics_object_t {
 		
 		bullet_object_t solid;
 		bullet_object_t slick;
 		
-		world_shape_t(world_data_ptr parent) : parent { parent }, solid { parent }, slick { parent } {
+		world_object_t(world_data_ptr parent, int submodel_idx, bool kinematic) : solid { parent }, slick { parent } {
 			
 			btVector3 inertia;
 			
@@ -224,7 +235,7 @@ struct bullet_world_t : public physics_world_t {
 				std::atomic_size_t patch_index;
 				spinlock mut;
 			} td = {
-				.subm = { parent->map, 0 },
+				.subm = { parent->map, submodel_idx },
 				.brush_index = 0,
 				.patch_index = 0,
 				.mut = {},
@@ -274,32 +285,66 @@ struct bullet_world_t : public physics_world_t {
 				}
 			};
 			
-			Com_Printf("Compiling physics map...\n", trap->GetTaskCore()->system_ideal_task_count());
 			trap->GetTaskCore()->enqueue_fill_wait(thread_func);
-			Com_Printf("...done\n\n");
-
+			
 			shape_solid->recalculateLocalAabb();
 			shape_solid->calculateLocalInertia( 0, inertia );
 			solid.motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
 			solid.body = new btRigidBody {{ 0, solid.motion, solid.shape, inertia }};
+			if (kinematic) {
+				solid.body->setCollisionFlags(solid.body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				solid.body->setActivationState(DISABLE_DEACTIVATION);
+			} else {
+				solid.body->setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);
+			}
+			solid.body->activate(true);
 			
 			shape_slick->recalculateLocalAabb();
 			shape_slick->calculateLocalInertia( 0, inertia );
 			slick.motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
 			slick.body = new btRigidBody {{ 0, slick.motion, slick.shape, inertia }};
+			if (kinematic) {
+				slick.body->setCollisionFlags(slick.body->getCollisionFlags() | btCollisionObject::CF_KINEMATIC_OBJECT);
+				slick.body->setActivationState(DISABLE_DEACTIVATION);
+			} else {
+				slick.body->setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);
+			}
 			slick.body->setFriction(0);
+			slick.body->activate(true);
 			
 			parent->world->addRigidBody(solid.body);
 			parent->world->addRigidBody(slick.body);
 		}
 		
-		~world_shape_t() {
+		void set_origin( qm::vec3_t const & origin ) override {
+			solid.set_origin(origin);
+			slick.set_origin(origin);
+		}
+		
+		qm::vec3_t get_origin() override {
+			return solid.get_origin();
+		}
+		
+		void set_angles( qm::vec3_t const & angles ) override {
+			solid.set_angles(angles);
+			slick.set_angles(angles);
+		}
+		
+		qm::vec3_t get_angles() override {
+			return solid.get_angles();
+		}
+		
+		void set_velocity( qm::vec3_t const & ) override {
+			
+		}
+		
+		void impulse( qm::vec3_t const & ) override {
 			
 		}
 	};
 	
 	std::shared_ptr<world_data_t> world_data;
-	std::unique_ptr<world_shape_t> world_solid;
+	std::unique_ptr<world_object_t> worldspawn_object;
 	std::unordered_set<physics_object_ptr> objects;
 	
 	float resolution = 120;
@@ -318,7 +363,7 @@ struct bullet_world_t : public physics_world_t {
 	
 	void add_world( clipMap_t const * map ) override {
 		world_data->map = map;
-		world_solid = std::make_unique<world_shape_t>( world_data );
+		worldspawn_object = std::make_unique<world_object_t>( world_data, 0, false );
 	}
 	
 	void set_gravity( float grav ) override {
@@ -396,9 +441,9 @@ struct bullet_world_t : public physics_world_t {
 	}
 	
 	physics_object_ptr add_object_bmodel( int submodel_idx ) override {
-		
-		submodel_t subm { world_data->map, submodel_idx };
-		
+		auto object = std::make_shared<world_object_t>(world_data, submodel_idx, true);
+		objects.insert(object);
+		return object;
 	}
 };
 

@@ -175,14 +175,20 @@ XCVAR_DEF( sv_fps,						"40",			NULL,				CVAR_ARCHIVE|CVAR_SERVERINFO,					qtrue
 XCVAR_DEF( sv_maxclients,				"8",			NULL,				CVAR_SERVERINFO|CVAR_LATCH|CVAR_ARCHIVE,		qfalse )
 XCVAR_DEF( timelimit,					"0",			NULL,				CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_NORESTART,	qtrue )
 
+// DOGIJK
+XCVAR_DEF( g_pushpull_radius,			"1024",			NULL,				CVAR_ARCHIVE,									qtrue )
+
+// PHYSICS
 XCVAR_DEF( g_physics,					"0",			NULL,				CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )
 
+// EEGG
 XCVAR_DEF( g_eegg_sdintra,				"1024",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_sdinter,				"256",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_bufferMiB,			"200",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_intercardinal,		"0",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_hardmode,				"0",			NULL,				CVAR_ARCHIVE,									qtrue )
 
+// WEAP
 XCVAR_DEF( weap_all_lifemult,			"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( weap_conc_bounce,			"0",			NULL,				CVAR_ARCHIVE,									qtrue )
 //weap_conc_bounceAlt IN bg_xcvar.h

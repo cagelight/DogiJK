@@ -33,6 +33,7 @@ void G_RunPhysicsProp( gentity_t * ent ) {
 	
 	auto physics = ent->get_component<GEntPhysics>();
 	if (ent->s.eFlags & EF_PHYSICS && physics) {
+		
 		qm::vec3_t new_origin = physics->object->get_origin();
 		new_origin.assign_to(ent->s.origin);
 		new_origin.assign_to(ent->r.currentOrigin);
@@ -42,6 +43,18 @@ void G_RunPhysicsProp( gentity_t * ent ) {
 		new_angles.assign_to(ent->s.angles);
 		new_angles.assign_to(ent->r.currentAngles);
 		new_angles.assign_to(ent->s.apos.trBase);
+	}
+	
+	ent->link();
+}
+
+void G_RunPhysicsMover( gentity_t * ent ) {
+	
+	auto physics = ent->get_component<GEntPhysics>();
+	if (ent->s.eFlags & EF_PHYSICS && physics) {
+		
+		physics->object->set_origin(ent->r.currentOrigin);
+		physics->object->set_angles(ent->r.currentAngles);
 	}
 	
 	ent->link();

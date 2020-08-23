@@ -14,6 +14,10 @@ struct physics_object_t {
 	virtual void set_angles( qm::vec3_t const & angles ) = 0;
 	virtual qm::vec3_t get_angles() = 0;
 	
+	virtual void set_velocity( qm::vec3_t const & vector ) = 0;
+	
+	virtual void impulse( qm::vec3_t const & vector ) = 0;
+	
 protected:
 	
 	physics_object_t() = default;

@@ -3902,7 +3902,7 @@ static void Prop_RemoveAll() {
 	}
 }
 
-static void Prop_Spawn( gentity_t * player, qm::vec3_t location, char const * model ) {
+static void Prop_Spawn( gentity_t * player, qm::vec3_t location, qm::vec3_t angles, char const * model ) {
 	
 	gentity_t * ent = G_Spawn();
 	ent->s.eType = ET_PROP;
@@ -3912,7 +3912,7 @@ static void Prop_Spawn( gentity_t * player, qm::vec3_t location, char const * mo
 	//ent->r.svFlags |= SVF_USE_CURRENT_ORIGIN;
 	
 	ent->s.modelindex = G_ModelIndex(model);
-	if (!ent->add_obj_physics(model, location)) {
+	if (!ent->add_obj_physics(model, location, angles)) {
 		trap->SendServerCommand( player-g_entities, va( "print \"could not spawn prop, OBJ model '%s' not found or was invalid\n\"", model ) );
 		ent->clear();
 		return;
@@ -3943,12 +3943,15 @@ static void Cmd_Prop_f( gentity_t * player ) {
 		Prop_RemoveAll();
 	}
 	else if (!Q_stricmp(subcmd, "spawn")) {
+		
+		qm::vec3_t angles { 0, player->playerState->viewangles[YAW], 0 };
+		
 		if (trap->Argc() < 3) {
-			Prop_Spawn( player, player->r.currentOrigin, test_boxes[ Q_irand(0, test_boxes.size() - 1) ] );
+			Prop_Spawn( player, player->r.currentOrigin, angles, test_boxes[ Q_irand(0, test_boxes.size() - 1) ] );
 		} else {
 			char model[MAX_QPATH];
 			trap->Argv(2, model, MAX_QPATH);
-			Prop_Spawn( player, player->r.currentOrigin, model );
+			Prop_Spawn( player, player->r.currentOrigin, angles, model );
 		}
 	}
 }
