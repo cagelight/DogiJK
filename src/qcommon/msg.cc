@@ -952,7 +952,7 @@ netField_t	entityStateFields[] =
 // possible multiple definitions
 { NETF(heldByClient), 6 },
 // this does not appear to be used in any production or non-cheat fashion - REMOVE
-{ NETF(ragAttach), GENTITYNUM_BITS },
+// { NETF(ragAttach), GENTITYNUM_BITS },
 // used only in one spot for seige
 { NETF(boltToPlayer), 6 },
 { NETF(npcSaber2), 9 },
@@ -1409,7 +1409,7 @@ netField_t	playerStateFields[] =
 { PSF(duelInProgress), 1 },
 { PSF(saberLockAdvance), 1 },
 { PSF(heldByClient), 6 },
-{ PSF(ragAttach), GENTITYNUM_BITS },
+// { PSF(ragAttach), GENTITYNUM_BITS },
 { PSF(iModelScale), 10 }, //0-1024 (guess it's gotta be increased if we want larger allowable scale.. but 1024% is pretty big)
 { PSF(hackingBaseTime), 16 }, //up to 65536ms, over 10 seconds would just be silly anyway
 //{ PSF(hyperSpaceAngles[0]), 0 },//only used by vehicle?
@@ -1561,7 +1561,7 @@ netField_t	pilotPlayerStateFields[] =
 { PSF(duelInProgress), 1 },
 { PSF(saberLockAdvance), 1 },
 { PSF(heldByClient), 6 },
-{ PSF(ragAttach), GENTITYNUM_BITS },
+// { PSF(ragAttach), GENTITYNUM_BITS },
 { PSF(iModelScale), 10 }, //0-1024 (guess it's gotta be increased if we want larger allowable scale.. but 1024% is pretty big)
 { PSF(hackingBaseTime), 16 }, //up to 65536ms, over 10 seconds would just be silly anyway
 //===NEVER SEND THESE, ONLY USED BY VEHICLES==============================================================

@@ -2870,7 +2870,7 @@ void BG_PlayerStateToEntityState( playerState_t *ps, entityState_t *s, qboolean 
 	s->fireflag = ps->fd.saberAnimLevel;
 
 	s->heldByClient = ps->heldByClient;
-	s->ragAttach = ps->ragAttach;
+	// s->ragAttach = ps->ragAttach;
 
 	s->iModelScale = ps->iModelScale;
 
@@ -3022,7 +3022,7 @@ void BG_PlayerStateToEntityStateExtraPolate( playerState_t *ps, entityState_t *s
 	s->fireflag = ps->fd.saberAnimLevel;
 
 	s->heldByClient = ps->heldByClient;
-	s->ragAttach = ps->ragAttach;
+	// s->ragAttach = ps->ragAttach;
 
 	s->iModelScale = ps->iModelScale;
 

@@ -2150,10 +2150,12 @@ void ClientThink_real( gentity_t *ent ) {
 			(grabbed->s.eFlags & EF_DISINTEGRATION) ||
 			(grabbed->s.eFlags & EF_NODRAW))
 		{
+#if 0
 			if (grabbed->inuse && grabbed->s.eType == ET_BODY)
 			{
 				grabbed->s.ragAttach = 0;
 			}
+#endif
 			client->bodyGrabIndex = ENTITYNUM_NONE;
 		}
 		else
@@ -2180,7 +2182,7 @@ void ClientThink_real( gentity_t *ent ) {
 
 			if (bodyDist > 40.0f)
 			{ //can no longer reach
-				grabbed->s.ragAttach = 0;
+				// grabbed->s.ragAttach = 0;
 				client->bodyGrabIndex = ENTITYNUM_NONE;
 			}
 			else if (bodyDist > 24.0f)

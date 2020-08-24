@@ -1266,7 +1266,7 @@ typedef struct playerState_s {
 
 	int			heldByClient; //can only be a client index - this client should be holding onto my arm using IK stuff.
 
-	int			ragAttach; //attach to ent while ragging
+	// int			ragAttach; //attach to ent while ragging
 
 	int			iModelScale;
 
@@ -1653,7 +1653,7 @@ typedef struct entityState_s {
 
 	int		heldByClient; //can only be a client index - this client should be holding onto my arm using IK stuff.
 
-	int		ragAttach; //attach to ent while ragging
+	// int		ragAttach; //attach to ent while ragging
 
 	int		iModelScale; //rww - transfer a percentage of the normal scale in a single int instead of 3 x-y-z scale values
 

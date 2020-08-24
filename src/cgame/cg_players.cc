@@ -3779,6 +3779,7 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 		cent->pe.torso.yawAngle =
 		cent->pe.legs.yawAngle = forcedAngles[YAW];
 
+#if 0
 		if (cent->currentState.ragAttach &&
 			(cent->currentState.eType != ET_NPC || cent->currentState.NPC_class != CLASS_VEHICLE))
 		{
@@ -3913,8 +3914,9 @@ qboolean CG_RagDoll(centity_t *cent, vec3_t forcedAngles)
 				}
 				cent->ragLastOriginTime = cg.time + 1000;
 			}
-		}
-		else if (cent->overridingBones)
+		} else
+#endif
+		if (cent->overridingBones)
 		{ //reset things to their normal rag state
 			vec3_t pcjMin, pcjMax;
 			vec3_t dVel;

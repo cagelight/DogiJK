@@ -1530,6 +1530,7 @@ void TryUse( gentity_t *ent )
 	{ //then hitting the use key just means let go
 		if (ent->client->bodyGrabTime < level.time)
 		{
+#if 0
 			gentity_t *grabbed = &g_entities[ent->client->bodyGrabIndex];
 
 			if (grabbed->inuse)
@@ -1543,6 +1544,7 @@ void TryUse( gentity_t *ent )
 					grabbed->s.ragAttach = 0;
 				}
 			}
+#endif 
 			ent->client->bodyGrabIndex = ENTITYNUM_NONE;
 			ent->client->bodyGrabTime = level.time + 1000;
 		}
