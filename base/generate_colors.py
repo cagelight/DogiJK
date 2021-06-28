@@ -5,7 +5,7 @@ import datetime
 import os
 
 colors = {
-	"vanta" : [0, 0, 0],
+	"pitch" : [0, 0, 0],
 	"black" : [0.1, 0.1, 0.1],
 	"white" : [1, 1, 1],
 	"grey" : [0.5, 0.5, 0.5],
@@ -14,6 +14,9 @@ colors = {
 	"red" : [1, 0, 0],
 	"redl" : [1, 0.5, 0.5],
 	"redd" : [0.5, 0, 0],
+	"sunset" : [1, 0.25, 0],
+	"sunsetl" : [1, 0.625, 0.5],
+	"sunsetd" : [0.5, 0.125, 0],
 	"orange" : [1, 0.5, 0],
 	"orangel" : [1, 0.75, 0.5],
 	"oranged" : [0.5, 0.25, 0],

@@ -180,6 +180,7 @@ XCVAR_DEF( g_pushpull_radius,			"1024",			NULL,				CVAR_ARCHIVE,									qtrue )
 
 // PHYSICS
 XCVAR_DEF( g_physics,					"0",			NULL,				CVAR_SERVERINFO|CVAR_ARCHIVE|CVAR_LATCH,		qfalse )
+XCVAR_DEF( g_physics_resolution,		"120",			NULL,				CVAR_ARCHIVE,									qtrue )
 
 // EEGG
 XCVAR_DEF( g_eegg_sdintra,				"1024",			NULL,				CVAR_ARCHIVE,									qtrue )

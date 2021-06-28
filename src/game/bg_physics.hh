@@ -29,7 +29,7 @@ struct physics_world_t {
 	
 	virtual ~physics_world_t() = default;
 	
-	virtual void advance( float time ) = 0;
+	virtual void advance( float time, int resolution = 120 ) = 0;
 	
 	virtual void add_world( clipMap_t const * map ) = 0;
 	

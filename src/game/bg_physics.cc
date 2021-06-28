@@ -88,10 +88,6 @@ struct submodel_t {
 		std::move(brushes_proto.begin(), brushes_proto.end(), std::back_inserter(brushes));
 		patches.reserve(patches_proto.size());
 		std::move(patches_proto.begin(), patches_proto.end(), std::back_inserter(patches));
-		
-		Com_Printf("BSP Submodel: %i\n", index);
-		Com_Printf("  Brushes: %zu\n", brushes.size());
-		Com_Printf("  Patches: %zu\n\n", patches.size());
 	}
 	
 private:
@@ -347,8 +343,6 @@ struct bullet_world_t : public physics_world_t {
 	std::unique_ptr<world_object_t> worldspawn_object;
 	std::unordered_set<physics_object_ptr> objects;
 	
-	float resolution = 120;
-	
 	bullet_world_t() {
 		world_data = std::make_shared<world_data_t>();
 	}
@@ -357,7 +351,7 @@ struct bullet_world_t : public physics_world_t {
 		
 	}
 	
-	void advance( float time ) override {
+	void advance( float time, int resolution ) override {
 		world_data->world->stepSimulation( time, resolution, 1.0f / resolution );
 	}
 	

@@ -1713,7 +1713,7 @@ typedef struct entityState_s {
 	int		m_iVehicleNum;
 	
 	// DOGIJK -- for client-server parity on random operations involving this object
-	int32_t rng_seed;
+	int		rng_seed;
 
 	//rww - spare values specifically for use by mod authors.
 	//See netf_overrides.txt if you want to increase the send

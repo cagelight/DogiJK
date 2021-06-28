@@ -33,9 +33,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/qcommon.hh"
 
 #ifndef DEDICATED
-#ifndef FINAL_BUILD
 #include "client/client.hh"
-#endif
 #endif
 #include <minizip/unzip.h>
 

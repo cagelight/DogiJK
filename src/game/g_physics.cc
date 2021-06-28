@@ -26,7 +26,7 @@ void G_Physics_Frame(int time) {
 	float adv = time / 1000.0f;
 	if (adv <= 0) return;
 	if (adv > 1) adv = 1;
-	g_phys->advance( adv );
+	g_phys->advance( adv, g_physics_resolution.integer );
 }
 
 void G_RunPhysicsProp( gentity_t * ent ) {

@@ -1719,7 +1719,7 @@ using CIN_SharePtr = std::shared_ptr<CIN_Share>;
 struct CIN_File {
 	
 	CIN_File(CIN_SharePtr share) : m_share { share } {
-		m_size = FS_FOpenFileRead(m_share->path.data(), &m_fh, true);
+		m_size = FS_FOpenFileRead(m_share->path.data(), &m_fh, qtrue);
 		if (m_size <= 0)
 			throw CIN_Exception { va("could not open file [%s] for reading", m_share->path.data()) };
 		m_io = avio_alloc_context(reinterpret_cast<uint8_t *>(av_malloc(BUFFER_SIZE)), BUFFER_SIZE, 0, this, &read_static, nullptr, &seek_static);
@@ -1734,7 +1734,7 @@ struct CIN_File {
 	inline AVIOContext * io() { return m_io; }
 	
 	void reset() {
-		FS_Seek(m_fh, 0, FS_SEEK_SET);
+		avio_seek(m_io, 0, SEEK_SET);
 	}
 	
 private:
@@ -1955,11 +1955,13 @@ struct CIN_Context {
 		m_starttime = CIN_Time();
 		m_framenum = 0;
 		
-		Com_Printf("\n\nCIN: New Video Loaded\n================\n");
-		m_cont->print_info();
-		Com_Printf("================\n");
-		Com_Printf("using video stream: %zu, output size: %ix%i\n", m_stream_idx, m_width, m_height);
-		Com_Printf("================\n\n");
+		if (com_developer->integer) {
+			Com_Printf("\n\nCIN: New Video Loaded\n================\n");
+			m_cont->print_info();
+			Com_Printf("================\n");
+			Com_Printf("using video stream: %zu, output size: %ix%i\n", m_stream_idx, m_width, m_height);
+			Com_Printf("================\n\n");
+		}
 	}
 	
 	~CIN_Context() {
@@ -1967,6 +1969,12 @@ struct CIN_Context {
 	}
 	
 	void run() {
+		
+		bool loop_breaker = false;
+		try_again:
+		if (loop_breaker) return;
+		//loop_breaker = true;
+		
 		int frame_target = (CIN_Time() - m_starttime) / m_frametime_msec + 1;
 		if (frame_target == m_framenum) return;
 		
@@ -1987,7 +1995,7 @@ struct CIN_Context {
 		while (m_framenum < frame_target) {
 			if (m_dec->retrieve_frame(m_frame) != CIN_Decoder::DecodeStatus::OK) {
 				reset();
-				run();
+				goto try_again;
 				return;
 			}
 			m_framenum++;
@@ -2012,7 +2020,7 @@ struct CIN_Context {
 	}
 	
 	void reset() {
-		m_file = std::make_unique<CIN_File>(m_share);
+		m_file->reset();
 		m_cont = std::make_shared<CIN_Container>(m_share, m_file->io());
 		m_dec = std::make_unique<CIN_Decoder>(m_share, m_cont, m_stream_idx, m_width, m_height);
 	}
