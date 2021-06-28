@@ -1,5 +1,8 @@
 #include "tr_common.hh"
 
+// SUPERSEDED BY JXL
+
+/*
 #include "webp/decode.h"
 #include "webp/encode.h"
 
@@ -10,11 +13,11 @@ void LoadWEBP(char const * filename, unsigned char ** data, int * width, int * h
 	
 	if (!WebPGetInfo(fs.data(), fs.size(), width, height)) return;
 	
-	/*
-	WebPBitstreamFeatures features {};
-	VP8StatusCode code = WebPGetFeatures(fs.data(), fs.size(), &features);
-	if (code != VP8_STATUS_OK) return;
-	*/
+	
+	//WebPBitstreamFeatures features {};
+	//VP8StatusCode code = WebPGetFeatures(fs.data(), fs.size(), &features);
+	//if (code != VP8_STATUS_OK) return;
+	
 	
 	size_t buffer_size = (*width) * (*height) * 4;
 	*data = (byte *)Z_Malloc(buffer_size, TAG_TEMP_WORKSPACE, qfalse);
@@ -55,3 +58,4 @@ bool RE_SaveWEBP( char const * filename, byte * buf, size_t width, size_t height
 	WebPFree(out);
 	return true;
 } 
+*/

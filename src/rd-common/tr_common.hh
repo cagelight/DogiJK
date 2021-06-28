@@ -61,8 +61,8 @@ qboolean R_ImageLoader_Add( const char *extension, ImageLoaderFn imageLoader );
 // Load an image from file.
 void R_LoadImage( const char *shortname, byte **pic, int *width, int *height );
 
-// Load raw image data from WEBP image.
-void LoadWEBP( const char *filename, byte **data, int *width, int *height );
+// Load raw image data from JPEG XL image.
+void LoadJXL( const char *filename, byte **data, int *width, int *height );
 
 // Load raw image data from PNG image.
 void LoadPNG( const char *filename, byte **data, int *width, int *height );
@@ -88,7 +88,7 @@ void RE_SaveJPG( const char * filename, int quality, int image_width, int image_
 int RE_SavePNG( const char *filename, byte *buf, size_t width, size_t height, int byteDepth );
 
 // Save raw image data as WEBP image file. (quality: lossy (0 - 100), lossless (-1))
-bool RE_SaveWEBP( const char *filename, byte *buf, size_t width, size_t height, int quality );
+bool RE_SaveJXL( const char *filename, byte *buf, size_t width, size_t height, int quality );
 
 /*
 ================================================================================

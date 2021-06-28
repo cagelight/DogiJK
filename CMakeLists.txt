@@ -9,11 +9,11 @@ set( CMAKE_CONFIGURATION_TYPES "Debug;Release;Native" )
 
 set( CMAKE_CXX_FLAGS         "-std=c++20" )
 set( CMAKE_CXX_FLAGS_DEBUG   "-Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -Og -march=core2 -mtune=native -ggdb3 -D_DEBUG" )
-set( CMAKE_CXX_FLAGS_RELEASE "-w -O2 -march=core2 -mtune=generic -DNDEBUG -DFINAL_BUILD" )
-set( CMAKE_CXX_FLAGS_NATIVE  "-w -Ofast -march=native -mtune=native -DNDEBUG -DFINAL_BUILD" )
+set( CMAKE_CXX_FLAGS_RELEASE "-w -O2 -march=core2 -mtune=generic -D_DEBUG -DFINAL_BUILD" )
+set( CMAKE_CXX_FLAGS_NATIVE  "-w -Ofast -march=native -mtune=native -D_DEBUG -DFINAL_BUILD" )
 
 if( NOT CMAKE_BUILD_TYPE )
-	set( CMAKE_BUILD_TYPE Release )
+	set( CMAKE_BUILD_TYPE Native )
 endif()
 message( "Using build configuration: ${CMAKE_BUILD_TYPE}" )
 
@@ -29,8 +29,8 @@ if( BUILD_CLIENT OR BUILD_SERVER )
 endif()
 if( BUILD_CLIENT )
 	pkg_check_modules( JPEG REQUIRED IMPORTED_TARGET libjpeg )
-	pkg_check_modules( PNG REQUIRED IMPORTED_TARGET libpng )
-	pkg_check_modules( WEBP REQUIRED IMPORTED_TARGET libwebp )
+	pkg_check_modules( PNG  REQUIRED IMPORTED_TARGET libpng )
+	pkg_check_modules( JXL  REQUIRED IMPORTED_TARGET libjxl )
 	pkg_check_modules( SDL2 REQUIRED IMPORTED_TARGET sdl2 )
 endif()
 
@@ -221,7 +221,7 @@ if( BUILD_CLIENT )
 
 	add_library( ${RDVAN_MODULE} MODULE ${RDVAN_FILES} )
 	target_include_directories( ${RDVAN_MODULE} PUBLIC "src/rd-vanilla" )
-	target_link_libraries( ${RDVAN_MODULE} PUBLIC Threads::Threads PkgConfig::JPEG PkgConfig::PNG PkgConfig::WEBP )
+	target_link_libraries( ${RDVAN_MODULE} PUBLIC Threads::Threads PkgConfig::JPEG PkgConfig::PNG PkgConfig::JXL )
 	set_target_properties( ${RDVAN_MODULE} PROPERTIES PREFIX "" )
 	install( TARGETS ${RDVAN_MODULE} LIBRARY DESTINATION "." )
 
@@ -244,7 +244,7 @@ if( BUILD_CLIENT )
 
 	add_library( ${RDHOW_MODULE} MODULE ${RDHOW_FILES} )
 	target_include_directories( ${RDHOW_MODULE} PUBLIC "src/rd-howler" )
-	target_link_libraries( ${RDHOW_MODULE} PUBLIC Threads::Threads PkgConfig::JPEG PkgConfig::PNG PkgConfig::WEBP "-lbsp" )
+	target_link_libraries( ${RDHOW_MODULE} PUBLIC Threads::Threads PkgConfig::JPEG PkgConfig::PNG PkgConfig::JXL "-lbsp" )
 	set_target_properties( ${RDHOW_MODULE} PROPERTIES PREFIX "" )
 	install( TARGETS ${RDHOW_MODULE} LIBRARY DESTINATION "." )
 
