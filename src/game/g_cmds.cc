@@ -3402,6 +3402,7 @@ static void Cmd_Tele_f( gentity_t * ent ) {
 	switch (trap->Argc()) {
 		case 1: {
 			trap->SendServerCommand( ent-g_entities, "print \"Usage 1: <player to>\nUsage 2: <player from> <player to>\nUsage 3: <X> <Y> <Z>\nUsage 4: <X> <Y> <Z> <PITCH> <YAW>\n\"" );
+			break;
 		}
 		case 2: {
 			trap->Argv(1, player2token, MAX_NETNAME);
@@ -3911,6 +3912,9 @@ static void Prop_Spawn( gentity_t * player, qm::vec3_t location, qm::vec3_t angl
 	
 	//ent->r.svFlags |= SVF_USE_CURRENT_ORIGIN;
 	
+	HSVtoRGB(Q_flrand(0, 1), 1.0, 1.0, (float *)ent->s.customRGBA);
+	ent->s.customRGBA[3] = 1;
+	
 	ent->s.modelindex = G_ModelIndex(model);
 	if (!ent->add_obj_physics(model, location, angles)) {
 		trap->SendServerCommand( player-g_entities, va( "print \"could not spawn prop, OBJ model '%s' not found or was invalid\n\"", model ) );
@@ -3988,12 +3992,14 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	if (trap->Argc() <= 1) {
 		std::vector<std::pair<std::string, std::string>> subcmd {
 			{ "clear", "Clear all currently spawned eggs." },
-			{ "explore", "Randomly fly around the map and score locations for egg placement." },
+			{ "cull", "Cull the eegg buffer to the specified usage percentage. <percent>" },
+			{ "explore", "Randomly fly around the map and score locations for egg placement. <seconds> <batches>" },
+			{ "forget", "Forget if locations have already been used, allowing eggs to be placed there again." },
 			{ "init", "Initialize the eegg system, or reset the current eegg state to default." },
 			{ "list", "List currently spawned egg locations." },
-			{ "place", "Place eggs based on scores from the 'explore' phase." },
+			{ "place", "Place eggs based on scores from the 'explore' phase. <number of eggs to place>" },
 			{ "stats", "Show stats about the current state." },
-			{ "tele", "Teleport to an egg (for debugging, etc.)" },
+			{ "tele", "Teleport to an egg (for debugging, etc.) <egg index>" },
 		};
 		std::stringstream ss;
 		for (auto const & [sub, desc] : subcmd) {
@@ -4064,22 +4070,22 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		
 		EEggConcept & conc = pers->path.m_concept;
 		conc.classname = "easter_egg";
-		conc.models = {
-			"models/dogijk/egg1.obj",
-			"models/dogijk/egg2.obj",
-			"models/dogijk/egg3.obj",
-			"models/dogijk/egg4.obj",
-			"models/dogijk/egg5.obj",
-		};
 		
-		if (g_eegg_hardmode.integer) {
-			conc.modelscalepercent = 25;
-			conc.mins = {-2.25, -2.25,  0};
-			conc.maxs = { 2.25,  2.25, 6.5};
+		if (g_eegg_photobox.integer) {
+			conc.models = { "models/dogijk/pbox.obj" };
+			conc.mins = {-10, -10,  0};
+			conc.maxs = { 10,  10, 20};
 		} else {
-			conc.modelscalepercent = 100;
-			conc.mins = {-9, -9,  0};
-			conc.maxs = { 9,  9, 26};
+			conc.models = { "models/dogijk/egg.obj" };
+			conc.mins = {-10, -10,  0};
+			conc.maxs = { 10,  10, 28};
+		}
+		
+		conc.modelscalepercent = 100;
+		if (g_eegg_hardmode.integer) {
+			conc.modelscalepercent /= 4;
+			conc.mins /= 4;
+			conc.maxs /= 4;
 		}
 		
 		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
@@ -4105,16 +4111,35 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		return;
 	}
 	
+	if (cmd == "cull") {
+		
+		float cull = 50;
+		
+		if (trap->Argc() > 2) {
+			std::array<char, 8> buf;
+			trap->Argv(2, buf.data(), buf.size());
+			cull = std::strtod(buf.data(), nullptr);
+			if (cull > 100) cull = 100;
+			if (cull < 0) cull = 0;
+		}
+		
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: culling the eegg buffer to %.2f (percent) usage.\n\"", cull) );
+		pers->path.cull(cull);
+		return;
+	}
+	
 	if (cmd == "forget") {
 		pers->path.forget();
 		return;
 	}
 	
 	if (cmd == "stats") {
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u eggs have been placed this session, %u locations are currently on file, and %u locations have been scored in total.\n\"", 
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u eggs have been placed this session, %u locations are currently on file, and %u locations have been scored in total. %.2f/%.2f MiB of the eegg buffer is being used.\n\"", 
 			pers->path.locations_used(), 
 			pers->path.locations_valid(), 
-			pers->path.locations_scored()
+			pers->path.locations_scored(),
+			static_cast<float>(pers->path.buffer_usage()) / (1024 * 1024),
+			g_eegg_bufferMiB.value
 		));
 		return;
 	}
@@ -4126,6 +4151,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		}
 		
 		std::chrono::high_resolution_clock::duration allotted_time = std::chrono::seconds(5);
+		uint16_t batches = 1;
 		
 		if (trap->Argc() > 2) {
 			std::array<char, 8> buf;
@@ -4133,9 +4159,22 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			allotted_time = std::chrono::seconds(std::strtol(buf.data(), nullptr, 10));
 		}
 		
+		if (trap->Argc() > 3) {
+			std::array<char, 8> buf;
+			trap->Argv(3, buf.data(), buf.size());
+			batches = std::strtol(buf.data(), nullptr, 10);
+		}
+		
 		pers->working = true;
-		trap->GetTaskCore()->enqueue([player, allotted_time](){
-			uint locs = pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->system_ideal_task_count(), allotted_time);
+		trap->GetTaskCore()->enqueue([player, allotted_time, batches](){
+			uint locs = 0;
+			for (size_t i = 0; i < batches; i++) {
+				locs += pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->system_ideal_task_count(), allotted_time / batches);
+				GTaskType task { [i, batches](){
+					trap->SendServerCommand( -1, va("print \"eegg: explore operation batch %hu of %hu complete.\n\"", i + 1, batches) );
+				}};
+				G_Task_Enqueue(std::move(task));
+			}
 			pers->working = false;
 			GTaskType task { [locs](){
 				trap->SendServerCommand( -1, va("print \"eegg: explore operation complete -- %u locations scored.\n\"", locs) );
@@ -4143,7 +4182,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			G_Task_Enqueue(std::move(task));
 		});
 		
-		trap->SendServerCommand( -1, va("print \"eegg: explore operation started -- set to run for %li seconds.\n\"", std::chrono::duration_cast<std::chrono::seconds>(allotted_time).count()) );
+		trap->SendServerCommand( -1, va("print \"eegg: explore operation started -- set to run for %li seconds in %hu batch(es).\n\"", std::chrono::duration_cast<std::chrono::seconds>(allotted_time).count(), batches) );
 		return;
 	}
 	

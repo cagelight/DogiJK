@@ -1690,7 +1690,13 @@ static int CIN_Time() {
 
 struct CIN_Exception : public std::exception {
 	
-	CIN_Exception(std::string_view msg, int err = -1) {
+	enum struct CODE : int {
+		UNKNOWN = 0,
+		FILE_NOT_FOUND = 1,
+		AVBASE = 1000
+	};
+	
+	CIN_Exception(std::string_view msg, CODE err = CODE::UNKNOWN) : m_code(err) {
 		message = va("CIN EXCEPTION [%i]: %s\n", err,  msg.data());
 	}
 	
@@ -1698,7 +1704,10 @@ struct CIN_Exception : public std::exception {
 		return message.data();
 	}
 	
+	CODE code() const { return m_code; }
+	
 private:
+	CODE m_code;
 	std::string message;
 };
 
@@ -1721,7 +1730,7 @@ struct CIN_File {
 	CIN_File(CIN_SharePtr share) : m_share { share } {
 		m_size = FS_FOpenFileRead(m_share->path.data(), &m_fh, qtrue);
 		if (m_size <= 0)
-			throw CIN_Exception { va("could not open file [%s] for reading", m_share->path.data()) };
+			throw CIN_Exception { va("could not open file [%s] for reading", m_share->path.data()), CIN_Exception::CODE::FILE_NOT_FOUND };
 		m_io = avio_alloc_context(reinterpret_cast<uint8_t *>(av_malloc(BUFFER_SIZE)), BUFFER_SIZE, 0, this, &read_static, nullptr, &seek_static);
 	}
 	
@@ -1882,7 +1891,7 @@ struct CIN_Decoder {
 			err = avcodec_receive_frame(m_cctx, src.get());
 			if (!err) break;
 			if (err != AVERROR(EAGAIN))
-				throw CIN_Exception { "unknown error occurred when decoding stream", err };
+				throw CIN_Exception { "unknown error occurred when decoding stream", static_cast<CIN_Exception::CODE>(err + 1000) };
 			AVPacket pkt;
 			do {
 				err = m_cont->read_packet(&pkt);
@@ -2072,14 +2081,32 @@ e_status CIN_RunCinematic (int handle) {
 
 int CIN_PlayCinematic( char const * path, int /*x*/, int /*y*/, int max_width, int max_height, int /*flags*/ ) {
 	
-	std::array<char, MAX_QPATH> name;
+	std::array<char, MAX_QPATH> name, name_mkv, name_roq;
 	if (!strstr(path, "/") && !strstr(path, "\\"))
 		Com_sprintf(name.data(), MAX_QPATH, "video/%s", path);
 	else
 		strncpy(name.data(), path, MAX_QPATH);
-	COM_DefaultExtension(name.data(), MAX_QPATH, ".roq"); // for compatibility reasons
+	
+	name_mkv = name;
+	name_roq = name;
+	COM_DefaultExtension(name_mkv.data(), MAX_QPATH, ".mkv");
+	COM_DefaultExtension(name_roq.data(), MAX_QPATH, ".roq"); // for compatibility reasons
 	
 	auto iter = cin_handle_lookup.find(name.data());
+	if (iter != cin_handle_lookup.end()) {
+		auto & ptr = cin_contexts[iter->second];
+		if (!ptr->is_active()) ptr->reset();
+		return iter->second;
+	}
+	
+	iter = cin_handle_lookup.find(name_mkv.data());
+	if (iter != cin_handle_lookup.end()) {
+		auto & ptr = cin_contexts[iter->second];
+		if (!ptr->is_active()) ptr->reset();
+		return iter->second;
+	}
+	
+	iter = cin_handle_lookup.find(name_roq.data());
 	if (iter != cin_handle_lookup.end()) {
 		auto & ptr = cin_contexts[iter->second];
 		if (!ptr->is_active()) ptr->reset();
@@ -2091,14 +2118,43 @@ int CIN_PlayCinematic( char const * path, int /*x*/, int /*y*/, int max_width, i
 	
 	try {
 		ctx = std::make_unique<CIN_Context>(name.data(), handle, max_width, max_height);
+		cin_handle_lookup[name.data()] = handle;
+		return handle;
 	} catch (CIN_Exception & ex) {
-		Com_Printf("%s\n", ex.what());
-		ctx.reset();
-		return -1;
+		if (ex.code() != CIN_Exception::CODE::FILE_NOT_FOUND) {
+			Com_Printf("%s\n", ex.what());
+			ctx.reset();
+			return -1;
+		}
 	}
 	
-	cin_handle_lookup[name.data()] = handle;
-	return handle;
+	try {
+		ctx = std::make_unique<CIN_Context>(name_mkv.data(), handle, max_width, max_height);
+		cin_handle_lookup[name_mkv.data()] = handle;
+		return handle;
+	} catch (CIN_Exception & ex) {
+		if (ex.code() != CIN_Exception::CODE::FILE_NOT_FOUND) {
+			Com_Printf("%s\n", ex.what());
+			ctx.reset();
+			return -1;
+		}
+	}
+	
+	try {
+		ctx = std::make_unique<CIN_Context>(name_roq.data(), handle, max_width, max_height);
+		cin_handle_lookup[name_roq.data()] = handle;
+		return handle;
+	} catch (CIN_Exception & ex) {
+		if (ex.code() != CIN_Exception::CODE::FILE_NOT_FOUND) {
+			Com_Printf("%s\n", ex.what());
+			ctx.reset();
+			return -1;
+		}
+	}
+	
+	Com_Printf("CIN EXCEPTION [%s]: could not find video!\n", name.data());
+	ctx.reset();
+	return -1;
 }
 
 void CIN_SetExtents (int /*handle*/, int /*x*/, int /*y*/, int /*w*/, int /*h*/) {

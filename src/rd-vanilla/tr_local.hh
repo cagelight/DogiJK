@@ -844,7 +844,7 @@ void		R_Modellist_f (void);
 
 
 #define	MAX_DRAWIMAGES			2048
-#define	MAX_LIGHTMAPS			512
+#define	MAX_LIGHTMAPS			1024
 #define	MAX_SKINS				1024
 
 

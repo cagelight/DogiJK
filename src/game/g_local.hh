@@ -1586,6 +1586,9 @@ struct EEggPathfinder {
 	uint spawn_eggs(uint max_eggs = 1);
 	void forget(); // keep all location data, but pretend like no eggs have ever been placed
 	
+	size_t buffer_usage() const;
+	void cull(double x); // [0 - 100), cull buffer to x% usage.
+	
 	uint locations_scored() const;
 	uint locations_valid() const;
 	uint locations_used() const;

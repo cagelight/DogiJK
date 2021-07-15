@@ -88,7 +88,7 @@ void RE_SaveJPG( const char * filename, int quality, int image_width, int image_
 int RE_SavePNG( const char *filename, byte *buf, size_t width, size_t height, int byteDepth );
 
 // Save raw image data as WEBP image file. (quality: lossy (0 - 100), lossless (-1))
-bool RE_SaveJXL( const char *filename, byte *buf, size_t width, size_t height, int quality );
+bool RE_SaveJXL( const char *filename, byte *buf, size_t width, size_t height, float quality = 1.0f, int effort = 3 );
 
 /*
 ================================================================================

@@ -316,7 +316,7 @@ vn -0.8520 0.0000 0.5234
 vn -0.8119 0.2833 0.5104
 vn -0.8119 -0.2833 0.5104
 vn -0.6537 -0.1103 0.7486
-usemtl models/dogijk/eggshad3
+usemtl models/dogijk/eggshad
 s 1
 f 1/1/1 32/2/2 4/3/3
 f 1/1/1 30/4/4 32/2/2

@@ -188,6 +188,8 @@ Ghoul2 Insert End
 
 cvar_t *r_aviMotionJpegQuality;
 cvar_t *r_screenshotJpegQuality;
+cvar_t *r_screenshotJXLQuality;
+cvar_t *r_screenshotJXLEffort;
 
 /*
 ** R_GetModeInfo

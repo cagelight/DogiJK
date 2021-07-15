@@ -365,12 +365,26 @@ struct bullet_world_t : public physics_world_t {
 	}
 	
 	void remove_object( physics_object_ptr object ) override {
+		if (!object) return;
 		auto iter = objects.find(object);
 		if (iter == objects.end()) return;
 		
-		std::shared_ptr<bullet_object_t> obj2 = std::dynamic_pointer_cast<bullet_object_t>(object);
-		world_data->world->removeRigidBody(obj2->body);
-		objects.erase(iter);
+		std::shared_ptr<bullet_object_t> obj_bullet = std::dynamic_pointer_cast<bullet_object_t>(object);
+		
+		if (obj_bullet) {
+			world_data->world->removeRigidBody(obj_bullet->body);
+			objects.erase(iter);
+			return;
+		}
+		
+		std::shared_ptr<world_object_t> obj_world = std::dynamic_pointer_cast<world_object_t>(object);
+		
+		if (obj_world) {
+			world_data->world->removeRigidBody(obj_world->solid.body);
+			world_data->world->removeRigidBody(obj_world->slick.body);
+			objects.erase(iter);
+			return;
+		}
 	}
 	
 	physics_object_ptr add_object_obj( char const * model_name ) override {

@@ -22,6 +22,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
 
+#include <cmath>
+
 #include "q_platform.hh"
 
 typedef float vec_t;

@@ -1257,25 +1257,42 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				stage->bundle[0].entityAnimMap = parms.entity;
 	
 				while ( 1 ) {
-					int		num;
 	
 					token = COM_ParseExt( text, qfalse );
 					if ( !token[0] ) {
 						break;
 					}
-					num = stage->bundle[0].numImageAnimations;
+					
+					// experimental "use entire directory"
+					if ( token[0] == '$' && token[1]) {
+						int num_files;
+						auto files = ri.FS_ListFiles(token + 1, nullptr, &num_files);
+						for (int i = 0; i < num_files; i++) {
+							auto img = R_FindImageFile( va("%s/%s", token + 1, files[i]), (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, parms.clamped ? GL_CLAMP : GL_REPEAT );
+							if (img) images.emplace_back(img);
+						}
+						ri.FS_FreeFileList(files);
+						continue;
+					}
+					
 					images.emplace_back(R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, parms.clamped ? GL_CLAMP : GL_REPEAT ));
-					if ( !images[num] )
+					if ( !images.back() )
 					{
 						ri.Printf( PRINT_ALL, S_COLOR_YELLOW  "WARNING: R_FindImageFile could not find '%s' in shader '%s'\n", token, shader.name );
 						return qfalse;
 					}
-					stage->bundle[0].numImageAnimations++;
 				}
-				// Copy image ptrs into an array of ptrs
-				stage->bundle[0].image = (image_t*) Hunk_Alloc( stage->bundle[0].numImageAnimations * sizeof( image_t* ), h_low );
-				memcpy( stage->bundle[0].image,	images.data(),			stage->bundle[0].numImageAnimations * sizeof( image_t* ) );
 				
+				stage->bundle[0].numImageAnimations = images.size();
+				
+				if (stage->bundle[0].numImageAnimations <= 0) return qfalse;
+				else if (stage->bundle[0].numImageAnimations == 1) {
+					stage->bundle[0].image = images[0];
+				} else {
+					// Copy image ptrs into an array of ptrs
+					stage->bundle[0].image = (image_t*) Hunk_Alloc( stage->bundle[0].numImageAnimations * sizeof( image_t* ), h_low );
+					memcpy( stage->bundle[0].image,	images.data(),  stage->bundle[0].numImageAnimations * sizeof( image_t* ) );
+				}
 			}
 		}
 		
