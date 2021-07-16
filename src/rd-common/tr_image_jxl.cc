@@ -73,16 +73,11 @@ void LoadJXL(char const * filename, unsigned char * * data, int * width, int * h
 
 struct JXLWriter {
 	
-	std::vector<uint8_t> encode(char const * filename, std::span<uint8_t> buf, size_t width, size_t height, float quality, int effort) {
+	std::vector<uint8_t> encode(char const * filename, std::span<uint8_t> buf, size_t width, size_t height, float fuzz, int effort) {
 		std::vector<uint8_t> data;
 		
 		m_enc = JxlEncoderCreate(nullptr);
 		assert(m_enc);
-		
-		m_opt = JxlEncoderOptionsCreate(m_enc, nullptr);
-		JXLEE(JxlEncoderOptionsSetDistance(m_opt, quality));
-		JXLEE(JxlEncoderOptionsSetLossless(m_opt, quality == 0 ? JXL_TRUE : JXL_FALSE));
-		JXLEE(JxlEncoderOptionsSetEffort(m_opt, effort));
 
 		static constexpr JxlPixelFormat PFMT {
 			.num_channels = 3,
@@ -96,14 +91,19 @@ struct JXLWriter {
 		m_info.bits_per_sample = 8;
 		m_info.num_color_channels = 3;
 		m_info.intensity_target = 255;
+		m_info.uses_original_profile = fuzz ? JXL_FALSE : JXL_TRUE;
 		m_info.orientation = JXL_ORIENT_FLIP_VERTICAL;
-		if (quality == 0)
-			m_info.uses_original_profile = JXL_TRUE;
 		JXLEE(JxlEncoderSetBasicInfo(m_enc, &m_info));
 
 		JxlColorEncoding color_profile;
 		JxlColorEncodingSetToSRGB(&color_profile, JXL_FALSE);
 		JXLEE(JxlEncoderSetColorEncoding(m_enc, &color_profile));
+		
+		m_opt = JxlEncoderOptionsCreate(m_enc, nullptr);
+		JXLEE(JxlEncoderOptionsSetDistance(m_opt, fuzz));
+		JXLEE(JxlEncoderOptionsSetLossless(m_opt, fuzz ? JXL_FALSE : JXL_TRUE));
+		JXLEE(JxlEncoderOptionsSetEffort(m_opt, effort));
+		
 		JXLEE(JxlEncoderAddImageFrame(m_opt, &PFMT, buf.data(), buf.size()));
 		JxlEncoderCloseInput(m_enc);
 		
@@ -128,7 +128,6 @@ struct JXLWriter {
 					return {};
 			}
 		}
-		
 	}
 	
 	~JXLWriter() {
@@ -142,10 +141,10 @@ private:
 	JxlBasicInfo m_info {};
 };
 
-bool RE_SaveJXL( char const * filename, byte * buf, size_t width, size_t height, float quality, int effort ) {
+bool RE_SaveJXL( char const * filename, byte * buf, size_t width, size_t height, float fuzz, int effort ) {
 	
-	if (quality < 0) quality = 0;
-	if (quality > 15) quality = 15;
+	if (fuzz < 0) fuzz = 0;
+	if (fuzz > 15) fuzz = 15;
 	
 	if (effort < 3) effort = 3;
 	if (effort > 9) effort = 9;
@@ -167,7 +166,7 @@ bool RE_SaveJXL( char const * filename, byte * buf, size_t width, size_t height,
 		memcpy( flip.data() + i * width * 3, buf + (height - i - 1) * width * 3, width * 3 );
 	
 	JXLWriter w;
-	auto data = w.encode(filename, flip, width, height, quality, effort);
+	auto data = w.encode(filename, flip, width, height, fuzz, effort);
 	
 	if (!data.size()) return false;
 	file.write(data.data(), data.size());

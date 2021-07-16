@@ -68,25 +68,37 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		m_data->locations_scored++;
 		
 		float score = 0;
-		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
+		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs, bool penalize_sky = false) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
 			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
 			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER | CONTENTS_LAVA, qfalse, 0, 0);
+			
+			// somehow ended up inside the world geometry? definitely not valid.
 			if (tr.startsolid) return Q3_INFINITE;
+			
+			// stay out of the map innards >:(
+			if (tr.brushside) {
+				auto cm = (clipMap_t const *)trap->CM_Get();
+				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/caulk")) return Q3_INFINITE;
+			}
+			
+			// probably not supposed to be here (unless testing upwards)
+			if (penalize_sky && (tr.surfaceFlags & SURF_SKY)) return Q3_INFINITE;
+			
 			dest = tr.endpos;
 			return (dest - pos).magnitude();
 		};
 		
 		auto score_axis = [&](qm::vec3_t const & axis, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
-			float p = dir_dist( axis, mins, maxs);
-			float n = dir_dist(-axis, mins, maxs);
+			float p = dir_dist( axis, mins, maxs, true);
+			float n = dir_dist(-axis, mins, maxs, true);
 			// score uses total distances on the two horizontal axis, and the closest wall
 			return (p + n) + (p < n ? p : n);
 		};
 		
 		// score ceiling
-		score = dir_dist(qm::cardinal_zp, mins, maxs) * 3; // this one is extra penalized (heuristic)
+		score = dir_dist(qm::cardinal_zp, mins, maxs, false) * 3; // this one is extra penalized (heuristic)
 		if (score == Q3_INFINITE) return score; // early short circuit for bad loation
 		
 		// score by nearby walls
@@ -208,14 +220,15 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		if (p.dealbroken) continue;
 		
 		// social distancing
+		bool sdcancel = false;
 		for (auto const & [grp, ap] : m_data->approved_prospects) {
 			if ((ap.location - p.location).magnitude() < (grp == m_data->spawn_group ? g_eegg_sdintra.value : g_eegg_sdinter.value)) {
-				p.dealbroken = true;
+				sdcancel = true;
 				break;
 			}
 		}
 		
-		if (p.dealbroken) continue;
+		if (sdcancel) continue;
 		
 		// forbid if too close to steep ledge
 		{

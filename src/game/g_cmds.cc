@@ -3912,8 +3912,12 @@ static void Prop_Spawn( gentity_t * player, qm::vec3_t location, qm::vec3_t angl
 	
 	//ent->r.svFlags |= SVF_USE_CURRENT_ORIGIN;
 	
-	HSVtoRGB(Q_flrand(0, 1), 1.0, 1.0, (float *)ent->s.customRGBA);
-	ent->s.customRGBA[3] = 1;
+	float rgb[3];
+	HSVtoRGB(Q_flrand(0, 1), 1.0, 1.0, rgb);
+	ent->s.customRGBA[0] = rgb[0] * 255;
+	ent->s.customRGBA[1] = rgb[1] * 255;
+	ent->s.customRGBA[2] = rgb[2] * 255;
+	ent->s.customRGBA[3] = 255;
 	
 	ent->s.modelindex = G_ModelIndex(model);
 	if (!ent->add_obj_physics(model, location, angles)) {
