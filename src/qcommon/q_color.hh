@@ -1,6 +1,6 @@
 #pragma once
 
-#include "q_math.hh"
+#include "q_math2.hh"
 
 #define	MAKERGB( v, r, g, b ) v[0]=r;v[1]=g;v[2]=b
 #define	MAKERGBA( v, r, g, b, a ) v[0]=r;v[1]=g;v[2]=b;v[3]=a
@@ -326,4 +326,27 @@ static void HSVtoRGB( float h, float s, float v, float rgb[3] )
 		rgb[2] = q;
 		break;
 	}
+}
+
+static qm::vec3_t HSLtoRGB(float h, float s, float l) {
+	
+	if (!s) return { l, l, l };
+	
+	auto cfunc = [](float p, float q, float t) {
+		if (t < 0) t += 1;
+		if (t > 1) t -= 1;
+		if (t < (1.f/6.f)) return p + (q - p) * 6 * t;
+		if (t < (1.f/2.f)) return q;;
+		if (t < (2.f/3.f)) return p + (q - p) * 6 * ((2.f/3.f) - t );
+		return p;
+	};
+	
+	auto q = l < 0.5f ? l * (1 + s) : l + s - l * s;
+	auto p = 2 * l - q;
+	
+	return {
+		cfunc(p, q, h + (1.f/3.f)),
+		cfunc(p, q, h),
+		cfunc(p, q, h - (1.f/3.f))
+	};
 }

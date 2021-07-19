@@ -125,6 +125,40 @@ typedef struct image_s {
 
 } image_t;
 
+struct DynamicImage {
+	DynamicImage(std::string_view path, bool mips = true, bool wrap = true);
+	~DynamicImage();
+	
+	bool load();
+	void unload();
+	void bind();
+	
+	inline std::string const & path() const { return m_path; }
+	inline bool valid() const { return m_handle; }
+	inline bool load_attempted() const { return m_load_attempted; }
+	
+private:
+	std::string m_path;
+	int m_width = 0, m_height = 0;
+	GLuint m_handle = 0;
+	int m_last_frame_used = 0;
+	
+	GLint m_wrap_mode = GL_CLAMP;
+	bool m_mips = true;
+	bool m_load_attempted = false;
+};
+
+using DynamicImagePtr = std::shared_ptr<DynamicImage>;
+
+struct DynamicImageSystem {
+	DynamicImagePtr get_or_create(std::string_view path, bool mips = true, bool wrap = true);
+	void unload_all();
+private:
+	std::unordered_map<std::string, DynamicImagePtr> m_images;
+};
+
+inline std::unique_ptr<DynamicImageSystem> dynimgsys;
+
 //===============================================================================
 
 typedef enum {

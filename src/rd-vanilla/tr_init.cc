@@ -1630,6 +1630,8 @@ void R_Init( void ) {
 	R_ImageLoader_Init();
 	R_NoiseInit();
 	R_Register();
+	
+	dynimgsys = std::make_unique<DynamicImageSystem>();
 
 	max_polys = Q_min( r_maxpolys->integer, DEFAULT_MAX_POLYS );
 	max_polyverts = Q_min( r_maxpolyverts->integer, DEFAULT_MAX_POLYVERTS );
@@ -1727,6 +1729,8 @@ void RE_Shutdown( qboolean destroyWindow, qboolean restarting ) {
 		// Release the blur texture.
 		glDeleteTextures( 1, &tr.blurImage );
 	}
+	
+	dynimgsys->unload_all();
 
 	R_ShutdownWorldEffects();
 	R_ShutdownFonts();

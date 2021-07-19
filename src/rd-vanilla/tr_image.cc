@@ -1512,3 +1512,85 @@ void R_DeleteTextures( void ) {
 	GL_ResetBinds();
 }
 
+/*
+===============
+DynamicImage
+===============
+*/
+
+DynamicImage::DynamicImage(std::string_view path, bool mips, bool wrap) : m_path(path) {
+	m_mips = mips;
+	m_wrap_mode = wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE;
+}
+
+DynamicImage::~DynamicImage() {
+	if (m_handle) glDeleteTextures(1, &m_handle);
+}
+
+bool DynamicImage::load() {
+	if (m_handle) return true;
+	else if (m_load_attempted) return false;
+	
+	m_load_attempted = true;
+	
+	// I think ???
+	if (ri.Cvar_VariableIntegerValue( "dedicated" )) {
+		m_handle = 999;
+		return true;
+	}
+	
+	byte * data = nullptr;
+	R_LoadImage(m_path.data(), &data, &m_width, &m_height);
+	if (!data) return false;
+	
+	size_t levels = 1;
+	if (m_mips)
+		levels += std::log2(qm::min(m_width, m_height));
+	
+	glCreateTextures(GL_TEXTURE_2D, 1, &m_handle);
+	glTextureStorage2D(m_handle, levels, GL_RGBA8, m_width, m_height);
+	glTextureSubImage2D(m_handle, 0, 0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+	if (m_mips) glGenerateTextureMipmap(m_handle);
+	
+	glTextureParameterf(m_handle, GL_TEXTURE_MIN_FILTER, gl_filter_min);
+	glTextureParameterf(m_handle, GL_TEXTURE_MAG_FILTER, gl_filter_max);
+	if(r_ext_texture_filter_anisotropic->integer>1 && glConfig.maxTextureFilterAnisotropy>0)
+	{
+		glTextureParameterf( m_handle, GL_TEXTURE_MAX_ANISOTROPY_EXT, r_ext_texture_filter_anisotropic->value );
+	}
+	
+	Z_Free(data);
+	return true;
+}
+
+void DynamicImage::unload() {
+	if (m_handle) glDeleteTextures(1, &m_handle);
+	m_handle = 0;
+	m_load_attempted = false;
+}
+
+void DynamicImage::bind() {
+	if (!m_load_attempted) load();
+	if (!m_handle) {
+		GL_Bind(tr.defaultImage);
+		return;
+	}
+	glState.currenttextures[glState.currenttmu] = m_handle;
+	glBindTexture(GL_TEXTURE_2D, m_handle);
+	glBindTextureUnit(0, m_handle);
+	m_last_frame_used = tr.frameCount;
+}
+
+std::shared_ptr<DynamicImage> DynamicImageSystem::get_or_create(std::string_view path, bool mips, bool wrap) {
+	std::string path2 { path };
+	auto iter = m_images.find(path2);
+	if (iter != m_images.end()) return iter->second;
+	
+	return m_images.emplace(std::make_pair(path2, std::make_shared<DynamicImage>(path2, mips, wrap))).first->second;
+}
+
+void DynamicImageSystem::unload_all() {
+	for (auto & kvp : m_images) {
+		kvp.second->unload();
+	}
+}

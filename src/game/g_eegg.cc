@@ -80,7 +80,10 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			// stay out of the map innards >:(
 			if (tr.brushside) {
 				auto cm = (clipMap_t const *)trap->CM_Get();
+				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/common/caulk")) return Q3_INFINITE;
 				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/caulk")) return Q3_INFINITE;
+				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/clip")) return Q3_INFINITE;
+				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/physics_clip")) return Q3_INFINITE;
 			}
 			
 			// probably not supposed to be here (unless testing upwards)
@@ -188,11 +191,10 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		ent->s.eType = ET_GENERAL;
 		
 		if (conc.random_entity_color) {
-			float rgb[3];
-			HSVtoRGB(Q_flrand(0, 1), 1.0, 1.0, rgb);
-			ent->s.customRGBA[0] = rgb[0] * 255;
-			ent->s.customRGBA[1] = rgb[1] * 255;
-			ent->s.customRGBA[2] = rgb[2] * 255;
+			auto color = HSLtoRGB(Q_flrand(0.0f, 1.0f), 1.0f, Q_flrand(0.5f, 0.8f));
+			ent->s.customRGBA[0] = color[0] * 255;
+			ent->s.customRGBA[1] = color[1] * 255;
+			ent->s.customRGBA[2] = color[2] * 255;
 			ent->s.customRGBA[3] = 255;
 		}
 		
