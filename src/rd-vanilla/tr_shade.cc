@@ -226,7 +226,7 @@ R_BindAnimatedImage
 
 // de-static'd because tr_quicksprite wants it
 void R_BindAnimatedImage( textureBundle_t *bundle ) {
-	int		index;
+	uint32_t		index;
 
 	if ( bundle->isVideoMap ) {
 		ri.CIN_RunCinematic(bundle->videoMapHandle);
@@ -239,15 +239,20 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 		GL_Bind( tr.whiteImage );
 		return;
 	}
+	
+	if ( !bundle->images.size() ) {
+		GL_Bind( nullptr );
+		return;
+	}
 
-	if ( bundle->numImageAnimations <= 1 ) {
-		GL_Bind( bundle->image );
+	if ( bundle->images.size() == 1 ) {
+		GL_Bind( bundle->images[0] );
 		return;
 	}
 	
 	if (bundle->entityAnimMap) {
-		index = backEnd.currentEntity->e.shaderRNG % bundle->numImageAnimations;
-		GL_Bind( *((image_t**)bundle->image + index) );
+		index = backEnd.currentEntity->e.shaderRNG % bundle->images.size();
+		GL_Bind( bundle->images[index] );
 		return;
 	}
 
@@ -268,18 +273,18 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 	}
 	
 	if ( bundle->shuffleAnimMap ) {
-		index = Q_random(index) * bundle->numImageAnimations;
+		index = Q_random(reinterpret_cast<int32_t &>(index)) * bundle->images.size();
 	} else if ( bundle->oneShotAnimMap ) {
-		if ( index >= bundle->numImageAnimations )
+		if ( index >= bundle->images.size() )
 		{
 			// stick on last frame
-			index = bundle->numImageAnimations - 1;
+			index = bundle->images.size() - 1;
 		}
 	}
 	
-	index %= bundle->numImageAnimations;
+	index %= bundle->images.size();
 
-	GL_Bind( *((image_t**)bundle->image + index) );
+	GL_Bind( bundle->images[index] );
 }
 
 /*
@@ -364,7 +369,7 @@ void RB_BeginSurface( shader_t *shader, int fogNum ) {
 	tess.shader = state;
 	tess.fogNum = fogNum;
 	tess.dlightBits = 0;		// will be OR'd in by surface functions
-	tess.xstages = state->stages;
+	tess.xstages = state->stages.data();
 	tess.numPasses = state->numUnfoggedPasses;
 	tess.currentStageIteratorFunc = shader->sky ? RB_StageIteratorSky : RB_StageIteratorGeneric;
 
@@ -670,8 +675,8 @@ static void ProjectDlightTexture2( void ) {
 			while (i < tess.shader->numUnfoggedPasses)
 			{
 				const int blendBits = (GLS_SRCBLEND_BITS+GLS_DSTBLEND_BITS);
-				if (((tess.shader->stages[i].bundle[0].image && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].numTexMods && tess.shader->stages[i].bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[0].tcGen != TCGEN_FOG) ||
-					 (tess.shader->stages[i].bundle[1].image && !tess.shader->stages[i].bundle[1].isLightmap && !tess.shader->stages[i].bundle[1].numTexMods && tess.shader->stages[i].bundle[1].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[1].tcGen != TCGEN_FOG)) &&
+				if (((tess.shader->stages[i].bundle[0].images.size() && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].texMods.size() && tess.shader->stages[i].bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[0].tcGen != TCGEN_FOG) ||
+					 (tess.shader->stages[i].bundle[1].images.size() && !tess.shader->stages[i].bundle[1].isLightmap && !tess.shader->stages[i].bundle[1].texMods.size() && tess.shader->stages[i].bundle[1].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[1].tcGen != TCGEN_FOG)) &&
 					(tess.shader->stages[i].stateBits & blendBits) == 0 )
 				{ //only use non-lightmap opaque stages
                     dStage = &tess.shader->stages[i];
@@ -696,7 +701,7 @@ static void ProjectDlightTexture2( void ) {
 			GL_SelectTexture( 0 );
 			GL_State(0);
 			glTexCoordPointer( 2, GL_FLOAT, 0, oldTexCoordsArray[0] );
-			if (dStage->bundle[0].image && !dStage->bundle[0].isLightmap && !dStage->bundle[0].numTexMods && dStage->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && dStage->bundle[0].tcGen != TCGEN_FOG)
+			if (dStage->bundle[0].images.size() && !dStage->bundle[0].isLightmap && !dStage->bundle[0].texMods.size() && dStage->bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && dStage->bundle[0].tcGen != TCGEN_FOG)
 			{
 				R_BindAnimatedImage( &dStage->bundle[0] );
 			}
@@ -1022,8 +1027,8 @@ static void ProjectDlightTexture( void ) {
 			while (i < tess.shader->numUnfoggedPasses)
 			{
 				const int blendBits = (GLS_SRCBLEND_BITS+GLS_DSTBLEND_BITS);
-				if (((tess.shader->stages[i].bundle[0].image && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].numTexMods) ||
-					 (tess.shader->stages[i].bundle[1].image && !tess.shader->stages[i].bundle[1].isLightmap && !tess.shader->stages[i].bundle[1].numTexMods)) &&
+				if (((tess.shader->stages[i].bundle[0].images.size() && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].texMods.size()) ||
+					 (tess.shader->stages[i].bundle[1].images.size() && !tess.shader->stages[i].bundle[1].isLightmap && !tess.shader->stages[i].bundle[1].texMods.size())) &&
 					(tess.shader->stages[i].stateBits & blendBits) == 0 )
 				{ //only use non-lightmap opaque stages
                     dStage = &tess.shader->stages[i];
@@ -1038,7 +1043,7 @@ static void ProjectDlightTexture( void ) {
 			GL_SelectTexture( 0 );
 			GL_State(0);
 			glTexCoordPointer( 2, GL_FLOAT, 0, tess.svars.texcoords[0] );
-			if (dStage->bundle[0].image && !dStage->bundle[0].isLightmap && !dStage->bundle[0].numTexMods)
+			if (dStage->bundle[0].images.size() && !dStage->bundle[0].isLightmap && !dStage->bundle[0].texMods.size())
 			{
 				R_BindAnimatedImage( &dStage->bundle[0] );
 			}
@@ -1429,7 +1434,6 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
     float	*texcoords;
 
 	for ( b = 0; b < NUM_TEXTURE_BUNDLES; b++ ) {
-		int tm;
 
         texcoords = (float *)tess.svars.texcoords[b];
 		//
@@ -1494,11 +1498,11 @@ static void ComputeTexCoords( shaderStage_t *pStage ) {
 		//
 		// alter texture coordinates
 		//
-		for ( tm = 0; tm < pStage->bundle[b].numTexMods ; tm++ ) {
+		for ( unsigned tm = 0; tm < pStage->bundle[b].texMods.size() ; tm++ ) {
 			switch ( pStage->bundle[b].texMods[tm].type )
 			{
 			case TMOD_NONE:
-				tm = TR_MAX_TEXMODS;		// break out of for loop
+				tm = -1;		// break out of for loop
 				break;
 
 			case TMOD_TURBULENT:
@@ -1700,7 +1704,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		//
 		// do multitexture
 		//
-		if ( pStage->bundle[1].image != 0 )
+		if ( pStage->bundle[1].images.size() )
 		{
 			DrawMultitextured( input, stage );
 		}

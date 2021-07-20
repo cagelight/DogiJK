@@ -194,9 +194,6 @@ typedef enum {
 	SS_NEAREST			// blood blobs
 } shaderSort_t;
 
-
-#define MAX_SHADER_STAGES 8
-
 typedef enum {
 	GF_NONE,
 
@@ -301,8 +298,6 @@ typedef struct waveForm_s {
 	float frequency;
 } waveForm_t;
 
-#define TR_MAX_TEXMODS 4
-
 typedef enum {
 	TMOD_NONE,
 	TMOD_TRANSFORM,
@@ -379,14 +374,12 @@ typedef struct surfaceSprite_s
 } surfaceSprite_t;
 
 typedef struct textureBundle_s {
-	image_t			*image;
+	std::vector<image_t *> images;
+	std::vector<texModInfo_t> texMods;
 
 	texCoordGen_t	tcGen;
 	vec3_t			*tcGenVectors;
 
-	texModInfo_t	*texMods;
-	short			numTexMods;
-	short			numImageAnimations;
 	float			imageAnimationSpeed;
 
 	bool			isLightmap;
@@ -501,7 +494,7 @@ typedef struct shader_s {
 	short		numDeforms;
 
 	short		numUnfoggedPasses;
-	shaderStage_t	*stages;
+	std::vector<shaderStage_t> stages;
 
   float clampTime;                                  // time this shader is clamped to
   float timeOffset;                                 // current time offset for this shader
