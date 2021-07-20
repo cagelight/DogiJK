@@ -1251,13 +1251,14 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 						int num_files;
 						auto files = ri.FS_ListFiles(token + 1, nullptr, &num_files);
 						for (int i = 0; i < num_files; i++) {
-							auto img = R_FindImageFile( va("%s/%s", token + 1, files[i]), (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, parms.clamped ? GL_CLAMP : GL_REPEAT );
-							if (img) stage->bundle[0].images.emplace_back(img);
+							stage->bundle[0].images.emplace_back(dynimgsys->get_or_create(va("%s/%s", token + 1, files[i]), !shader.noMipMaps, !parms.clamped));
 						}
 						ri.FS_FreeFileList(files);
 						continue;
 					}
 					
+					stage->bundle[0].images.emplace_back(dynimgsys->get_or_create(token, !shader.noMipMaps, !parms.clamped));
+					/*
 					image_t * img = R_FindImageFile( token, (qboolean)!shader.noMipMaps, (qboolean)!shader.noPicMip, (qboolean)!shader.noTC, parms.clamped ? GL_CLAMP : GL_REPEAT );
 					if ( !img )
 					{
@@ -1265,6 +1266,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 						return qfalse;
 					}
 					stage->bundle[0].images.push_back(img);
+					*/
 				}
 				
 				if (stage->bundle[0].images.size() <= 0) return qfalse;
@@ -3140,12 +3142,6 @@ static shader_t *FinishShader( void ) {
 		}
 	}
 
-
-	//
-	// compute number of passes
-	//
-	shader.numUnfoggedPasses = shader.stages.size();
-
 	// fogonly shaders don't have any normal passes
 	if ( !shader.stages.size() && !shader.sky ) {
 		shader.sort = SS_FOG;
@@ -3779,7 +3775,7 @@ void	R_ShaderList_f (void) {
 			shader = tr.shaders[i];
 		}
 
-		ri.Printf( PRINT_ALL, "%i ", shader->numUnfoggedPasses );
+		ri.Printf( PRINT_ALL, "%zu ", shader->stages.size() );
 
 		if (shader->lightmapIndex[0] >= 0 ) {
 			ri.Printf( PRINT_ALL,  "L ");

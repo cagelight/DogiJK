@@ -68,7 +68,8 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		m_data->locations_scored++;
 		
 		float score = 0;
-		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs, bool penalize_sky = false) -> float {
+		int sky_hits = 0;
+		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
 			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
@@ -87,26 +88,33 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			}
 			
 			// probably not supposed to be here (unless testing upwards)
-			if (penalize_sky && (tr.surfaceFlags & SURF_SKY)) return Q3_INFINITE;
+			if (tr.surfaceFlags & SURF_SKY) sky_hits++;
 			
 			dest = tr.endpos;
 			return (dest - pos).magnitude();
 		};
 		
 		auto score_axis = [&](qm::vec3_t const & axis, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
-			float p = dir_dist( axis, mins, maxs, true);
-			float n = dir_dist(-axis, mins, maxs, true);
+			bool sky_hit;
+			float p = dir_dist( axis, mins, maxs);
+			float n = dir_dist(-axis, mins, maxs);
 			// score uses total distances on the two horizontal axis, and the closest wall
 			return (p + n) + (p < n ? p : n);
 		};
 		
 		// score ceiling
-		score = dir_dist(qm::cardinal_zp, mins, maxs, false) * 3; // this one is extra penalized (heuristic)
-		if (score == Q3_INFINITE) return score; // early short circuit for bad loation
+		score = dir_dist(qm::cardinal_zp, mins, maxs) * 3; // this one is extra penalized (heuristic)
+		if (score >= Q3_INFINITE) return Q3_INFINITE; // early short circuit for bad loation
+		
+		// reset to 0 to ignore vertical sky hit
+		sky_hits = 0;
 		
 		// score by nearby walls
 		score += score_axis(qm::cardinal_xp, mins, maxs);
 		score += score_axis(qm::cardinal_yp, mins, maxs);
+		
+		// only 1 horizontal sky hit allowed, visibility heuristic
+		if (sky_hits > 1) return Q3_INFINITE;
 		
 		if (g_eegg_intercardinal.integer) {
 			score += score_axis(qm::intercardinal_xpyp, qm::vec3_t { 0, 0, mins[2] }, qm::vec3_t { 0, 0, maxs[2] }) / 2;

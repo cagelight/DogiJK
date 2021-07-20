@@ -233,6 +233,11 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 		ri.CIN_UploadCinematic(bundle->videoMapHandle);
 		return;
 	}
+	
+	struct BindVisitor {
+		void operator () (image_t * img) { GL_Bind( img ); };
+		void operator () (DynamicImagePtr img) { img->bind(); };
+	};
 
 	if ((r_fullbright->value /*|| tr.refdef.doFullbright */) && bundle->isLightmap)
 	{
@@ -246,13 +251,13 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 	}
 
 	if ( bundle->images.size() == 1 ) {
-		GL_Bind( bundle->images[0] );
+		std::visit(BindVisitor {}, bundle->images[0]);
 		return;
 	}
 	
 	if (bundle->entityAnimMap) {
 		index = backEnd.currentEntity->e.shaderRNG % bundle->images.size();
-		GL_Bind( bundle->images[index] );
+		std::visit(BindVisitor {}, bundle->images[index]);
 		return;
 	}
 
@@ -284,7 +289,7 @@ void R_BindAnimatedImage( textureBundle_t *bundle ) {
 	
 	index %= bundle->images.size();
 
-	GL_Bind( bundle->images[index] );
+	std::visit(BindVisitor {}, bundle->images[index]);
 }
 
 /*
@@ -370,7 +375,7 @@ void RB_BeginSurface( shader_t *shader, int fogNum ) {
 	tess.fogNum = fogNum;
 	tess.dlightBits = 0;		// will be OR'd in by surface functions
 	tess.xstages = state->stages.data();
-	tess.numPasses = state->numUnfoggedPasses;
+	tess.numPasses = state->stages.size();
 	tess.currentStageIteratorFunc = shader->sky ? RB_StageIteratorSky : RB_StageIteratorGeneric;
 
 	tess.shaderTime = backEnd.refdef.floatTime - tess.shader->timeOffset;
@@ -671,8 +676,8 @@ static void ProjectDlightTexture2( void ) {
 		dStage = NULL;
 		if (tess.shader && glActiveTextureARB)
 		{
-			int i = 0;
-			while (i < tess.shader->numUnfoggedPasses)
+			unsigned i = 0;
+			while (i < tess.shader->stages.size())
 			{
 				const int blendBits = (GLS_SRCBLEND_BITS+GLS_DSTBLEND_BITS);
 				if (((tess.shader->stages[i].bundle[0].images.size() && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].texMods.size() && tess.shader->stages[i].bundle[0].tcGen != TCGEN_ENVIRONMENT_MAPPED && tess.shader->stages[i].bundle[0].tcGen != TCGEN_FOG) ||
@@ -1023,8 +1028,8 @@ static void ProjectDlightTexture( void ) {
 		dStage = NULL;
 		if (tess.shader && glActiveTextureARB)
 		{
-			int i = 0;
-			while (i < tess.shader->numUnfoggedPasses)
+			unsigned i = 0;
+			while (i < tess.shader->stages.size())
 			{
 				const int blendBits = (GLS_SRCBLEND_BITS+GLS_DSTBLEND_BITS);
 				if (((tess.shader->stages[i].bundle[0].images.size() && !tess.shader->stages[i].bundle[0].isLightmap && !tess.shader->stages[i].bundle[0].texMods.size()) ||
@@ -1574,7 +1579,7 @@ static const float logtestExp2 = (sqrt( -log( 1.0 / 255.0 ) ));
 extern bool tr_stencilled; //tr_backend.cpp
 static void RB_IterateStagesGeneric( shaderCommands_t *input )
 {
-	int stage;
+	unsigned stage;
 	bool	UseGLFog = false;
 	bool	FogColorChange = false;
 	fog_t	*fog = NULL;
@@ -1629,7 +1634,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 		UseGLFog = true;
 	}
 
-	for ( stage = 0; stage < input->shader->numUnfoggedPasses; stage++ )
+	for ( stage = 0; stage < input->shader->stages.size(); stage++ )
 	{
 		shaderStage_t *pStage = &tess.xstages[stage];
 		int forceRGBGen = 0;
@@ -1791,7 +1796,7 @@ static void RB_IterateStagesGeneric( shaderCommands_t *input )
 void RB_StageIteratorGeneric( void )
 {
 	shaderCommands_t *input;
-	int stage;
+	unsigned stage;
 
 	input = &tess;
 
@@ -1909,7 +1914,7 @@ void RB_StageIteratorGeneric( void )
 	// Now check for surfacesprites.
 	if (r_surfaceSprites->integer)
 	{
-		for ( stage = 1; stage < tess.shader->numUnfoggedPasses; stage++ )
+		for ( stage = 1; stage < tess.shader->stages.size(); stage++ )
 		{
 			if (tess.xstages[stage].ss && tess.xstages[stage].ss->surfaceSpriteType)
 			{	// Draw the surfacesprite

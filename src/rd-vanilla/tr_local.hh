@@ -373,8 +373,10 @@ typedef struct surfaceSprite_s
 	int				facing;		// Hangdown on vertical sprites, faceup on others.
 } surfaceSprite_t;
 
+using ImageVariant = std::variant<image_t *, DynamicImagePtr>;
+
 typedef struct textureBundle_s {
-	std::vector<image_t *> images;
+	std::vector<ImageVariant> images;
 	std::vector<texModInfo_t> texMods;
 
 	texCoordGen_t	tcGen;
@@ -492,8 +494,7 @@ typedef struct shader_s {
 
 	deformStage_t	*deforms[MAX_SHADER_DEFORMS];
 	short		numDeforms;
-
-	short		numUnfoggedPasses;
+	
 	std::vector<shaderStage_t> stages;
 
   float clampTime;                                  // time this shader is clamped to

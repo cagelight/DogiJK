@@ -1418,7 +1418,7 @@ const void *RB_RotatePic ( const void *data )
 	cmd = (const rotatePicCommand_t *)data;
 
 	shader = cmd->shader;
-	image = shader->stages[0].bundle[0].images.size() ? shader->stages[0].bundle[0].images[0] : nullptr;
+	image = shader->stages[0].bundle[0].images.size() ? std::get<image_t *>(shader->stages[0].bundle[0].images[0]) : nullptr;
 
 	if ( image ) {
 		if ( !backEnd.projection2D ) {
@@ -1514,9 +1514,9 @@ const void *RB_RotatePic2 ( const void *data )
 
 	shader = cmd->shader;
 
-	if ( shader->numUnfoggedPasses )
+	if ( shader->stages.size() )
 	{
-		image = shader->stages[0].bundle[0].images.size() ? shader->stages[0].bundle[0].images[0] : nullptr;
+		image = shader->stages[0].bundle[0].images.size() ? std::get<image_t *>(shader->stages[0].bundle[0].images[0]) : nullptr;
 
 		if ( image )
 		{
