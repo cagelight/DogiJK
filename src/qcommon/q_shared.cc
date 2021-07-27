@@ -693,7 +693,9 @@ FIXME: make this buffer size safe someday
 ============
 */
 
-#include <array>
+#define	MAX_VA_STRING 65535
+#define MAX_VA_BUFFERS 6
+
 static std::array<std::array<char, MAX_VA_STRING>, MAX_VA_BUFFERS> va_string;
 static size_t va_index = 0;
 

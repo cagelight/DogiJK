@@ -31,11 +31,6 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 #include "qcommon/MiniHeap.hh"
 #include "ghoul2/g2_public.hh"
 
-vidconfig_t	glConfig;
-glconfigExt_t glConfigExt;
-glstate_t	glState;
-window_t	window;
-
 static void GfxInfo_f( void );
 
 cvar_t	*r_verbose;
@@ -1588,9 +1583,9 @@ void R_Init( void ) {
 
 //	ri.Printf( PRINT_ALL, "----- R_Init -----\n" );
 	// clear all our internal state
-	memset( &tr, 0, sizeof( tr ) );
-	memset( &backEnd, 0, sizeof( backEnd ) );
-	memset( &tess, 0, sizeof( tess ) );
+	tr = {};
+	backEnd = {};
+	tess = {};
 
 //	Swap_Init();
 

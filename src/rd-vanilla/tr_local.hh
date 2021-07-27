@@ -126,19 +126,19 @@ typedef struct image_s {
 } image_t;
 
 struct DynamicImage {
-	DynamicImage(std::string_view path, bool mips = true, bool wrap = true);
+	DynamicImage(istring_view path, bool mips = true, bool wrap = true);
 	~DynamicImage();
 	
 	bool load();
 	void unload();
 	void bind();
 	
-	inline std::string const & path() const { return m_path; }
+	inline istring const & path() const { return m_path; }
 	inline bool valid() const { return m_handle; }
 	inline bool load_attempted() const { return m_load_attempted; }
 	
 private:
-	std::string m_path;
+	istring m_path;
 	int m_width = 0, m_height = 0;
 	GLuint m_handle = 0;
 	int m_last_frame_used = 0;
@@ -151,10 +151,10 @@ private:
 using DynamicImagePtr = std::shared_ptr<DynamicImage>;
 
 struct DynamicImageSystem {
-	DynamicImagePtr get_or_create(std::string_view path, bool mips = true, bool wrap = true);
+	DynamicImagePtr get_or_create(istring_view path, bool mips = true, bool wrap = true);
 	void unload_all();
 private:
-	std::unordered_map<std::string, DynamicImagePtr> m_images;
+	std::unordered_map<istring, DynamicImagePtr> m_images;
 };
 
 inline std::unique_ptr<DynamicImageSystem> dynimgsys;
@@ -872,7 +872,6 @@ void		R_Modellist_f (void);
 
 
 #define	MAX_DRAWIMAGES			2048
-#define	MAX_LIGHTMAPS			1024
 #define	MAX_SKINS				1024
 
 
@@ -1029,8 +1028,7 @@ typedef struct trGlobals_s {
 
 	shader_t				*sunShader;
 
-	int						numLightmaps;
-	image_t					*lightmaps[MAX_LIGHTMAPS];
+	std::vector<image_t *>   lightmaps;
 
 	trRefEntity_t			*currentEntity;
 	trRefEntity_t			worldEntity;		// point currentEntity at this when rendering world
@@ -1104,12 +1102,12 @@ void	 R_Images_DeleteLightMaps(void);
 void	 R_Images_DeleteImage(image_t *pImage);
 
 
-extern backEndState_t	backEnd;
-extern trGlobals_t	tr;
-extern vidconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
-extern glconfigExt_t glConfigExt;
-extern glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
-extern window_t		window;
+inline backEndState_t	backEnd;
+inline trGlobals_t	tr;
+inline vidconfig_t	glConfig;		// outside of TR since it shouldn't be cleared during ref re-init
+inline glconfigExt_t glConfigExt;
+inline glstate_t	glState;		// outside of TR since it shouldn't be cleared during ref re-init
+inline window_t		window;
 
 
 //
@@ -1503,7 +1501,7 @@ struct shaderCommands_s
 #else
 	typedef struct shaderCommands_s  shaderCommands_t;
 #endif
-extern	shaderCommands_t	tess;
+inline	shaderCommands_t	tess;
 
 extern	color4ub_t	styleColors[MAX_LIGHT_STYLES];
 

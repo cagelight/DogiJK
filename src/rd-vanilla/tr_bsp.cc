@@ -123,11 +123,8 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	int			i, j;
 	float maxIntensity = 0;
 	double sumIntensity = 0;
-
-	if (&worldData == &s_worldData)
-	{
-		tr.numLightmaps = 0;
-	}
+	
+	tr.lightmaps.clear();
 
     len = l->filelen;
 	if ( !len ) {
@@ -139,16 +136,17 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	R_IssuePendingRenderCommands();
 
 	// create all the lightmaps
-	tr.numLightmaps = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
-	Com_Printf("Loading %i lightmaps...\n", tr.numLightmaps);
-	if (tr.numLightmaps > MAX_LIGHTMAPS) {
-		Com_Error(ERR_DROP, "Lightmap count (%i) exceeds MAX_LIGHTMAPS (%i)", tr.numLightmaps, MAX_LIGHTMAPS);
-	}
+	int lnum = len / (LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3);
+	tr.lightmaps.reserve(lnum);
+	Com_Printf("Loading %i lightmaps...\n", lnum);
+	
+	/*
 	if ( tr.numLightmaps == 1 ) {
 		//FIXME: HACK: maps with only one lightmap turn up fullbright for some reason.
 		//this avoids this, but isn't the correct solution.
 		tr.numLightmaps++;
 	}
+	*/
 
 	// if we are in r_vertexLight mode, we don't need the lightmaps at all
 	if ( r_vertexLight->integer ) {
@@ -158,7 +156,7 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 	char sMapName[MAX_QPATH];
 	COM_StripExtension(psMapName, sMapName, sizeof(sMapName));
 
-	for ( i = 0 ; i < tr.numLightmaps ; i++ ) {
+	for ( i = 0 ; i < lnum ; i++ ) {
 		// expand the 24 bit on-disk to 32 bit
 		buf_p = buf + i * LIGHTMAP_SIZE*LIGHTMAP_SIZE * 3;
 
@@ -197,8 +195,9 @@ static	void R_LoadLightmaps( lump_t *l, const char *psMapName, world_t &worldDat
 				image[j*4+3] = 255;
 			}
 		}
-		tr.lightmaps[i] = R_CreateImage( va("*%s/lightmap%d",sMapName,i), image,
-			LIGHTMAP_SIZE, LIGHTMAP_SIZE, GL_RGBA, qfalse, qfalse, (qboolean)r_ext_compressed_lightmaps->integer, GL_CLAMP );
+		tr.lightmaps.push_back(R_CreateImage( va("*%s/lightmap%d",sMapName,i), image,
+			LIGHTMAP_SIZE, LIGHTMAP_SIZE, GL_RGBA, qfalse, qfalse, (qboolean)r_ext_compressed_lightmaps->integer, GL_CLAMP )
+		);
 	}
 
 	if ( r_lightmap->integer == 2 )	{

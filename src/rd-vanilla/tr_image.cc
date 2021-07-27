@@ -524,7 +524,6 @@ public:
 typedef std::map <const char *, image_t *, CStringComparator> AllocatedImages_t;
 AllocatedImages_t AllocatedImages;
 AllocatedImages_t::iterator itAllocatedImages;
-int giTextureBindNum = 1024;	// will be set to this anyway at runtime, but wtf?
 
 
 // return = number of images in the list, for those interested
@@ -813,8 +812,6 @@ void R_Images_Clear(void)
 	}
 
 	AllocatedImages.clear();
-
-	giTextureBindNum = 1024;
 }
 
 
@@ -978,8 +975,6 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	image = (image_t*) Z_Malloc( sizeof( image_t ), TAG_IMAGE_T, qtrue );
 //	memset(image,0,sizeof(*image));	// qtrue above does this
 
-	image->texnum = 1024 + giTextureBindNum++;	// ++ is of course staggeringly important...
-
 	// record which map it was used on...
 	//
 	image->iLastLevelUsedOn = RE_RegisterMedia_GetLevel();
@@ -996,13 +991,14 @@ image_t *R_CreateImage( const char *name, const byte *pic, int width, int height
 	if ( glActiveTextureARB ) {
 		GL_SelectTexture( 0 );
 	}
+	
+	GLuint uiTarget = bRectangle ? GL_TEXTURE_RECTANGLE_ARB : GL_TEXTURE_2D;
+	glCreateTextures(uiTarget, 1, &image->texnum);
 
-	GLuint uiTarget = GL_TEXTURE_2D;
 	if ( bRectangle )
 	{
-		glDisable( uiTarget );
-		uiTarget = GL_TEXTURE_RECTANGLE_ARB;
-		glEnable( uiTarget );
+		glDisable( GL_TEXTURE_2D );
+		glEnable( GL_TEXTURE_RECTANGLE_ARB );
 		glWrapClampMode = GL_CLAMP_TO_EDGE;	// default mode supported by rectangle.
 		glBindTexture( uiTarget, image->texnum );
 	}
@@ -1278,9 +1274,9 @@ void R_CreateBuiltinImages( void ) {
 	tr.screenImage = R_CreateImage("*screen", (byte *)data, 8, 8, GL_RGBA, qfalse, qfalse, qfalse, GL_REPEAT );
 
 	// Create the scene glow image. - AReis
-	tr.screenGlow = 1024 + giTextureBindNum++;
 	glDisable( GL_TEXTURE_2D );
 	glEnable( GL_TEXTURE_RECTANGLE_ARB );
+	glCreateTextures(GL_TEXTURE_RECTANGLE_ARB, 1, &tr.screenGlow);
 	glBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.screenGlow );
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
 	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -1289,7 +1285,7 @@ void R_CreateBuiltinImages( void ) {
 	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP );
 
 	// Create the scene image. - AReis
-	tr.sceneImage = 1024 + giTextureBindNum++;
+	glCreateTextures(GL_TEXTURE_RECTANGLE_ARB, 1, &tr.sceneImage);
 	glBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.sceneImage );
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, glConfig.vidWidth, glConfig.vidHeight, 0, GL_RGB, GL_FLOAT, 0 );
 	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -1306,7 +1302,7 @@ void R_CreateBuiltinImages( void ) {
 	{
 		r_DynamicGlowHeight->integer = glConfig.vidHeight;
 	}
-	tr.blurImage = 1024 + giTextureBindNum++;
+	glCreateTextures(GL_TEXTURE_RECTANGLE_ARB, 1, &tr.blurImage);
 	glBindTexture( GL_TEXTURE_RECTANGLE_ARB, tr.blurImage );
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA16, r_DynamicGlowWidth->integer, r_DynamicGlowHeight->integer, 0, GL_RGB, GL_FLOAT, 0 );
 	glTexParameteri( GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
@@ -1318,7 +1314,7 @@ void R_CreateBuiltinImages( void ) {
 	if ( glConfigExt.doGammaCorrectionWithShaders )
 	{
 		glEnable( GL_TEXTURE_3D );
-		tr.gammaCorrectLUTImage = 1024 + giTextureBindNum++;
+		glCreateTextures(GL_TEXTURE_3D, 1, &tr.gammaCorrectLUTImage);
 		glBindTexture(GL_TEXTURE_3D, tr.gammaCorrectLUTImage);
 		glTexImage3D(GL_TEXTURE_3D, 0, GL_RGBA8, 64, 64, 64, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1518,7 +1514,7 @@ DynamicImage
 ===============
 */
 
-DynamicImage::DynamicImage(std::string_view path, bool mips, bool wrap) : m_path(path) {
+DynamicImage::DynamicImage(istring_view path, bool mips, bool wrap) : m_path(path) {
 	m_mips = mips;
 	m_wrap_mode = wrap ? GL_REPEAT : GL_CLAMP_TO_EDGE;
 }
@@ -1577,12 +1573,12 @@ void DynamicImage::bind() {
 	}
 	glState.currenttextures[glState.currenttmu] = m_handle;
 	glBindTexture(GL_TEXTURE_2D, m_handle);
-	glBindTextureUnit(0, m_handle);
+	//glBindTextureUnit(0, m_handle);
 	m_last_frame_used = tr.frameCount;
 }
 
-std::shared_ptr<DynamicImage> DynamicImageSystem::get_or_create(std::string_view path, bool mips, bool wrap) {
-	std::string path2 { path };
+std::shared_ptr<DynamicImage> DynamicImageSystem::get_or_create(istring_view path, bool mips, bool wrap) {
+	istring path2 { path };
 	auto iter = m_images.find(path2);
 	if (iter != m_images.end()) return iter->second;
 	

@@ -2202,8 +2202,6 @@ DIRECTORY SCANNING FUNCTIONS
 =================================================================================
 */
 
-#define	MAX_FOUND_FILES	0x1000
-
 static int FS_ReturnPath( const char *zname, char *zpath, int *depth ) {
 	int len, at, newdep;
 
@@ -2232,18 +2230,15 @@ static int FS_ReturnPath( const char *zname, char *zpath, int *depth ) {
 FS_AddFileToList
 ==================
 */
-static int FS_AddFileToList( char *name, char *list[MAX_FOUND_FILES], int nfiles ) {
+static int FS_AddFileToList( char *name, std::vector<char *> & list, int nfiles ) {
 	int		i;
 
-	if ( nfiles == MAX_FOUND_FILES - 1 ) {
-		return nfiles;
-	}
 	for ( i = 0 ; i < nfiles ; i++ ) {
 		if ( !Q_stricmp( name, list[i] ) ) {
 			return nfiles;		// allready in list
 		}
 	}
-	list[nfiles] = CopyString( name );
+	list.push_back( CopyString( name ) );
 	nfiles++;
 
 	return nfiles;
@@ -2260,7 +2255,6 @@ from all search paths
 char **FS_ListFilteredFiles( const char *path, const char *extension, char *filter, int *numfiles ) {
 	int				nfiles;
 	char			**listCopy;
-	char			*list[MAX_FOUND_FILES];
 	searchpath_t	*search;
 	int				i;
 	int				pathLength;
@@ -2269,6 +2263,8 @@ char **FS_ListFilteredFiles( const char *path, const char *extension, char *filt
 	pack_t			*pak;
 	fileInPack_t	*buildBuffer;
 	char			zpath[MAX_ZPATH];
+	
+	std::vector<char *> list;
 
 	if ( !fs_searchpaths ) {
 		Com_Error( ERR_FATAL, "Filesystem call made without initialization\n" );

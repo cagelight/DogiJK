@@ -1202,7 +1202,7 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 				
 				else if ( !Q_stricmp( token, "$lightmap" ) ) {
 					stage->bundle[0].isLightmap = qtrue;
-					if ( shader.lightmapIndex[0] < 0 || shader.lightmapIndex[0] >= tr.numLightmaps ) {
+					if ( shader.lightmapIndex[0] < 0 || shader.lightmapIndex[0] >= (int)tr.lightmaps.size() ) {
 						#ifndef FINAL_BUILD
 						ri.Printf( PRINT_ALL, S_COLOR_RED"Lightmap requested but none available for shader %s\n", shader.name);
 						#endif
@@ -3298,7 +3298,7 @@ static inline const int *R_FindLightmap( const int *lightmapIndex )
 		return lightmapIndex;
 
 	// does this lightmap already exist?
-	if( *lightmapIndex < tr.numLightmaps && tr.lightmaps[ *lightmapIndex ] != NULL )
+	if( *lightmapIndex < (int)tr.lightmaps.size() && tr.lightmaps[ *lightmapIndex ] != NULL )
 		return lightmapIndex;
 
 	// bail if no world dir
@@ -3319,9 +3319,7 @@ static inline const int *R_FindLightmap( const int *lightmapIndex )
 	}
 
 	// add it to the lightmap list
-	if( *lightmapIndex >= tr.numLightmaps )
-		tr.numLightmaps = *lightmapIndex + 1;
-	tr.lightmaps[ *lightmapIndex ] = image;
+	tr.lightmaps.push_back(image);
 	return lightmapIndex;
 }
 
@@ -3538,7 +3536,7 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int *lightmapIndex, byte 
 	// only gets called from tr_font.c with lightmapIndex == LIGHTMAP_2D
 	// but better safe than sorry.
 	// Doesn't actually ever get called in JA at all
-	if ( lightmapIndex[0] >= tr.numLightmaps ) {
+	if ( lightmapIndex[0] >= (int)tr.lightmaps.size() ) {
 		lightmapIndex = (int *)lightmapsFullBright;
 	}
 
