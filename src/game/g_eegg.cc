@@ -115,10 +115,10 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		
 		float score = 0;
 		int sky_hits = 0;
-		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs, int extra_mask = 0) -> float {
+		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs, int forbidden_contents = 0) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
-			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER | extra_mask, qfalse, 0, 0);
+			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER, qfalse, 0, 0);
 			
 			// stay out of the map innards >:(
 			if (tr.brushside) {
@@ -127,10 +127,12 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/caulk")) return Q3_INFINITE;
 				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/clip")) return Q3_INFINITE;
 				if (!Q_stricmp(cm->shaders[tr.brushside->shaderNum].GetName(), "textures/system/physics_clip")) return Q3_INFINITE;
+				if (cm->shaders[tr.brushside->shaderNum].contentFlags & forbidden_contents) return Q3_INFINITE;
 			}
 			
 			// probably not supposed to be here (unless testing upwards)
 			if (tr.surfaceFlags & SURF_SKY) sky_hits++;
+			
 			
 			dest = tr.endpos;
 			return (dest - pos).magnitude();
@@ -158,7 +160,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		if (!test_position()) return Q3_INFINITE;
 		
 		// score ceiling
-		score = dir_dist(qm::cardinal_zp, test_mins, test_maxs, CONTENTS_TRIGGER) * 3; // this one is extra penalized (heuristic), also overhead triggers are hella sus
+		score = dir_dist(qm::cardinal_zp, test_mins, test_maxs, CONTENTS_TRIGGER | CONTENTS_LAVA) * 3; // this one is extra penalized (heuristic), also overhead triggers are hella sus, and overhead lava seems like a bad idea
 		if (score >= Q3_INFINITE) return Q3_INFINITE; // early short circuit for bad loation
 		
 		// reset to 0 to ignore vertical sky hit
