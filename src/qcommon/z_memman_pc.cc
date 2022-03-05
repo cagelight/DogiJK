@@ -205,16 +205,6 @@ void *Z_Malloc(int iSize, memtag_t eTag, qboolean bZeroit /* = qfalse */, int iU
 			// new bit, if we fail to malloc memory, try dumping some of the cached stuff that's non-vital and try again...
 			//
 
-			// ditch the BSP cache...
-			//
-			extern qboolean CM_DeleteCachedMap(qboolean bGuaranteedOkToDelete);
-			if (CM_DeleteCachedMap(qfalse))
-			{
-				gbMemFreeupOccured = qtrue;
-				continue;		// we've just ditched a whole load of memory, so try again with the malloc
-			}
-
-
 			// ditch any sounds not used on this level...
 			//
 			extern qboolean SND_RegisterAudio_LevelLoadEnd(qboolean bDeleteEverythingNotUsedThisLevel);

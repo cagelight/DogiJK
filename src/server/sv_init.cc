@@ -24,7 +24,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "server.hh"
 #include "ghoul2/g2_public.hh"
-#include "qcommon/cm_public.hh"
+#include "qcommon/cm_local.hh"
 #include "qcommon/MiniHeap.hh"
 #include "qcommon/stringed_ingame.hh"
 #include "sv_gameapi.hh"
@@ -800,15 +800,9 @@ qboolean Com_TheHunkMarkHasBeenMade(void);
 //qcommon/vm.cpp
 extern vm_t *currentVM;
 
-//qcommon/cm_load.cpp
-extern void *gpvCachedMapDiskImage;
-extern qboolean gbUsingCachedMapDataRightNow;
-
 static char *GetSharedMemory( void ) { return sv.mSharedMemory; }
 static vm_t *GetCurrentVM( void ) { return currentVM; }
-static void *CM_GetCachedMapDiskImage( void ) { return gpvCachedMapDiskImage; }
-static void CM_SetCachedMapDiskImage( void *ptr ) { gpvCachedMapDiskImage = ptr; }
-static void CM_SetUsingCache( qboolean usingCache ) { gbUsingCachedMapDataRightNow = usingCache; }
+static void *CM_GetCachedMapDiskImage( void ) { return cm_mapCache.data(); }
 
 //server stuff D:
 extern void SV_GetConfigstring( int index, char *buffer, int bufferSize );
@@ -905,8 +899,6 @@ static void SV_InitRef( void ) {
 
 	// ugly win32 backend
 	ri.CM_GetCachedMapDiskImage = CM_GetCachedMapDiskImage;
-	ri.CM_SetCachedMapDiskImage = CM_SetCachedMapDiskImage;
-	ri.CM_SetUsingCache = CM_SetUsingCache;
 
 	//FIXME: Might have to do something about this...
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;

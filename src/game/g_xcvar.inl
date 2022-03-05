@@ -187,8 +187,11 @@ XCVAR_DEF( g_eegg_sdintra,				"1024",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_sdinter,				"256",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_bufferMiB,			"200",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_intercardinal,		"0",			NULL,				CVAR_ARCHIVE,									qtrue )
-XCVAR_DEF( g_eegg_hardmode,				"0",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_scale,				"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_photobox,				"0",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_vischeck,				"0",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_sightcheck,			"0",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_cpusage,				"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 
 // WEAP
 XCVAR_DEF( weap_all_lifemult,			"1",			NULL,				CVAR_ARCHIVE,									qtrue )

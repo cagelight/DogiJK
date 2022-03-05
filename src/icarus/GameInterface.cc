@@ -144,7 +144,7 @@ int ICARUS_RunScript( sharedEntity_t *ent, const char *name )
 
 	if ( ( ICARUS_entFilter == -1 ) || ( ICARUS_entFilter == ent->s.number ) )
 	{
-		Q3_DebugPrint( WL_VERBOSE, "%d Script %s executed by %s %s\n", svs.time, (char *) name, ent->classname, ent->targetname );
+		Q3_DebugPrint( WL_VERBOSE, "%d Script %s executed by %s %s\n", svs.time, (char *) name, ent->classname.data(), ent->targetname );
 	}
 
 	return true;

@@ -84,6 +84,10 @@ clipMap_t const * CM_Get() {
 	return &cmg;
 }
 
+BSP::Reader CM_Read() {
+	return BSP::Reader { cm_mapCache.data() };
+}
+
 /*
 ===============================================================================
 
@@ -222,6 +226,8 @@ static void CMod_LoadNodes( const lump_t *l, clipMap_t &cm ) {
 			child = LittleLong (in->children[j]);
 			out->children[j] = child;
 		}
+		out->mins = in->mins;
+		out->maxs = in->maxs;
 	}
 
 }
@@ -313,6 +319,9 @@ static void CMod_LoadLeafs (const lump_t *l, clipMap_t &cm)
 		out->numLeafBrushes = LittleLong (in->numLeafBrushes);
 		out->firstLeafSurface = LittleLong (in->firstLeafSurface);
 		out->numLeafSurfaces = LittleLong (in->numLeafSurfaces);
+		
+		out->mins = in->mins;
+		out->maxs = in->maxs;
 
 		if (out->cluster >= cm.numClusters)
 			cm.numClusters = out->cluster + 1;
@@ -586,42 +595,6 @@ CM_LoadMap
 Loads in the map and all submodels
 ==================
 */
-void *gpvCachedMapDiskImage = NULL;
-char  gsCachedMapDiskImage[MAX_QPATH];
-qboolean gbUsingCachedMapDataRightNow = qfalse;	// if true, signifies that you can't delete this at the moment!! (used during z_malloc()-fail recovery attempt)
-
-// called in response to a "devmapbsp blah" or "devmapall blah" command, do NOT use inside CM_Load unless you pass in qtrue
-//
-// new bool return used to see if anything was freed, used during z_malloc failure re-try
-//
-qboolean CM_DeleteCachedMap(qboolean bGuaranteedOkToDelete)
-{
-	qboolean bActuallyFreedSomething = qfalse;
-
-	if (bGuaranteedOkToDelete || !gbUsingCachedMapDataRightNow)
-	{
-		// dump cached disk image...
-		//
-		if (gpvCachedMapDiskImage)
-		{
-			Z_Free(	gpvCachedMapDiskImage );
-					gpvCachedMapDiskImage = NULL;
-
-			bActuallyFreedSomething = qtrue;
-		}
-		gsCachedMapDiskImage[0] = '\0';
-
-		// force map loader to ignore cached internal BSP structures for next level CM_LoadMap() call...
-		//
-		cmg.name[0] = '\0';
-	}
-
-	return bActuallyFreedSomething;
-}
-
-
-
-
 
 static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *checksum, clipMap_t &cm )
 { //rwwRMG - function needs heavy modification
@@ -629,7 +602,8 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	dheader_t		header;
 	static unsigned	last_checksum;
 	char			origName[MAX_OSPATH];
-	void			*newBuff = 0;
+	
+	std::vector<byte> cm_mapNew;
 
 	if ( !name || !name[0] ) {
 		Com_Error( ERR_DROP, "CM_LoadMap: NULL name" );
@@ -676,10 +650,9 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	//
 	//rww - Doesn't this sort of defeat the purpose? We're clearing it even if the map is the same as the last one!
 	//Not touching it though in case I'm just overlooking something.
-	if (gpvCachedMapDiskImage && &cm == &cmg)	// MP code: this'll only be NZ if we got an ERR_DROP during last map load,
+	if (cm_mapCache.size() && &cm == &cmg)	// MP code: this'll only be NZ if we got an ERR_DROP during last map load,
 	{							//	so it's really just a safety measure.
-		Z_Free(	gpvCachedMapDiskImage);
-				gpvCachedMapDiskImage = NULL;
+		cm_mapCache.clear();
 	}
 
 #ifndef BSPC
@@ -693,15 +666,14 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	const int iBSPLen = FS_FOpenFileRead( name, &h, qfalse );
 	if (h)
 	{
-		newBuff = Z_Malloc( iBSPLen, TAG_BSP_DISKIMAGE );
-		FS_Read( newBuff, iBSPLen, h);
+		cm_mapNew.resize(iBSPLen);
+		FS_Read( cm_mapNew.data(), iBSPLen, h);
 		FS_FCloseFile( h );
 
-		buf = (int*) newBuff;	// so the rest of the code works as normal
+		buf = (int*) cm_mapNew.data();	// so the rest of the code works as normal
 		if (&cm == &cmg)
 		{
-			gpvCachedMapDiskImage = newBuff;
-			newBuff = 0;
+			cm_mapCache = std::move(cm_mapNew);
 		}
 
 		// carry on as before...
@@ -725,8 +697,7 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	}
 
 	if ( header.version != BSP_VERSION ) {
-		Z_Free(	gpvCachedMapDiskImage);
-				gpvCachedMapDiskImage = NULL;
+		cm_mapCache.clear();
 
 		Com_Error (ERR_DROP, "CM_LoadMap: %s has wrong version number (%i should be %i)"
 		, name, header.version, BSP_VERSION );
@@ -756,29 +727,6 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 		CM_InitBoxHull ();
 	}
 
-#ifndef BSPC	// I hope we can lose this crap soon
-	//
-	// if we've got enough memory, and it's not a dedicated-server, then keep the loaded map binary around
-	//	for the renderer to chew on... (but not if this gets ported to a big-endian machine, because some of the
-	//	map data will have been Little-Long'd, but some hasn't).
-	//
-	if (Sys_LowPhysicalMemory()
-		|| com_dedicated->integer
-//		|| we're on a big-endian machine
-		)
-	{
-		Z_Free(	gpvCachedMapDiskImage );
-				gpvCachedMapDiskImage = NULL;
-	}
-	else
-	{
-		// ... do nothing, and let the renderer free it after it's finished playing with it...
-		//
-	}
-#else
-	FS_FreeFile (buf);
-#endif
-
 	CM_FloodAreaConnections (cm);
 
 	// allow this to be cached if it is loaded by the server
@@ -792,11 +740,7 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 //
 void CM_LoadMap( const char *name, qboolean clientload, int *checksum )
 {
-	gbUsingCachedMapDataRightNow = qtrue;	// !!!!!!!!!!!!!!!!!!
-
-		CM_LoadMap_Actual( name, clientload, checksum, cmg );
-
-	gbUsingCachedMapDataRightNow = qfalse;	// !!!!!!!!!!!!!!!!!!
+	CM_LoadMap_Actual( name, clientload, checksum, cmg );
 }
 
 

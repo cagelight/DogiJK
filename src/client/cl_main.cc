@@ -28,7 +28,7 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include <limits.h>
 #include "ghoul2/G2.hh"
-#include "qcommon/cm_public.hh"
+#include "qcommon/cm_local.hh"
 #include "qcommon/MiniHeap.hh"
 #include "qcommon/stringed_ingame.hh"
 #include "qcommon/models.hh"
@@ -2349,16 +2349,10 @@ CL_InitRef
 */
 qboolean Com_TheHunkMarkHasBeenMade(void);
 
-//qcommon/cm_load.cpp
-extern void *gpvCachedMapDiskImage;
-extern qboolean gbUsingCachedMapDataRightNow;
-
 static char *GetSharedMemory( void ) { return cl.mSharedMemory; }
 static vm_t *GetCurrentVM( void ) { return currentVM; }
 static qboolean CGVMLoaded( void ) { return (qboolean)cls.cgameStarted; }
-static void *CM_GetCachedMapDiskImage( void ) { return gpvCachedMapDiskImage; }
-static void CM_SetCachedMapDiskImage( void *ptr ) { gpvCachedMapDiskImage = ptr; }
-static void CM_SetUsingCache( qboolean usingCache ) { gbUsingCachedMapDataRightNow = usingCache; }
+static void *CM_GetCachedMapDiskImage( void ) { return cm_mapCache.data(); }
 
 #define G2_VERT_SPACE_SERVER_SIZE 256
 IHeapAllocator *G2VertSpaceServer = NULL;
@@ -2486,8 +2480,6 @@ void CL_InitRef( void ) {
 	ri.VK_GetDrawableSize = WIN_VK_GetDrawableSize;
 
 	ri.CM_GetCachedMapDiskImage = CM_GetCachedMapDiskImage;
-	ri.CM_SetCachedMapDiskImage = CM_SetCachedMapDiskImage;
-	ri.CM_SetUsingCache = CM_SetUsingCache;
 
 	//FIXME: Might have to do something about this...
 	ri.GetG2VertSpaceServer = GetG2VertSpaceServer;

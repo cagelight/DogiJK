@@ -23,17 +23,22 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #pragma once
 
+#include <libbsp/reader.hh>
+
 #include "qcommon/q_shared.hh"
 #include "qfiles.hh"
 
 typedef struct cNode_s {
 	cplane_t	*plane;
 	int32_t		children[2];		// negative numbers are leafs
+	qm::ivec3_t	mins, maxs;
 } cNode_t;
 
 typedef struct cLeaf_s {
 	int32_t		cluster;
 	int32_t		area;
+	
+	qm::ivec3_t	mins, maxs;
 
 	ptrdiff_t	firstLeafBrush;
 	int32_t		numLeafBrushes;
@@ -60,7 +65,6 @@ typedef struct cbrush_s {
 	vec3_t				bounds[2];
 	cbrushside_t		*sides;
 	unsigned short		numsides;
-	unsigned short		checkcount;		// to avoid repeated testings
 } cbrush_t;
 
 // a trace is returned when a box is swept through the world
@@ -104,7 +108,6 @@ public:
 };
 
 typedef struct cPatch_s {
-	int			checkcount;				// to avoid repeated testings
 	int			surfaceFlags;
 	int			contents;
 	struct patchCollide_s	*pc;
@@ -162,10 +165,11 @@ typedef struct clipMap_s {
 	cPatch_t	**surfaces;			// non-patches will be NULL
 
 	int			floodvalid;
-	int			checkcount;					// incremented on each trace
 } clipMap_t;
 
 clipMap_t const * CM_Get();
+
+BSP::Reader CM_Read();
 
 void		CM_LoadMap( const char *name, qboolean clientload, int *checksum);
 

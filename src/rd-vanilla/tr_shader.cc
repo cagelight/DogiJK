@@ -39,10 +39,8 @@ static	shader_t		shader;
 // retail JKA shader for gfx/menus/radar/arrow_w.
 #define RETAIL_ARROW_W_SHADER_HASH (1650186)
 
-#define FILE_HASH_SIZE		1024
-static	shader_t*		hashTable[FILE_HASH_SIZE];
-
 std::unordered_map<istring, char const *> shaderTextHashTableNew;
+std::unordered_map<istring, std::vector<std::unique_ptr<shader_t>>> shaderHashTableNew;
 
 void KillTheShaderHashTable(void)
 {
@@ -169,6 +167,8 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 	// remap all the shaders with the given name
 	// even tho they might have different lightmaps
 	COM_StripExtension( shaderName, strippedName, sizeof( strippedName ) );
+	
+	/*
 	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
 	for (sh = hashTable[hash]; sh; sh = sh->next) {
 		if (Q_stricmp(sh->name, strippedName) == 0) {
@@ -179,6 +179,7 @@ void R_RemapShader(const char *shaderName, const char *newShaderName, const char
 			}
 		}
 	}
+	*/
 	if (timeOffset) {
 		sh2->timeOffset = atof(timeOffset);
 	}
@@ -2665,31 +2666,27 @@ static shader_t *GeneratePermanentShader( void ) {
 		return tr.defaultShader;
 	}
 
-	shader_t * newShader = (struct shader_s *)ri.Hunk_Alloc( sizeof( shader_t ), h_low );
-	new (newShader) shader_t {};
-	*newShader = shader;
+	std::unique_ptr<shader_t> newShader = std::make_unique<shader_t>(std::move(shader));
 
-	if ( shader.sort <= static_cast<float>(/*SS_OPAQUE*/SS_SEE_THROUGH) ) {
+	if ( newShader->sort <= static_cast<float>(/*SS_OPAQUE*/SS_SEE_THROUGH) ) {
 		newShader->fogPass = FP_EQUAL;
-	} else if ( shader.contentFlags & CONTENTS_FOG ) {
+	} else if ( newShader->contentFlags & CONTENTS_FOG ) {
 		newShader->fogPass = FP_LE;
 	}
 
-	tr.shaders[ tr.numShaders ] = newShader;
+	tr.shaders[ tr.numShaders ] = newShader.get();
 	newShader->index = tr.numShaders;
 
-	tr.sortedShaders[ tr.numShaders ] = newShader;
+	tr.sortedShaders[ tr.numShaders ] = newShader.get();
 	newShader->sortedIndex = tr.numShaders;
 
 	tr.numShaders++;
 
 	SortNewShader();
 
-	const int hash = generateHashValue(newShader->name, FILE_HASH_SIZE);
-	newShader->next = hashTable[hash];
-	hashTable[hash] = newShader;
-
-	return newShader;
+	auto ptr = newShader.get();
+	shaderHashTableNew[newShader->name].emplace_back(std::move(newShader));
+	return ptr;
 }
 
 /*
@@ -3225,7 +3222,6 @@ default shader if the real one can't be found.
 shader_t *R_FindShaderByName( const char *name ) {
 	char		strippedName[MAX_QPATH];
 	int			hash;
-	shader_t	*sh;
 
 	if ( (name==NULL) || (name[0] == 0) ) {
 		return tr.defaultShader;
@@ -3233,23 +3229,9 @@ shader_t *R_FindShaderByName( const char *name ) {
 
 	COM_StripExtension( name, strippedName, sizeof( strippedName ) );
 
-	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
-
-	//
-	// see if the shader is already loaded
-	//
-	for (sh=hashTable[hash]; sh; sh=sh->next) {
-		// NOTE: if there was no shader or image available with the name strippedName
-		// then a default shader is created with lightmapIndex == LIGHTMAP_NONE, so we
-		// have to check all default shaders otherwise for every call to R_FindShader
-		// with that same strippedName a new default shader is created.
-		if (Q_stricmp(sh->name, strippedName) == 0) {
-			// match found
-			return sh;
-		}
-	}
-
-	return tr.defaultShader;
+	auto sh = shaderHashTableNew.find(strippedName);
+	if (sh == shaderHashTableNew.end()) return tr.defaultShader;
+	return sh->second.front().get();
 }
 
 
@@ -3381,22 +3363,12 @@ shader_t *R_FindShader( const char *name, const int *lightmapIndex, const byte *
 	}
 
 	COM_StripExtension( name, strippedName, sizeof( strippedName ) );
-
-	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
-
-	//
-	// see if the shader is already loaded
-	//
-	for (sh = hashTable[hash]; sh; sh = sh->next) {
-		// NOTE: if there was no shader or image available with the name strippedName
-		// then a default shader is created with lightmapIndex == LIGHTMAP_NONE, so we
-		// have to check all default shaders otherwise for every call to R_FindShader
-		// with that same strippedName a new default shader is created.
-		if (IsShader(sh, strippedName, lightmapIndex, styles))
-		{
-			return sh;
-		}
-	}
+	
+	auto shv = shaderHashTableNew.find(strippedName);
+	if (shv != shaderHashTableNew.end())
+		for (auto const & sh : shv->second)
+			if (IsShader(sh.get(), strippedName, lightmapIndex, styles))
+				return sh.get();
 
 	// clear the global shader
 	ClearGlobalShader();
@@ -3500,21 +3472,11 @@ shader_t *R_FindServerShader( const char *name, const int *lightmapIndex, const 
 
 	COM_StripExtension( name, strippedName, sizeof( strippedName ) );
 
-	hash = generateHashValue(strippedName, FILE_HASH_SIZE);
-
-	//
-	// see if the shader is already loaded
-	//
-	for (sh = hashTable[hash]; sh; sh = sh->next) {
-		// NOTE: if there was no shader or image available with the name strippedName
-		// then a default shader is created with lightmapIndex == LIGHTMAP_NONE, so we
-		// have to check all default shaders otherwise for every call to R_FindShader
-		// with that same strippedName a new default shader is created.
-		if (IsShader(sh, strippedName, lightmapIndex, styles))
-		{
-			return sh;
-		}
-	}
+	auto shv = shaderHashTableNew.find(strippedName);
+	if (shv != shaderHashTableNew.end())
+		for (auto const & sh : shv->second)
+			if (IsShader(sh.get(), strippedName, lightmapIndex, styles))
+				return sh.get();
 
 	// clear the global shader
 	ClearGlobalShader();
@@ -3530,8 +3492,6 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int *lightmapIndex, byte 
 	int			i, hash;
 	shader_t	*sh;
 
-	hash = generateHashValue(name, FILE_HASH_SIZE);
-
 	// probably not necessary since this function
 	// only gets called from tr_font.c with lightmapIndex == LIGHTMAP_2D
 	// but better safe than sorry.
@@ -3543,16 +3503,11 @@ qhandle_t RE_RegisterShaderFromImage(const char *name, int *lightmapIndex, byte 
 	//
 	// see if the shader is already loaded
 	//
-	for (sh=hashTable[hash]; sh; sh=sh->next) {
-		// NOTE: if there was no shader or image available with the name strippedName
-		// then a default shader is created with lightmapIndex == LIGHTMAP_NONE, so we
-		// have to check all default shaders otherwise for every call to R_FindShader
-		// with that same strippedName a new default shader is created.
-		if (IsShader(sh, name, lightmapIndex, styles))
-		{
-			return sh->index;
-		}
-	}
+	auto shv = shaderHashTableNew.find(name);
+	if (shv != shaderHashTableNew.end())
+		for (auto const & sh : shv->second)
+			if (IsShader(sh.get(), name, lightmapIndex, styles))
+				return sh->index;
 
 	// clear the global shader
 	ClearGlobalShader();
@@ -4102,7 +4057,7 @@ void R_InitShaders(qboolean server)
 {
 	//ri.Printf( PRINT_ALL, "Initializing Shaders\n" );
 
-	memset(hashTable, 0, sizeof(hashTable));
+	shaderHashTableNew.clear();
 
 	if ( !server )
 	{

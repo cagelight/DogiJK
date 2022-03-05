@@ -818,7 +818,7 @@ void G_SpawnGEntityFromSpawnVars( qboolean inSubBSP ) {
 	int			i;
 	gentity_t	*ent;
 	char const		*s, *value, *gametypeName;
-	static char *gametypeNames[] = {"ffa", "holocron", "jedimaster", "duel", "powerduel", "single", "team", "siege", "ctf", "cty"};
+	static char const *gametypeNames[] = {"ffa", "holocron", "jedimaster", "duel", "powerduel", "single", "team", "siege", "ctf", "cty"};
 
 	// get the next free entity
 	ent = G_Spawn();

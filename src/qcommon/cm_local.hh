@@ -49,6 +49,8 @@ extern	cvar_t		*cm_noCurves;
 extern	cvar_t		*cm_playerCurveClip;
 extern	cvar_t		*cm_extraVerbose;
 
+inline std::vector<byte> cm_mapCache;
+
 // cm_test.c
 
 // Used for oriented capsule collision detection
@@ -84,6 +86,9 @@ typedef struct traceWork_s { //rwwRMG - modified
 	cplane_t		*clipplane;
 	bool			startout;
 	bool			getout;
+	
+	std::vector<bool> checked_patches;
+	std::vector<bool> checked_brushes;
 
 } traceWork_t;
 
@@ -98,7 +103,6 @@ typedef struct leafList_s {
 } leafList_t;
 
 void CM_StoreLeafs( leafList_t *ll, int nodenum );
-void CM_StoreBrushes( leafList_t *ll, int nodenum );
 
 void CM_BoxLeafnums_r( leafList_t *ll, int nodenum );
 

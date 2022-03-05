@@ -533,7 +533,7 @@ namespace howler {
 	using uniform_float = uniform<float, upload_float>;
 	inline void upload_vec3(GLint location, qm::vec3_t const & value) { glUniform3fv(location, 1, value); }
 	using uniform_vec3 = uniform<qm::vec3_t, upload_vec3>;
-	inline void upload_vec4(GLint location, qm::vec4_t const & value) { glUniform4fv(location, 1, value); }
+	inline void upload_vec4(GLint location, qm::vec4_t const & value) { glUniform4fv(location, 1, value.ptr()); }
 	using uniform_vec4 = uniform<qm::vec4_t, upload_vec4>;
 	inline void upload_mat3(GLint location, qm::mat3_t const & value) { glUniformMatrix3fv(location, 1, GL_FALSE, value); }
 	using uniform_mat3 = uniform<qm::mat3_t, upload_mat3>;

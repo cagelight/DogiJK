@@ -52,6 +52,10 @@ models/dogijk/pbox_rimlight
 	{
 		map $whiteimage
 		rgbGen entity
-		glow
+	}
+	{
+		map $whiteimage
+		rgbGen wave sin 0.8 0.2 0 4
+		blendFunc GL_DST_COLOR GL_ZERO
 	}
 }

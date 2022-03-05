@@ -6850,7 +6850,7 @@ typedef struct keywordHash_s
 } keywordHash_t;
 
 static int KeywordHash_Key(char *keyword) {
-	int register hash, i;
+	int hash, i;
 
 	hash = 0;
 	for (i = 0; keyword[i] != '\0'; i++) {

@@ -731,11 +731,11 @@ static QINLINE qboolean G_CheckLookTarget( gentity_t *ent, vec3_t	lookAngles, fl
 //bandwidth-intensive.
 //This is primarily droid stuff I guess, I'm going to try to handle all humanoid
 //NPC stuff in with the actual player stuff if possible.
-void NPC_SetBoneAngles(gentity_t *ent, char *bone, vec3_t angles);
+void NPC_SetBoneAngles(gentity_t *ent, char const *bone, vec3_t angles);
 static QINLINE void G_G2NPCAngles(gentity_t *ent, matrix3_t legs, vec3_t angles)
 {
-	char *craniumBone = "cranium";
-	char *thoracicBone = "thoracic"; //only used by atst so doesn't need a case
+	char const *craniumBone = "cranium";
+	char const *thoracicBone = "thoracic"; //only used by atst so doesn't need a case
 	qboolean looking = qfalse;
 	vec3_t viewAngles;
 	vec3_t lookAngles;

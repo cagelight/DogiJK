@@ -788,6 +788,7 @@ void CL_BindCGame( void ) {
 	cgi.CM_TransformedPointContents			= CM_TransformedPointContents;
 	cgi.CM_TransformedTrace					= CM_TransformedBoxTrace;
 	cgi.CM_Get								= CL_CM_Get;
+	cgi.CM_Read								= CM_Read;
 	cgi.RMG_Init							= CL_RMG_Init;
 	cgi.S_AddLocalSet						= S_AddLocalSet;
 	cgi.S_AddLoopingSound					= S_AddLoopingSound;

@@ -311,7 +311,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 }
 
 void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qboolean dirty) {
-	if (client >= hw_inst->cinematic_frames.size()) hw_inst->cinematic_frames.resize(client + 1);
+	if (client >= (int)hw_inst->cinematic_frames.size()) hw_inst->cinematic_frames.resize(client + 1);
 	assert(hw_inst->cinematic_frames.size());
 	hw_inst->cinematic_frames[client] = howler::make_q3texture(cols, rows);
 	hw_inst->cinematic_frames[client]->upload(cols, rows, data);

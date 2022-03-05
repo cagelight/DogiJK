@@ -228,7 +228,7 @@ extern qboolean NPC_EnemyTooFar(gentity_t *enemy, float dist, qboolean toShoot);
 // ==================================================================
 
 //rww - special system for sync'ing bone angles between client and server.
-void NPC_SetBoneAngles(gentity_t *ent, char *bone, vec3_t angles);
+void NPC_SetBoneAngles(gentity_t *ent, char const *bone, vec3_t angles);
 
 //rww - and another method of automatically managing surface status for the client and server at once
 void NPC_SetSurfaceOnOff(gentity_t *ent, const char *surfaceName, int surfaceFlags);

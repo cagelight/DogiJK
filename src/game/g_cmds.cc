@@ -121,6 +121,33 @@ void Cmd_Score_f( gentity_t *ent ) {
 
 /*
 ==================
+Cmd_ScoreReset_f
+
+Reset score of specific player or all players
+==================
+*/
+void Cmd_ScoreReset_f( gentity_t *ent ) {
+	
+	std::array<char, MAX_NETNAME> playerToken {};
+	
+	if (trap->Argc() > 1)
+		trap->Argv(1, playerToken.data(), MAX_NETNAME);
+	
+	for(int i = 0; i < MAX_CLIENTS; i++) {
+		gentity_t & player = g_entities[i];
+		if (!player.client) continue;
+		if (!playerToken[0] || Q_stristr(player.client->pers.netname_nocolor, playerToken.data())) {
+			player.client->ps.persistant[PERS_SCORE] = 0;
+			level.teamScores[ player.client->ps.persistant[PERS_TEAM] ] = 0;
+		}
+	}
+	
+	CalculateRanks();
+	
+}
+
+/*
+==================
 ConcatArgs
 ==================
 */
@@ -1603,20 +1630,20 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 	default:
 	case SAY_ALL:
 		G_LogPrintf( "say: %s: %s\n", ent->client->pers.netname, text );
-		Com_sprintf (name, sizeof(name), "%s%c%c"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+		Com_sprintf (name, sizeof(name), "%s%c%c" EC ": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 		color = COLOR_GREEN;
 		break;
 	case SAY_TEAM:
 		G_LogPrintf( "sayteam: %s: %s\n", ent->client->pers.netname, text );
 		if (Team_GetLocationMsg(ent, location, sizeof(location)))
 		{
-			Com_sprintf (name, sizeof(name), EC"(%s%c%c"EC")"EC": ",
+			Com_sprintf (name, sizeof(name), EC "(%s%c%c" EC ")" EC ": ",
 				ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 			locMsg = location;
 		}
 		else
 		{
-			Com_sprintf (name, sizeof(name), EC"(%s%c%c"EC")"EC": ",
+			Com_sprintf (name, sizeof(name), EC "(%s%c%c" EC ")" EC ": ",
 				ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 		}
 		color = COLOR_CYAN;
@@ -1626,12 +1653,12 @@ void G_Say( gentity_t *ent, gentity_t *target, int mode, const char *chatText ) 
 			target->client->sess.sessionTeam == ent->client->sess.sessionTeam &&
 			Team_GetLocationMsg(ent, location, sizeof(location)))
 		{
-			Com_sprintf (name, sizeof(name), EC"[%s%c%c"EC"]"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+			Com_sprintf (name, sizeof(name), EC "[%s%c%c" EC "]" EC ": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 			locMsg = location;
 		}
 		else
 		{
-			Com_sprintf (name, sizeof(name), EC"[%s%c%c"EC"]"EC": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
+			Com_sprintf (name, sizeof(name), EC "[%s%c%c" EC "]" EC ": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE );
 		}
 		color = COLOR_MAGENTA;
 		break;
@@ -1761,7 +1788,7 @@ static void Cmd_VoiceCommand_f(gentity_t *ent)
 	if (ent->client->sess.sessionTeam == TEAM_SPECTATOR ||
 		ent->client->tempSpectate >= level.time)
 	{
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NOVOICECHATASSPEC")) );
+		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NOVOICECHATASSPEC ")) );
 		return;
 	}
 
@@ -2310,7 +2337,7 @@ void Cmd_Vote_f( gentity_t *ent ) {
 	if (level.gametype != GT_DUEL && level.gametype != GT_POWERDUEL)
 	{
 		if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
-			trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NOVOTEASSPEC")) );
+			trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NOVOTEASSPEC ")) );
 			return;
 		}
 	}
@@ -2474,7 +2501,7 @@ void Cmd_TeamVote_f( gentity_t *ent ) {
 		return;
 	}
 	if ( ent->client->sess.sessionTeam == TEAM_SPECTATOR ) {
-		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NOVOTEASSPEC")) );
+		trap->SendServerCommand( ent-g_entities, va("print \"%s\n\"", G_GetStringEdString("MP_SVGAME", "NOVOTEASSPEC ")) );
 		return;
 	}
 
@@ -3996,12 +4023,13 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	if (trap->Argc() <= 1) {
 		std::vector<std::pair<std::string, std::string>> subcmd {
 			{ "clear", "Clear all currently spawned eggs." },
-			{ "cull", "Cull the eegg buffer to the specified usage percentage. <percent>" },
+			{ "cull", "Cull the eegg buffer by removing eggs that are too close to other eggs." },
 			{ "explore", "Randomly fly around the map and score locations for egg placement. <seconds> <batches>" },
 			{ "forget", "Forget if locations have already been used, allowing eggs to be placed there again." },
 			{ "init", "Initialize the eegg system, or reset the current eegg state to default." },
 			{ "list", "List currently spawned egg locations." },
 			{ "place", "Place eggs based on scores from the 'explore' phase. <number of eggs to place>" },
+			{ "shrink", "Shrink the eegg buffer to the specified memory usage percentage. <percent>" },
 			{ "stats", "Show stats about the current state." },
 			{ "tele", "Teleport to an egg (for debugging, etc.) <egg index>" },
 		};
@@ -4023,9 +4051,10 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	
 	if (cmd == "list") {
 		uint count = 0;
+		std::stringstream ss;
 		for (gentity_t & ent : *g_entities_actual) if (ent.classname == "easter_egg")
-			trap->SendServerCommand( player - g_entities, va("print \"eegg: Egg %u: (%f, %f, %f)\n\"", count++, ent.r.currentOrigin[0], ent.r.currentOrigin[1], ent.r.currentOrigin[2]) );
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: %u Eggs listed.\n\"", count) );
+			ss << va("%u: (%f, %f, %f)\n", count++, ent.r.currentOrigin[0], ent.r.currentOrigin[1], ent.r.currentOrigin[2]);
+		trap->SendServerCommand( player - g_entities, va("print \"Eggs: %u\n%s\"", count, ss.str().data()) );
 		return;
 	}
 	
@@ -4077,20 +4106,17 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		
 		if (g_eegg_photobox.integer) {
 			conc.models = { "models/dogijk/pbox.obj" };
-			conc.mins = {-10, -10,  0};
-			conc.maxs = { 10,  10, 20};
+			conc.mins = {-10, -10, -10};
+			conc.maxs = { 10,  10,  10};
 		} else {
 			conc.models = { "models/dogijk/egg.obj" };
 			conc.mins = {-10, -10,  0};
 			conc.maxs = { 10,  10, 28};
 		}
 		
-		conc.modelscalepercent = 100;
-		if (g_eegg_hardmode.integer) {
-			conc.modelscalepercent /= 4;
-			conc.mins /= 4;
-			conc.maxs /= 4;
-		}
+		conc.modelscalepercent = 100 * g_eegg_scale.value;
+		conc.mins *= g_eegg_scale.value;
+		conc.maxs *= g_eegg_scale.value;
 		
 		conc.use = *[](gentity_t * self, gentity_t * /*other*/, gentity_t * activator){
 			if (!activator) return;
@@ -4116,8 +4142,34 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	}
 	
 	if (cmd == "cull") {
+		if (pers->working) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
+			return;
+		}
 		
-		float cull = 50;
+		pers->working = true;
+		trap->GetTaskCore()->enqueue([](){
+			pers->path.cull();
+			pers->working = false;
+			GTaskType task { [](){
+				trap->SendServerCommand( -1, va("print \"eegg: cull operation complete.\n\"") );
+			}};
+			G_Task_Enqueue(std::move(task));
+		});
+		
+		trap->SendServerCommand( -1, va("print \"eegg: cull operation started.\n\"") );
+		return;
+	}
+	
+	if (cmd == "shrink") {
+		
+		if (pers->working) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
+			return;
+		}
+		
+		float * cullp = new float;
+		float & cull = *cullp;
 		
 		if (trap->Argc() > 2) {
 			std::array<char, 8> buf;
@@ -4127,8 +4179,8 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			if (cull < 0) cull = 0;
 		}
 		
-		trap->SendServerCommand( player - g_entities, va("print \"eegg: culling the eegg buffer to %.2f (percent) usage.\n\"", cull) );
-		pers->path.cull(cull);
+		trap->SendServerCommand( player - g_entities, va("print \"eegg: truncating the eegg buffer to %.2f (percent) usage.\n\"", cull) );
+		pers->path.shrink(cull);
 		return;
 	}
 	
@@ -4169,11 +4221,16 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			batches = std::strtol(buf.data(), nullptr, 10);
 		}
 		
+		float task_mult = g_eegg_cpusage.value;
+		if (task_mult > 1) task_mult = 1;
+		float tasks = trap->GetTaskCore()->system_ideal_task_count() * task_mult;
+		if (tasks < 1) tasks = 1;
+		
 		pers->working = true;
-		trap->GetTaskCore()->enqueue([player, allotted_time, batches](){
+		trap->GetTaskCore()->enqueue([player, allotted_time, batches, tasks](){
 			uint locs = 0;
 			for (size_t i = 0; i < batches; i++) {
-				locs += pers->path.explore(player->r.currentOrigin, trap->GetTaskCore()->system_ideal_task_count(), allotted_time / batches);
+				locs += pers->path.explore(player->r.currentOrigin, std::round(tasks), allotted_time / batches);
 				GTaskType task { [i, batches](){
 					trap->SendServerCommand( -1, va("print \"eegg: explore operation batch %hu of %hu complete.\n\"", i + 1, batches) );
 				}};
@@ -4302,6 +4359,7 @@ command_t commands[] = {
 	{ "say",				Cmd_Say_f,					0 },
 	{ "say_team",			Cmd_SayTeam_f,				0 },
 	{ "score",				Cmd_Score_f,				0 },
+	{ "scorereset",			Cmd_ScoreReset_f,			CMD_NOINTERMISSION },
 	{ "setviewpos",			Cmd_SetViewpos_f,			CMD_CHEAT|CMD_NOINTERMISSION },
 	{ "siegeclass",			Cmd_SiegeClass_f,			CMD_NOINTERMISSION },
 	{ "target",				Cmd_Target_f,				CMD_CHEAT|CMD_ALIVE },

@@ -1225,7 +1225,7 @@ int Q3_GetFloat( int entID, int type, const char *name, float *value )
 	case SET_PARM16:
 		if (ent->parms == NULL)
 		{
-			G_DebugPrint( WL_ERROR, "GET_PARM: %s %s did not have any parms set!\n", ent->classname, ent->targetname );
+			G_DebugPrint( WL_ERROR, "GET_PARM: %s %s did not have any parms set!\n", ent->classname.data(), ent->targetname );
 			return 0;	// would prefer qfalse, but I'm fitting in with what's here <sigh>
 		}
 		*value = atof( ent->parms->parm[toGet - SET_PARM1] );

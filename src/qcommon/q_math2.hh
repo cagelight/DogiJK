@@ -110,12 +110,15 @@ namespace qm {
 	}
 	
 	using vec2_t = meta::vec2_t<float>;
+	using vec2d_t = meta::vec2_t<double>;
 	using ivec2_t = meta::vec2_t<int32_t>;
 	
 	using vec3_t = meta::vec3_t<float>;
+	using vec3d_t = meta::vec3_t<double>;
 	using ivec3_t = meta::vec3_t<int32_t>;
 	
 	using vec4_t = meta::vec4_t<float>;
+	using vec4d_t = meta::vec4_t<double>;
 	using ivec4_t = meta::vec4_t<int32_t>;
 	
 	using quat_t = meta::quat_t<float>;
@@ -309,7 +312,9 @@ struct qm::meta::vec3_t {
 	
 	constexpr vec3_t(T const & x, T const & y, T const & z) noexcept : data { x, y, z } {}
 	constexpr vec3_t(vec2_t<T> const & v, float const & z) : data { v.data[0], v.data[1], z } {}
-	constexpr vec3_t(::vec3_t const & ptr) : data { ptr[0], ptr[1], ptr[2] } {}
+	
+	using T_3 = T[3];
+	constexpr vec3_t(T_3 const & ptr) : data { ptr[0], ptr[1], ptr[2] } {}
 	
 	template <typename U>
 	static vec3_t from(vec3_t<U> const & other) noexcept {
@@ -543,8 +548,6 @@ struct qm::meta::vec4_t {
 	
 	constexpr T & operator [] (size_t i) noexcept { return data[i]; }
 	constexpr T const & operator [] (size_t i) const noexcept { return data[i]; }
-	
-	constexpr operator T const * () const { return &data[0]; }
 };
 
 //================================================================

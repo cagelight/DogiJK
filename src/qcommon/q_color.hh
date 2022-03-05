@@ -122,23 +122,23 @@ typedef enum ct_table_e
 	CT_MAX
 } ct_table_t;
 
-static vec4_t		colorBlack	= {0, 0, 0, 1};
-static vec4_t		colorRed	= {1, 0, 0, 1};
-static vec4_t		colorGreen	= {0, 1, 0, 1};
-static vec4_t		colorBlue	= {0, 0, 1, 1};
-static vec4_t		colorYellow	= {1, 1, 0, 1};
-static vec4_t		colorOrange = {1, 0.5, 0, 1};
-static vec4_t		colorMagenta= {1, 0, 1, 1};
-static vec4_t		colorCyan	= {0, 1, 1, 1};
-static vec4_t		colorWhite	= {1, 1, 1, 1};
-static vec4_t		colorLtGrey	= {0.75, 0.75, 0.75, 1};
-static vec4_t		colorMdGrey	= {0.5, 0.5, 0.5, 1};
-static vec4_t		colorDkGrey	= {0.25, 0.25, 0.25, 1};
+inline vec4_t		colorBlack	= {0, 0, 0, 1};
+inline vec4_t		colorRed	= {1, 0, 0, 1};
+inline vec4_t		colorGreen	= {0, 1, 0, 1};
+inline vec4_t		colorBlue	= {0, 0, 1, 1};
+inline vec4_t		colorYellow	= {1, 1, 0, 1};
+inline vec4_t		colorOrange = {1, 0.5, 0, 1};
+inline vec4_t		colorMagenta= {1, 0, 1, 1};
+inline vec4_t		colorCyan	= {0, 1, 1, 1};
+inline vec4_t		colorWhite	= {1, 1, 1, 1};
+inline vec4_t		colorLtGrey	= {0.75, 0.75, 0.75, 1};
+inline vec4_t		colorMdGrey	= {0.5, 0.5, 0.5, 1};
+inline vec4_t		colorDkGrey	= {0.25, 0.25, 0.25, 1};
 
-static vec4_t		colorLtBlue	= {0.367f, 0.261f, 0.722f, 1};
-static vec4_t		colorDkBlue	= {0.199f, 0.0f,   0.398f, 1};
+inline vec4_t		colorLtBlue	= {0.367f, 0.261f, 0.722f, 1};
+inline vec4_t		colorDkBlue	= {0.199f, 0.0f,   0.398f, 1};
 
-static vec4_t g_color_table[Q_COLOR_BITS+1] = {
+inline vec4_t g_color_table[Q_COLOR_BITS+1] = {
 	{ 0.0, 0.0, 0.0, 1.0 },	// black
 	{ 1.0, 0.0, 0.0, 1.0 },	// red
 	{ 0.0, 1.0, 0.0, 1.0 },	// green
@@ -151,7 +151,7 @@ static vec4_t g_color_table[Q_COLOR_BITS+1] = {
 	{ 0.5, 0.5, 0.5, 1.0 },	// md.grey
 };
 
-static vec4_t colorTable[CT_MAX] =
+inline vec4_t colorTable[CT_MAX] =
 {
 	{0, 0, 0, 0},			// CT_NONE
 	{0, 0, 0, 1},			// CT_BLACK
@@ -236,7 +236,7 @@ static vec4_t colorTable[CT_MAX] =
 	{	0.549f, .854f,  1.0f,  1.0f},	//	CT_TITLE
 };
 
-static inline unsigned ColorBytes3 (float r, float g, float b) {
+inline unsigned ColorBytes3 (float r, float g, float b) {
 	unsigned i;
 
 	( (byte *)&i )[0] = (byte)(r * 255);
@@ -246,7 +246,7 @@ static inline unsigned ColorBytes3 (float r, float g, float b) {
 	return i;
 }
 
-static inline unsigned ColorBytes4 (float r, float g, float b, float a) {
+inline unsigned ColorBytes4 (float r, float g, float b, float a) {
 	unsigned i;
 
 	( (byte *)&i )[0] = (byte)(r * 255);
@@ -257,7 +257,7 @@ static inline unsigned ColorBytes4 (float r, float g, float b, float a) {
 	return i;
 }
 
-static inline float NormalizeColor( const vec3_t in, vec3_t out ) {
+inline float NormalizeColor( const vec3_t in, vec3_t out ) {
 	float	max;
 
 	max = in[0];
@@ -278,23 +278,17 @@ static inline float NormalizeColor( const vec3_t in, vec3_t out ) {
 	return max;
 }
 
-static void HSVtoRGB( float h, float s, float v, float rgb[3] )
+inline void HSVtoRGB( float h, float s, float v, float rgb[3] )
 {
-	int i;
-	float f;
-	float p, q, t;
-
 	h *= 5;
+	int i = std::floor( h );
+	float f = h * 5 - i;
 
-	i = std::floor( h );
-	f = h - i;
+	float p = v * ( 1 - s );
+	float q = v * ( 1 - s * f );
+	float t = v * ( 1 - s * ( 1 - f ) );
 
-	p = v * ( 1 - s );
-	q = v * ( 1 - s * f );
-	t = v * ( 1 - s * ( 1 - f ) );
-
-	switch ( i )
-	{
+	switch ( i ) {
 	case 0:
 		rgb[0] = v;
 		rgb[1] = t;
@@ -328,7 +322,7 @@ static void HSVtoRGB( float h, float s, float v, float rgb[3] )
 	}
 }
 
-static qm::vec3_t HSLtoRGB(float h, float s, float l) {
+inline qm::vec3_t HSLtoRGB(float h, float s, float l) {
 	
 	if (!s) return { l, l, l };
 	

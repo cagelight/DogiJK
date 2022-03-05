@@ -2950,10 +2950,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 	vec3_t		tfrom, tto, fwd, a;
 	int			powerUse = 0;
 	
-	struct PushEnt {
-		gentity_t * ent;
-		float dist;
-	};
+	using PushEnt = std::pair<gentity_t *, float>;
 	std::vector<PushEnt> push_list;
 
 	visionArc = 0;
@@ -3343,9 +3340,9 @@ void ForceThrow( gentity_t *self, qboolean pull )
 		int modPowerLevel = powerLevel;
 
 
-		if (push.ent->client)
+		if (push.first->client)
 		{
-			modPowerLevel = WP_AbsorbConversion(push.ent, push.ent->client->ps.fd.forcePowerLevel[FP_ABSORB], self, powerUse, powerLevel, forcePowerNeeded[self->client->ps.fd.forcePowerLevel[powerUse]][powerUse]);
+			modPowerLevel = WP_AbsorbConversion(push.first, push.first->client->ps.fd.forcePowerLevel[FP_ABSORB], self, powerUse, powerLevel, forcePowerNeeded[self->client->ps.fd.forcePowerLevel[powerUse]][powerUse]);
 			if (modPowerLevel == -1)
 			{
 				modPowerLevel = powerLevel;
@@ -3354,30 +3351,30 @@ void ForceThrow( gentity_t *self, qboolean pull )
 
 		pushPower = 256*modPowerLevel;
 
-		if (push.ent->client)
-			VectorCopy(push.ent->client->ps.origin, thispush_org);
-		else if (push.ent->s.eType == ET_PROP)
-			VectorCopy(push.ent->r.currentOrigin, thispush_org);
+		if (push.first->client)
+			VectorCopy(push.first->client->ps.origin, thispush_org);
+		else if (push.first->s.eType == ET_PROP)
+			VectorCopy(push.first->r.currentOrigin, thispush_org);
 		else
-			VectorCopy(push.ent->s.origin, thispush_org);
+			VectorCopy(push.first->s.origin, thispush_org);
 
-		if ( push.ent->client )
+		if ( push.first->client )
 		{//FIXME: make enemy jedi able to hunker down and resist this?
-			int otherPushPower = push.ent->client->ps.fd.forcePowerLevel[powerUse];
+			int otherPushPower = push.first->client->ps.fd.forcePowerLevel[powerUse];
 			qboolean canPullWeapon = qtrue;
 			float dirLen = 0;
 
-			if ( (push.ent->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
+			if ( (push.first->client->ps.pm_flags&PMF_STUCK_TO_WALL) )
 			{//no resistance if stuck to wall
 				//push/pull them off the wall
 				otherPushPower = 0;
-				G_LetGoOfWall( push.ent );
+				G_LetGoOfWall( push.first );
 			}
 
 			pushPowerMod = pushPower;
 
-			if (push.ent->client->pers.cmd.forwardmove ||
-				push.ent->client->pers.cmd.rightmove)
+			if (push.first->client->pers.cmd.forwardmove ||
+				push.first->client->pers.cmd.rightmove)
 			{ //if you are moving, you get one less level of defense
 				otherPushPower--;
 
@@ -3387,29 +3384,29 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				}
 			}
 
-			if (otherPushPower && CanCounterThrow(push.ent, self, pull))
+			if (otherPushPower && CanCounterThrow(push.first, self, pull))
 			{
 				if ( pull )
 				{
-					G_Sound( push.ent, CHAN_BODY, G_SoundIndex( "sound/weapons/force/pull.wav" ) );
-					push.ent->client->ps.forceHandExtend = HANDEXTEND_FORCEPULL;
-					push.ent->client->ps.forceHandExtendTime = level.time + 400;
+					G_Sound( push.first, CHAN_BODY, G_SoundIndex( "sound/weapons/force/pull.wav" ) );
+					push.first->client->ps.forceHandExtend = HANDEXTEND_FORCEPULL;
+					push.first->client->ps.forceHandExtendTime = level.time + 400;
 				}
 				else
 				{
-					G_Sound( push.ent, CHAN_BODY, G_SoundIndex( "sound/weapons/force/push.wav" ) );
-					push.ent->client->ps.forceHandExtend = HANDEXTEND_FORCEPUSH;
-					push.ent->client->ps.forceHandExtendTime = level.time + 1000;
+					G_Sound( push.first, CHAN_BODY, G_SoundIndex( "sound/weapons/force/push.wav" ) );
+					push.first->client->ps.forceHandExtend = HANDEXTEND_FORCEPUSH;
+					push.first->client->ps.forceHandExtendTime = level.time + 1000;
 				}
-				push.ent->client->ps.powerups[PW_DISINT_4] = push.ent->client->ps.forceHandExtendTime + 200;
+				push.first->client->ps.powerups[PW_DISINT_4] = push.first->client->ps.forceHandExtendTime + 200;
 
 				if (pull)
 				{
-					push.ent->client->ps.powerups[PW_PULL] = push.ent->client->ps.powerups[PW_DISINT_4];
+					push.first->client->ps.powerups[PW_PULL] = push.first->client->ps.powerups[PW_DISINT_4];
 				}
 				else
 				{
-					push.ent->client->ps.powerups[PW_PULL] = 0;
+					push.first->client->ps.powerups[PW_PULL] = 0;
 				}
 
 				//Make a counter-throw effect
@@ -3448,7 +3445,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			{
 				VectorSubtract( self->client->ps.origin, thispush_org, pushDir );
 
-				if (push.ent->client && VectorLength(pushDir) <= 256)
+				if (push.first->client && VectorLength(pushDir) <= 256)
 				{
 					int randfact = 0;
 
@@ -3465,7 +3462,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 						randfact = 10;
 					}
 
-					if (!OnSameTeam(self, push.ent) && Q_irand(1, 10) <= randfact && canPullWeapon)
+					if (!OnSameTeam(self, push.first) && Q_irand(1, 10) <= randfact && canPullWeapon)
 					{
 						vec3_t uorg, vecnorm;
 
@@ -3475,7 +3472,7 @@ void ForceThrow( gentity_t *self, qboolean pull )
 						VectorSubtract(uorg, thispush_org, vecnorm);
 						VectorNormalize(vecnorm);
 
-						TossClientWeapon(push.ent, vecnorm, 500);
+						TossClientWeapon(push.first, vecnorm, 500);
 					}
 				}
 			}
@@ -3484,31 +3481,31 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				VectorSubtract( thispush_org, self->client->ps.origin, pushDir );
 			}
 
-			if ((modPowerLevel > otherPushPower || push.ent->client->ps.m_iVehicleNum) && push.ent->client)
+			if ((modPowerLevel > otherPushPower || push.first->client->ps.m_iVehicleNum) && push.first->client)
 			{
 				if (modPowerLevel == FORCE_LEVEL_3 &&
-					push.ent->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN)
+					push.first->client->ps.forceHandExtend != HANDEXTEND_KNOCKDOWN)
 				{
 					dirLen = VectorLength(pushDir);
 
-					if (BG_KnockDownable(&push.ent->client->ps) &&
+					if (BG_KnockDownable(&push.first->client->ps) &&
 						dirLen <= (64*((modPowerLevel - otherPushPower)-1)))
 					{ //can only do a knockdown if fairly close
-						push.ent->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
-						push.ent->client->ps.forceHandExtendTime = level.time + 700;
-						push.ent->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
-						push.ent->client->ps.quickerGetup = qtrue;
+						push.first->client->ps.forceHandExtend = HANDEXTEND_KNOCKDOWN;
+						push.first->client->ps.forceHandExtendTime = level.time + 700;
+						push.first->client->ps.forceDodgeAnim = 0; //this toggles between 1 and 0, when it's 1 we should play the get up anim
+						push.first->client->ps.quickerGetup = qtrue;
 					}
-					else if (push.ent->s.number < MAX_CLIENTS && push.ent->client->ps.m_iVehicleNum &&
+					else if (push.first->s.number < MAX_CLIENTS && push.first->client->ps.m_iVehicleNum &&
 						dirLen <= 128.0f )
 					{ //a player on a vehicle
-						gentity_t *vehEnt = &g_entities[push.ent->client->ps.m_iVehicleNum];
+						gentity_t *vehEnt = &g_entities[push.first->client->ps.m_iVehicleNum];
 						if (vehEnt->inuse && vehEnt->client && vehEnt->m_pVehicle)
 						{
 							if (vehEnt->m_pVehicle->m_pVehicleInfo->type == VH_SPEEDER ||
 								vehEnt->m_pVehicle->m_pVehicleInfo->type == VH_ANIMAL)
 							{ //push the guy off
-								vehEnt->m_pVehicle->m_pVehicleInfo->Eject(vehEnt->m_pVehicle, (bgEntity_t *)push.ent, qfalse);
+								vehEnt->m_pVehicle->m_pVehicleInfo->Eject(vehEnt->m_pVehicle, (bgEntity_t *)push.first, qfalse);
 							}
 						}
 					}
@@ -3522,25 +3519,25 @@ void ForceThrow( gentity_t *self, qboolean pull )
 
 			VectorNormalize(pushDir);
 
-			if (push.ent->client)
+			if (push.first->client)
 			{
 				//escape a force grip if we're in one
 				if (self->client->ps.fd.forceGripBeingGripped > level.time)
 				{ //force the enemy to stop gripping me if I managed to push him
-					if (push.ent->client->ps.fd.forceGripEntityNum == self->s.number)
+					if (push.first->client->ps.fd.forceGripEntityNum == self->s.number)
 					{
-						if (modPowerLevel >= push.ent->client->ps.fd.forcePowerLevel[FP_GRIP])
+						if (modPowerLevel >= push.first->client->ps.fd.forcePowerLevel[FP_GRIP])
 						{ //only break the grip if our push/pull level is >= their grip level
-							WP_ForcePowerStop(push.ent, FP_GRIP);
+							WP_ForcePowerStop(push.first, FP_GRIP);
 							self->client->ps.fd.forceGripBeingGripped = 0;
-							push.ent->client->ps.fd.forceGripUseTime = level.time + 1000; //since we just broke out of it..
+							push.first->client->ps.fd.forceGripUseTime = level.time + 1000; //since we just broke out of it..
 						}
 					}
 				}
 
-				push.ent->client->ps.otherKiller = self->s.number;
-				push.ent->client->ps.otherKillerTime = level.time + 5000;
-				push.ent->client->ps.otherKillerDebounceTime = level.time + 100;
+				push.first->client->ps.otherKiller = self->s.number;
+				push.first->client->ps.otherKillerTime = level.time + 5000;
+				push.first->client->ps.otherKillerDebounceTime = level.time + 100;
 
 				pushPowerMod -= (dirLen*0.7);
 				if (pushPowerMod < 16)
@@ -3549,28 +3546,28 @@ void ForceThrow( gentity_t *self, qboolean pull )
 				}
 
 				//fullbody push effect
-				push.ent->client->pushEffectTime = level.time + 600;
+				push.first->client->pushEffectTime = level.time + 600;
 
-				push.ent->client->ps.velocity[0] = pushDir[0]*pushPowerMod;
-				push.ent->client->ps.velocity[1] = pushDir[1]*pushPowerMod;
+				push.first->client->ps.velocity[0] = pushDir[0]*pushPowerMod;
+				push.first->client->ps.velocity[1] = pushDir[1]*pushPowerMod;
 
-				if ((int)push.ent->client->ps.velocity[2] == 0)
+				if ((int)push.first->client->ps.velocity[2] == 0)
 				{ //if not going anywhere vertically, boost them up a bit
-					push.ent->client->ps.velocity[2] = pushDir[2]*pushPowerMod;
+					push.first->client->ps.velocity[2] = pushDir[2]*pushPowerMod;
 
-					if (push.ent->client->ps.velocity[2] < 128)
+					if (push.first->client->ps.velocity[2] < 128)
 					{
-						push.ent->client->ps.velocity[2] = 128;
+						push.first->client->ps.velocity[2] = 128;
 					}
 				}
 				else
 				{
-					push.ent->client->ps.velocity[2] = pushDir[2]*pushPowerMod;
+					push.first->client->ps.velocity[2] = pushDir[2]*pushPowerMod;
 				}
 			}
 		}
-		else if ( push.ent->s.eType == ET_PROP ) {
-			GEntPhysics * phys = push.ent->get_component<GEntPhysics>();
+		else if ( push.first->s.eType == ET_PROP ) {
+			GEntPhysics * phys = push.first->get_component<GEntPhysics>();
 			assert(phys);
 			
 			if ( pull )
@@ -3594,31 +3591,31 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			}
 			
 			VectorNormalize(pushDir);
-			VectorScale(pushDir, pushPower * (1 - push.dist / g_pushpull_radius.value), pushDir);
+			VectorScale(pushDir, pushPower * (1 - push.second / g_pushpull_radius.value), pushDir);
 			phys->object->impulse(pushDir);
 		}
-		else if ( push.ent->s.eType == ET_MISSILE && push.ent->s.pos.trType != TR_STATIONARY && (push.ent->s.pos.trType != TR_INTERPOLATE||push.ent->s.weapon != WP_THERMAL) )//rolling and stationary thermal detonators are dealt with below
+		else if ( push.first->s.eType == ET_MISSILE && push.first->s.pos.trType != TR_STATIONARY && (push.first->s.pos.trType != TR_INTERPOLATE||push.first->s.weapon != WP_THERMAL) )//rolling and stationary thermal detonators are dealt with below
 		{
 			if ( pull )
 			{//deflect rather than reflect?
 			}
 			else
 			{
-				G_ReflectMissile( self, push.ent, forward );
+				G_ReflectMissile( self, push.first, forward );
 			}
 		}
-		else if ( "func_static" == push.ent->classname )
+		else if ( "func_static" == push.first->classname )
 		{//force-usable func_static
-			if ( !pull && (push.ent->spawnflags&1/*F_PUSH*/) )
+			if ( !pull && (push.first->spawnflags&1/*F_PUSH*/) )
 			{
-				GEntity_UseFunc( push.ent, self, self );
+				GEntity_UseFunc( push.first, self, self );
 			}
-			else if ( pull && (push.ent->spawnflags&2/*F_PULL*/) )
+			else if ( pull && (push.first->spawnflags&2/*F_PULL*/) )
 			{
-				GEntity_UseFunc( push.ent, self, self );
+				GEntity_UseFunc( push.first, self, self );
 			}
 		}
-		else if (( "func_door" == push.ent->classname ) && (push.ent->spawnflags&2) )
+		else if (( "func_door" == push.first->classname ) && (push.first->spawnflags&2) )
 		{//push/pull the door
 			vec3_t	pos1, pos2;
 			vec3_t	trFrom;
@@ -3630,43 +3627,43 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			VectorNormalize( forward );
 			VectorMA( trFrom, g_pushpull_radius.value, forward, end );
 			trap->Trace( &tr, trFrom, vec3_origin, vec3_origin, end, self->s.number, MASK_SHOT, qfalse, 0, 0 );
-			if ( tr.entityNum != push.ent->s.number || tr.fraction == 1.0 || tr.allsolid || tr.startsolid )
+			if ( tr.entityNum != push.first->s.number || tr.fraction == 1.0 || tr.allsolid || tr.startsolid )
 			{//must be pointing right at it
 				continue;
 			}
 
-			if ( VectorCompare( vec3_origin, push.ent->s.origin ) )
+			if ( VectorCompare( vec3_origin, push.first->s.origin ) )
 			{//does not have an origin brush, so pos1 & pos2 are relative to world origin, need to calc center
-				VectorSubtract( push.ent->r.absmax, push.ent->r.absmin, size );
-				VectorMA( push.ent->r.absmin, 0.5, size, center );
-				if ( (push.ent->spawnflags&1) && push.ent->moverState == MOVER_POS1 )
+				VectorSubtract( push.first->r.absmax, push.first->r.absmin, size );
+				VectorMA( push.first->r.absmin, 0.5, size, center );
+				if ( (push.first->spawnflags&1) && push.first->moverState == MOVER_POS1 )
 				{//if at pos1 and started open, make sure we get the center where it *started* because we're going to add back in the relative values pos1 and pos2
-					VectorSubtract( center, push.ent->pos1, center );
+					VectorSubtract( center, push.first->pos1, center );
 				}
-				else if ( !(push.ent->spawnflags&1) && push.ent->moverState == MOVER_POS2 )
+				else if ( !(push.first->spawnflags&1) && push.first->moverState == MOVER_POS2 )
 				{//if at pos2, make sure we get the center where it *started* because we're going to add back in the relative values pos1 and pos2
-					VectorSubtract( center, push.ent->pos2, center );
+					VectorSubtract( center, push.first->pos2, center );
 				}
-				VectorAdd( center, push.ent->pos1, pos1 );
-				VectorAdd( center, push.ent->pos2, pos2 );
+				VectorAdd( center, push.first->pos1, pos1 );
+				VectorAdd( center, push.first->pos2, pos2 );
 			}
 			else
 			{//actually has an origin, pos1 and pos2 are absolute
-				VectorCopy( push.ent->r.currentOrigin, center );
-				VectorCopy( push.ent->pos1, pos1 );
-				VectorCopy( push.ent->pos2, pos2 );
+				VectorCopy( push.first->r.currentOrigin, center );
+				VectorCopy( push.first->pos1, pos1 );
+				VectorCopy( push.first->pos2, pos2 );
 			}
 
 			if ( Distance( pos1, trFrom ) < Distance( pos2, trFrom ) )
 			{//pos1 is closer
-				if ( push.ent->moverState == MOVER_POS1 )
+				if ( push.first->moverState == MOVER_POS1 )
 				{//at the closest pos
 					if ( pull )
 					{//trying to pull, but already at closest point, so screw it
 						continue;
 					}
 				}
-				else if ( push.ent->moverState == MOVER_POS2 )
+				else if ( push.first->moverState == MOVER_POS2 )
 				{//at farthest pos
 					if ( !pull )
 					{//trying to push, but already at farthest point, so screw it
@@ -3676,14 +3673,14 @@ void ForceThrow( gentity_t *self, qboolean pull )
 			}
 			else
 			{//pos2 is closer
-				if ( push.ent->moverState == MOVER_POS1 )
+				if ( push.first->moverState == MOVER_POS1 )
 				{//at the farthest pos
 					if ( !pull )
 					{//trying to push, but already at farthest point, so screw it
 						continue;
 					}
 				}
-				else if ( push.ent->moverState == MOVER_POS2 )
+				else if ( push.first->moverState == MOVER_POS2 )
 				{//at closest pos
 					if ( pull )
 					{//trying to pull, but already at closest point, so screw it
@@ -3691,11 +3688,11 @@ void ForceThrow( gentity_t *self, qboolean pull )
 					}
 				}
 			}
-			GEntity_UseFunc( push.ent, self, self );
+			GEntity_UseFunc( push.first, self, self );
 		}
-		else if ( "func_button" == push.ent->classname )
+		else if ( "func_button" == push.first->classname )
 		{//pretend you pushed it
-			Touch_Button( push.ent, self, NULL );
+			Touch_Button( push.first, self, NULL );
 			continue;
 		}
 	}

@@ -1890,6 +1890,7 @@ void SV_BindGame( void ) {
 	gi.SetActiveSubBSP						= SV_SetActiveSubBSP;
 	gi.CM_RegisterTerrain					= SV_CM_RegisterTerrain;
 	gi.CM_Get								= SV_CM_Get;
+	gi.CM_Read								= CM_Read;
 	gi.RMG_Init								= SV_RMG_Init;
 	gi.G2API_ListModelBones					= SV_G2API_ListModelBones;
 	gi.G2API_ListModelSurfaces				= SV_G2API_ListModelSurfaces;

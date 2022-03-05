@@ -10,7 +10,7 @@ set( CMAKE_CONFIGURATION_TYPES "Debug;Release;Native" )
 set( CMAKE_CXX_FLAGS         "-std=c++20" )
 set( CMAKE_CXX_FLAGS_DEBUG   "-Wall -Wextra -Wno-unused-variable -Wno-unused-parameter -Og -march=core2 -mtune=native -ggdb3 -D_DEBUG" )
 set( CMAKE_CXX_FLAGS_RELEASE "-w -O2 -march=core2 -mtune=generic -D_DEBUG -DFINAL_BUILD" )
-set( CMAKE_CXX_FLAGS_NATIVE  "-w -Ofast -march=native -mtune=native -D_DEBUG -DFINAL_BUILD" )
+set( CMAKE_CXX_FLAGS_NATIVE  "-w -Os --fast-math -march=native -mtune=native -D_DEBUG -DFINAL_BUILD" )
 
 if( NOT CMAKE_BUILD_TYPE )
 	set( CMAKE_BUILD_TYPE Native )
@@ -214,6 +214,7 @@ if( BUILD_CLIENT )
 		"src/qcommon/q_math.cc"
 		"src/qcommon/q_string.cc"
 		"src/qcommon/q_shared.cc"
+		"src/qcommon/q_simplex.cc"
 		"src/qcommon/matcomp.cc"
 		"src/rd-vanilla/*.cc"
 		"src/rd-common/*.cc"
@@ -237,6 +238,7 @@ if( BUILD_CLIENT )
 		"src/qcommon/q_math.cc"
 		"src/qcommon/q_string.cc"
 		"src/qcommon/q_shared.cc"
+		"src/qcommon/q_simplex.cc"
 		"src/qcommon/matcomp.cc"
 		"src/rd-howler/*.cc"
 		"src/rd-common/*.cc"

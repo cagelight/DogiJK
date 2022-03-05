@@ -1911,7 +1911,7 @@ private:
 	
 	CIN_SharePtr m_share;
 	CIN_ContainerPtr m_cont;
-	AVCodec * m_codec = nullptr;
+	AVCodec const * m_codec = nullptr;
 	AVStream * m_stream;
 	int m_stream_idx;
 	
@@ -1974,6 +1974,7 @@ struct CIN_Context {
 	}
 	
 	~CIN_Context() {
+		if (m_framebuffer) av_free(m_framebuffer);
 		if (m_frame) av_frame_free(&m_frame);
 	}
 	

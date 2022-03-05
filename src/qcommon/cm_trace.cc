@@ -219,11 +219,13 @@ void CM_TestInLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *l
 	// test box position against all brushes in the leaf
 	for (k=0 ; k<leaf->numLeafBrushes ; k++) {
 		brushnum = local->leafbrushes[leaf->firstLeafBrush+k];
-		b = &local->brushes[brushnum];
-		if (b->checkcount == local->checkcount) {
+		
+		if ( tw->checked_brushes[brushnum] ) {
 			continue;	// already checked this brush in another leaf
 		}
-		b->checkcount = local->checkcount;
+		tw->checked_brushes[brushnum] = true;
+		
+		b = &local->brushes[brushnum];
 
 		if ( !(b->contents & tw->contents)) {
 			continue;
@@ -246,10 +248,10 @@ void CM_TestInLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *l
 			if ( !patch ) {
 				continue;
 			}
-			if ( patch->checkcount == local->checkcount ) {
+			if ( tw->checked_patches[k] ) {
 				continue;	// already checked this brush in another leaf
 			}
-			patch->checkcount = local->checkcount;
+			tw->checked_patches[k] = true;
 
 			if ( !(patch->contents & tw->contents)) {
 				continue;
@@ -399,12 +401,7 @@ void CM_PositionTest( traceWork_t *tw, trace_t &trace ) {
 	ll.lastLeaf = 0;
 	ll.overflowed = qfalse;
 
-	cmg.checkcount++;
-
 	CM_BoxLeafnums_r( &ll, 0 );
-
-
-	cmg.checkcount++;
 
 	// test the contents of the leafs
 	for (i=0 ; i < ll.count ; i++) {
@@ -659,12 +656,13 @@ void CM_TraceThroughLeaf( traceWork_t *tw, trace_t &trace, clipMap_t *local, cLe
 	// trace line against all brushes in the leaf
 	for ( k = 0 ; k < leaf->numLeafBrushes ; k++ ) {
 		brushnum = local->leafbrushes[leaf->firstLeafBrush+k];
-
-		b = &local->brushes[brushnum];
-		if ( b->checkcount == local->checkcount ) {
+		
+		if ( tw->checked_brushes[brushnum] ) {
 			continue;	// already checked this brush in another leaf
 		}
-		b->checkcount = local->checkcount;
+		tw->checked_brushes[brushnum] = true;
+
+		b = &local->brushes[brushnum];
 
 		if ( !(b->contents & tw->contents) ) {
 			continue;
@@ -688,10 +686,10 @@ void CM_TraceThroughLeaf( traceWork_t *tw, trace_t &trace, clipMap_t *local, cLe
 			if ( !patch ) {
 				continue;
 			}
-			if ( patch->checkcount == local->checkcount ) {
-				continue;	// already checked this patch in another leaf
+			if ( tw->checked_patches[k] ) {
+				continue;	// already checked this brush in another leaf
 			}
-			patch->checkcount = local->checkcount;
+			tw->checked_patches[k] = true;
 
 			if ( !(patch->contents & tw->contents) ) {
 				continue;
@@ -1016,13 +1014,13 @@ void CM_TraceToLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *
 	for ( k = 0 ; k < leaf->numLeafBrushes ; k++ )
 	{
 		brushnum = local->leafbrushes[leaf->firstLeafBrush + k];
-
-		b = &local->brushes[brushnum];
-		if ( b->checkcount == local->checkcount )
-		{
+		
+		if ( tw->checked_brushes[brushnum] ) {
 			continue;	// already checked this brush in another leaf
 		}
-		b->checkcount = local->checkcount;
+		tw->checked_brushes[brushnum] = true;
+
+		b = &local->brushes[brushnum];
 
 		if ( !(b->contents & tw->contents) )
 		{
@@ -1047,10 +1045,10 @@ void CM_TraceToLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *
 			if ( !patch ) {
 				continue;
 			}
-			if ( patch->checkcount == local->checkcount ) {
-				continue;	// already checked this patch in another leaf
+			if ( tw->checked_patches[k] ) {
+				continue;	// already checked this brush in another leaf
 			}
-			patch->checkcount = local->checkcount;
+			tw->checked_patches[k] = true;
 
 			if ( !(patch->contents & tw->contents) ) {
 				continue;
@@ -1220,19 +1218,19 @@ void CM_Trace( trace_t *trace, const vec3_t start, const vec3_t end,
 						  const vec3_t mins, const vec3_t maxs,
 						  clipHandle_t model, const vec3_t origin, int brushmask, int capsule, sphere_t *sphere ) {
 	int			i;
-	traceWork_t	tw;
+	traceWork_t	tw {};
 	vec3_t		offset;
 	cmodel_t	*cmod;
 	clipMap_t	*local = 0;
 
 	cmod = CM_ClipHandleToModel( model, &local );
 
-	local->checkcount++;		// for multi-check avoidance
-
 	c_traces++;				// for statistics, may be zeroed
+	
+	tw.checked_brushes.resize(local->numLeafBrushes);
+	tw.checked_patches.resize(local->numLeafSurfaces);
 
 	// fill in a default trace
-	Com_Memset( &tw, 0, sizeof(tw) );
 	memset(trace, 0, sizeof(*trace));
 	trace->fraction = 1;	// assume it goes the entire distance until shown otherwise
 	VectorCopy(origin, tw.modelOrigin);

@@ -1049,6 +1049,7 @@ typedef struct gameImport_s {
 	const char *(*SetActiveSubBSP)						( int index );
 	int			(*CM_RegisterTerrain)					( const char *config );
 	void const * (*CM_Get)								( void );
+	BSP::Reader (*CM_Read)								( void );
 	void		(*RMG_Init)								( void );
 
 	void		(*G2API_ListModelBones)					( void *ghlInfo, int frame );

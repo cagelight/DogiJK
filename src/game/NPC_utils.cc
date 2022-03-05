@@ -925,7 +925,7 @@ qboolean G_ActivateBehavior (gentity_t *self, int bset )
 */
 
 //rww - special system for sync'ing bone angles between client and server.
-void NPC_SetBoneAngles(gentity_t *ent, char *bone, vec3_t angles)
+void NPC_SetBoneAngles(gentity_t *ent, char const *bone, vec3_t angles)
 {
 	int *thebone = &ent->s.boneIndex1;
 	int *firstFree = NULL;

@@ -2474,9 +2474,9 @@ extern void RunEmplacedWeapon( gentity_t *ent, usercmd_t **ucmd );
 	if ( self->s.eType == ET_NPC ) {
 		// check for named NPCs
 		if ( self->targetname )
-			Q_strcat( buf, sizeof( buf ), va( "%s (%s) by %s\n", self->NPC_type, self->targetname, obit ) );
+			Q_strcat( buf, sizeof( buf ), va( "%s (%s) by %s\n", self->NPC_type.data(), self->targetname, obit ) );
 		else
-			Q_strcat( buf, sizeof( buf ), va( "%s by %s\n", self->NPC_type, obit ) );
+			Q_strcat( buf, sizeof( buf ), va( "%s by %s\n", self->NPC_type.data(), obit ) );
 	}
 	else
 		Q_strcat( buf, sizeof( buf ), va( "%s by %s\n", self->client->pers.netname, obit ) );

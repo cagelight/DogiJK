@@ -248,12 +248,9 @@ typedef struct refimport_s {
 	qboolean		(*VK_CreateSurface)					( void * instance, void * surface );
 	void			(*VK_GetDrawableSize)				( int * w, int * h );
 
-	// gpvCachedMapDiskImage
+	// cm_mapCache
 	void *			(*CM_GetCachedMapDiskImage)			( void );
-	void			(*CM_SetCachedMapDiskImage)			( void *ptr );
-	// gbUsingCachedMapDataRightNow
-	void			(*CM_SetUsingCache)					( qboolean usingCache );
-
+	
 	// even the server will have this, which is a singleton
 	// so before assigning to this in R_Init, check if it's NULL!
 	IHeapAllocator *(*GetG2VertSpaceServer)				( void );

@@ -88,49 +88,6 @@ void CM_StoreLeafs( leafList_t *ll, int nodenum ) {
 	ll->list[ ll->count++ ] = leafNum;
 }
 
-void CM_StoreBrushes( leafList_t *ll, int nodenum ) {
-	int			i, k;
-	int			leafnum;
-	int			brushnum;
-	cLeaf_t		*leaf;
-	cbrush_t	*b;
-
-	leafnum = -1 - nodenum;
-
-	leaf = &cmg.leafs[leafnum];
-
-	for ( k = 0 ; k < leaf->numLeafBrushes ; k++ ) {
-		brushnum = cmg.leafbrushes[leaf->firstLeafBrush+k];
-		b = &cmg.brushes[brushnum];
-		if ( b->checkcount == cmg.checkcount ) {
-			continue;	// already checked this brush in another leaf
-		}
-		b->checkcount = cmg.checkcount;
-		for ( i = 0 ; i < 3 ; i++ ) {
-			if ( b->bounds[0][i] >= ll->bounds[1][i] || b->bounds[1][i] <= ll->bounds[0][i] ) {
-				break;
-			}
-		}
-		if ( i != 3 ) {
-			continue;
-		}
-		if ( ll->count >= ll->maxcount) {
-			ll->overflowed = qtrue;
-			return;
-		}
-		((cbrush_t **)ll->list)[ ll->count++ ] = b;
-	}
-#if 0
-	// store patches?
-	for ( k = 0 ; k < leaf->numLeafSurfaces ; k++ ) {
-		patch = cm.surfaces[ cm.leafsurfaces[ leaf->firstleafsurface + k ] ];
-		if ( !patch ) {
-			continue;
-		}
-	}
-#endif
-}
-
 /*
 =============
 CM_BoxLeafnums
@@ -174,8 +131,6 @@ CM_BoxLeafnums
 int	CM_BoxLeafnums( const vec3_t mins, const vec3_t maxs, int *boxList, int listsize, int *lastLeaf) {
 	//rwwRMG - changed to boxList to not conflict with list type
 	leafList_t	ll;
-
-	cmg.checkcount++;
 
 	VectorCopy( mins, ll.bounds[0] );
 	VectorCopy( maxs, ll.bounds[1] );

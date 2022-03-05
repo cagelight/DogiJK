@@ -40,8 +40,8 @@ static void CVU_Derpity( void ) {
 
 typedef struct cvarTable_s {
 	vmCvar_t	*vmCvar;
-	char		*cvarName;
-	char		*defaultString;
+	char const	*cvarName;
+	char const	*defaultString;
 	void		(*update)( void );
 	uint32_t	cvarFlags;
 	qboolean	trackChange; // announce if value changes

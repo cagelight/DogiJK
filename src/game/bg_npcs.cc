@@ -662,7 +662,7 @@ void NPC_Precache ( gentity_t *spawner )
 		token = COM_ParseExt( &p, qtrue );
 		if ( !token[0] )
 		{
-			Com_Printf( S_COLOR_RED"ERROR: unexpected EOF while parsing '%s'\n", spawner->NPC_type );
+			Com_Printf( S_COLOR_RED"ERROR: unexpected EOF while parsing '%s'\n", spawner->NPC_type.data() );
 			return;
 		}
 
@@ -2063,7 +2063,7 @@ qboolean NPC_ParseParmsActual( istring const & NPCNameIn, gentity_t *NPC, istrin
 			{
 				if ( !NPC->m_pVehicle )
 				{//you didn't spawn this guy right!
-					Com_Printf ( S_COLOR_RED "ERROR: Tried to spawn a vehicle NPC (%s) without using NPC_Vehicle or 'NPC spawn vehicle <vehiclename>'!!!  Bad, bad, bad!  Shame on you!\n", NPCName );
+					Com_Printf ( S_COLOR_RED "ERROR: Tried to spawn a vehicle NPC (%s) without using NPC_Vehicle or 'NPC spawn vehicle <vehiclename>'!!!  Bad, bad, bad!  Shame on you!\n", NPCName.data() );
 					return qfalse;
 				}
 				md3Model = qfalse;

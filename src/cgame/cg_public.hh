@@ -529,6 +529,7 @@ typedef struct cgameImport_s {
 	int				(*CM_TransformedPointContents)			( const vec3_t p, clipHandle_t model, const vec3_t origin, const vec3_t angles );
 	void			(*CM_TransformedTrace)					( trace_t *results, const vec3_t start, const vec3_t end, const vec3_t mins, const vec3_t maxs, clipHandle_t model, int brushmask, const vec3_t origin, const vec3_t angles, int capsule );
 	void const * 	(*CM_Get)								( void );
+	BSP::Reader 	(*CM_Read)								( void );
 	void			(*RMG_Init)								( int terrainID, const char *terrainInfo );
 
 	// sound
