@@ -115,14 +115,10 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		
 		float score = 0;
 		int sky_hits = 0;
-		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
+		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs, int extra_mask = 0) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
-			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
-			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER | CONTENTS_LAVA, qfalse, 0, 0);
-			
-			// somehow ended up inside the world geometry? definitely not valid.
-			if (tr.startsolid || tr.allsolid) return Q3_INFINITE;
+			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER | extra_mask, qfalse, 0, 0);
 			
 			// stay out of the map innards >:(
 			if (tr.brushside) {
@@ -140,6 +136,17 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			return (dest - pos).magnitude();
 		};
 		
+		auto test_position = [&]() -> bool {
+			trace_t tr {};
+			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
+			trap->Trace(&tr, pos, mins, maxs, pos, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER | CONTENTS_LAVA | CONTENTS_TRIGGER, qfalse, 0, 0);
+			
+			// somehow ended up inside the world geometry? definitely not valid.
+			if (tr.startsolid || tr.allsolid) return false;
+			
+			return true;
+		};
+		
 		auto score_axis = [&](qm::vec3_t const & axis, qm::vec3_t const & mins, qm::vec3_t const & maxs) -> float {
 			bool sky_hit;
 			float p = dir_dist( axis, mins, maxs);
@@ -148,8 +155,10 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			return (p + n) + (p < n ? p : n);
 		};
 		
+		if (!test_position()) return Q3_INFINITE;
+		
 		// score ceiling
-		score = dir_dist(qm::cardinal_zp, test_mins, test_maxs) * 3; // this one is extra penalized (heuristic)
+		score = dir_dist(qm::cardinal_zp, test_mins, test_maxs, CONTENTS_TRIGGER) * 3; // this one is extra penalized (heuristic), also overhead triggers are hella sus
 		if (score >= Q3_INFINITE) return Q3_INFINITE; // early short circuit for bad loation
 		
 		// reset to 0 to ignore vertical sky hit
@@ -322,6 +331,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 			if (p.thoroughcheck < 0) continue;
 		}
 		
+		/*
 		// don't hurt players who find this
 		if (!p.thoroughcheck) {
 			trace_t tr {};
@@ -329,6 +339,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 			p.thoroughcheck = (tr.startsolid && g_entities[tr.entityNum].damage) ? -1 : 1;
 			if (p.thoroughcheck < 0) continue;
 		}
+		*/
 		
 		// anti-patch bullshit
 		auto boomerang = [&](qm::vec3_t const & dir, vec3_t const mins, vec3_t const maxs) -> bool {
