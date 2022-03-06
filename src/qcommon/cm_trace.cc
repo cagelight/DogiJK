@@ -1227,8 +1227,8 @@ void CM_Trace( trace_t *trace, const vec3_t start, const vec3_t end,
 
 	c_traces++;				// for statistics, may be zeroed
 	
-	tw.checked_brushes.resize(local->numLeafBrushes);
-	tw.checked_patches.resize(local->numLeafSurfaces);
+	tw.checked_brushes.resize(local->numLeafBrushes, 0);
+	tw.checked_patches.resize(local->numLeafSurfaces, 0);
 
 	// fill in a default trace
 	memset(trace, 0, sizeof(*trace));

@@ -30,6 +30,8 @@ EEggPathfinder::~EEggPathfinder() = default;
 static constexpr qm::vec3_t player_mins { -16, -16, DEFAULT_MINS_2 };
 static constexpr qm::vec3_t player_maxs {  16,  16, DEFAULT_MAXS_2 };
 
+static constexpr int BASE_CLIP = MASK_PLAYERSOLID | CONTENTS_SHOTCLIP;
+
 /*
 static qm::vec3_t center_sink(qm::vec3_t const & outer_mins, qm::vec3_t const & outer_maxs, qm::vec3_t const & inner_mins, qm::vec3_t const & inner_maxs) {
 	qm::vec3_t v;
@@ -101,7 +103,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		trace_t tr {};
 		qm::vec3_t dest;
 		dest = pos.move_along(dir, Q3_INFINITE);
-		trap->Trace(&tr, pos.ptr(), mins, maxs, dest, -1, MASK_PLAYERSOLID, qfalse, 0, 0);
+		trap->Trace(&tr, pos.ptr(), mins, maxs, dest, -1, BASE_CLIP, qfalse, 0, 0);
 		out = tr.endpos;
 		return tr.plane.normal;
 	};
@@ -118,7 +120,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		auto dir_dist = [&](qm::vec3_t const & dir, qm::vec3_t const & mins, qm::vec3_t const & maxs, int forbidden_contents = 0) -> float {
 			qm::vec3_t dest = pos.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
-			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER, qfalse, 0, 0);
+			trap->Trace(&tr, pos, mins, maxs, dest, ENTITYNUM_NONE, BASE_CLIP | CONTENTS_WATER, qfalse, 0, 0);
 			
 			// stay out of the map innards >:(
 			if (tr.brushside) {
@@ -141,7 +143,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		auto test_position = [&]() -> bool {
 			trace_t tr {};
 			// test nearby solid surfaces, as well as lava and water (no burning or drowning players...)
-			trap->Trace(&tr, pos, mins, maxs, pos, ENTITYNUM_NONE, MASK_PLAYERSOLID | CONTENTS_WATER | CONTENTS_LAVA | CONTENTS_TRIGGER, qfalse, 0, 0);
+			trap->Trace(&tr, pos, mins, maxs, pos, ENTITYNUM_NONE, BASE_CLIP | CONTENTS_WATER | CONTENTS_LAVA | CONTENTS_TRIGGER, qfalse, 0, 0);
 			
 			// somehow ended up inside the world geometry? definitely not valid.
 			if (tr.startsolid || tr.allsolid) return false;
@@ -190,7 +192,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		while (std::chrono::high_resolution_clock::now() < deadline) {
 			qm::vec3_t dest = origin.move_along(qm::quat_t::random() * qm::vec3_t {0, 0, 1}, Q3_INFINITE);
 			trace_t tr {};
-			trap->Trace(&tr, origin, mins, maxs, dest, -1, MASK_PLAYERSOLID, qfalse, 0 ,0);
+			trap->Trace(&tr, origin, mins, maxs, dest, -1, BASE_CLIP, qfalse, 0 ,0);
 			if (tr.startsolid || tr.allsolid || stuck_counter >= STUCK_MAX) {
 				stuck_counter = 0;
 				origin = start;
@@ -309,7 +311,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 			bool ok = true;
 			for (auto const & [grp, ap] : m_data->approved_prospects) {
 				trace_t tr {};
-				trap->Trace(&tr, p.location, nullptr, nullptr, ap.location, -1, MASK_PLAYERSOLID, qfalse, 0, 0);
+				trap->Trace(&tr, p.location, nullptr, nullptr, ap.location, -1, BASE_CLIP, qfalse, 0, 0);
 				if ((ap.location - (qm::vec3_t)tr.endpos).magnitude() < 0.1) {
 					ok = false;
 					break;
@@ -327,7 +329,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 			qm::vec3_t dest = p.location.move_along(qm::cardinal_zn, Q3_INFINITE);
 			qm::vec3_t hmins = { xcenter, ycenter, m_concept.mins[2] };
 			qm::vec3_t hmaxs = { xcenter, ycenter, m_concept.maxs[2] };
-			trap->Trace(&tr, p.location, hmins.ptr(), hmaxs.ptr(), dest, -1, MASK_PLAYERSOLID, qfalse, 0 ,0);
+			trap->Trace(&tr, p.location, hmins.ptr(), hmaxs.ptr(), dest, -1, BASE_CLIP, qfalse, 0 ,0);
 			
 			p.thoroughcheck = (std::abs(tr.endpos[2] - p.location[2]) > vtest_allowance) ? -1 : 1;
 			if (p.thoroughcheck < 0) continue;
@@ -347,10 +349,11 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		auto boomerang = [&](qm::vec3_t const & dir, vec3_t const mins, vec3_t const maxs) -> bool {
 			qm::vec3_t dest = p.location.move_along(dir, Q3_INFINITE);
 			trace_t tr {};
-			trap->Trace(&tr, p.location, nullptr, nullptr, dest, ENTITYNUM_NONE, MASK_PLAYERSOLID, qfalse, 0, 0);
+			trap->Trace(&tr, p.location, nullptr, nullptr, dest, ENTITYNUM_NONE, BASE_CLIP, qfalse, 0, 0);
+			if (tr.startsolid || tr.allsolid) return false;
 			dest = tr.endpos;
 			tr = {};
-			trap->Trace(&tr, dest, nullptr, nullptr, p.location, ENTITYNUM_NONE, MASK_PLAYERSOLID, qfalse, 0, 0);
+			trap->Trace(&tr, dest, nullptr, nullptr, p.location, ENTITYNUM_NONE, BASE_CLIP, qfalse, 0, 0);
 			dest = tr.endpos;
 			return std::abs((dest - p.location).magnitude()) < 0.1;
 		};
@@ -364,7 +367,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		           boomerang(qm::cardinal_zp, mins, maxs);
 		};
 		
-		if (!p.thoroughcheck && (!boomerall(nullptr, nullptr) || !boomerall(m_concept.mins * 0.95, m_concept.maxs * 0.95))) {
+		if (!p.thoroughcheck && (!boomerall(nullptr, nullptr) || !boomerall(m_concept.mins, m_concept.maxs))) {
 			p.thoroughcheck = -1;
 			continue;
 		} else p.thoroughcheck = 1;
