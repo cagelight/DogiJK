@@ -640,6 +640,32 @@ struct qm::meta::quat_t {
 		};
 	}
 	
+	[[nodiscard]]
+	static inline quat_t slerp (quat_t const & A, quat_t const & B, T value) {
+		
+		if (value == 0) return A;
+		if (value == 1) return B;
+		
+		T dot = A[0] * B[0] + A[1] * B[1] + A[2] * B[2] + A[3] * B[3];
+		if (dot > 1) dot = 1;
+		if (dot < -1) dot = -1;
+		if (dot == 1) return A;
+		T angle = std::acos(dot);
+		T sqi = std::sqrt(static_cast<T>(1) - dot * dot);
+		T vA = std::sin((static_cast<T>(1) - value) * angle) / sqi;
+		T vB = std::sin(value * angle) / sqi;
+		
+		quat_t ret {
+			A[0] * vA + B[0] * vB,
+			A[1] * vA + B[1] * vB,
+			A[2] * vA + B[2] * vB,
+			A[3] * vA + B[3] * vB,
+		};
+		
+		ret.normalize();
+		return ret;
+	}
+	
 	// COMMON
 	
 	constexpr quat_t<T> conjugate() const {
@@ -686,6 +712,25 @@ struct qm::meta::quat_t {
 		};
 		ret.normalize();
 		return ret;
+	}
+	
+	constexpr vec3_t<T> to_euler() {
+		vec3_t<T> angles {};
+		
+		angles[YAW]  = std::atan2(2 * (data[3] * data[2] + data[0] * data[1]), 1 - 2 * (data[1] * data[1] + data[2] * data[2]));
+		angles[ROLL] = std::atan2(2 * (data[3] * data[0] + data[1] * data[2]), 1 - 2 * (data[0] * data[0] + data[1] * data[1]));
+		
+		T t1 = 2 * (data[3] * data[1] - data[2] * data[0]);
+		if (t1 >= 1)
+			angles[PITCH] = std::copysign(qm::pi / 2, t1);
+		else
+			angles[PITCH] = std::asin(t1);
+		
+		angles[YAW] = rad2deg(angles[YAW]);
+		angles[ROLL] = rad2deg(angles[ROLL]);
+		angles[PITCH] = rad2deg(angles[PITCH]);
+		
+		return angles;
 	}
 
 	// OPERATORS
@@ -826,12 +871,12 @@ struct qm::meta::mat3_t {
 	
 	static mat3_t<T> euler (vec3_t<T> const & v) {
 		mat3_t<T> w;
-		T rs = sin(-v.data[0]);
-		T ps = sin(v.data[1]);
-		T ys = sin(-v.data[2]);
-		T rc = cos(-v.data[0]);
-		T pc = cos(v.data[1]);
-		T yc = cos(-v.data[2]);
+		T rs = sin(deg2rad(-v.data[ROLL]));
+		T ps = sin(deg2rad(v.data[PITCH]));
+		T ys = sin(deg2rad(-v.data[YAW]));
+		T rc = cos(deg2rad(-v.data[ROLL]));
+		T pc = cos(deg2rad(v.data[PITCH]));
+		T yc = cos(deg2rad(-v.data[YAW]));
 		w[0][0] = yc * pc;
 		w[0][1] = ps * rs - pc * ys * rc;
 		w[0][2] = pc * ys * rs + ps * rc;
@@ -841,6 +886,7 @@ struct qm::meta::mat3_t {
 		w[2][0] = -ps * yc;
 		w[2][1] = ps * ys * rc + pc * rs;
 		w[2][2] = -ps * yc * rs + pc * rc;
+		return w;
 	}
 	
 	static mat3_t<T> ortho(T t, T b, T l, T r) {

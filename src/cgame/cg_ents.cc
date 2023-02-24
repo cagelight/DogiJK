@@ -3069,10 +3069,20 @@ static void CG_InterpolateEntityPosition( centity_t *cent ) {
 
 	BG_EvaluateTrajectory( &cent->currentState.apos, cg.snap->serverTime, current );
 	BG_EvaluateTrajectory( &cent->nextState.apos, cg.nextSnap->serverTime, next );
-
+	
+	/*
+	qm::quat_t src { qm::mat3_t::euler(current) };
+	qm::quat_t dst { qm::mat3_t::euler(next) };
+	qm::quat_t lrp = qm::quat_t::slerp(src, dst, f);
+	qm::vec3_t lrpa = lrp.to_euler();
+	
+	VectorCopy(lrpa, cent->lerpAngles);
+	*/
+	
 	cent->lerpAngles[0] = LerpAngle( current[0], next[0], f );
 	cent->lerpAngles[1] = LerpAngle( current[1], next[1], f );
 	cent->lerpAngles[2] = LerpAngle( current[2], next[2], f );
+	
 }
 
 /*

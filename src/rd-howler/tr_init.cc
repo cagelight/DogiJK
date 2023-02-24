@@ -304,7 +304,7 @@ void RE_StretchRaw (int x, int y, int w, int h, int cols, int rows, const byte *
 	auto shad = howler::make_q3shader();
 	auto & stg = shad->stages.emplace_back();
 	auto tex = howler::make_q3texture(cols, rows);
-	tex->upload(cols, rows, data);
+	tex->upload2D(cols, rows, data);
 	stg.diffuse = tex;
 	shad->validate();
 	hw_inst->frame().ui_stretchpics.emplace_back( howler::cmd2d::stretchpic { (float)x, (float)y, (float)w, (float)h, 0, 0, 1, 1, shad, ui_color });
@@ -314,7 +314,7 @@ void RE_UploadCinematic (int cols, int rows, const byte *data, int client, qbool
 	if (client >= (int)hw_inst->cinematic_frames.size()) hw_inst->cinematic_frames.resize(client + 1);
 	assert(hw_inst->cinematic_frames.size());
 	hw_inst->cinematic_frames[client] = howler::make_q3texture(cols, rows);
-	hw_inst->cinematic_frames[client]->upload(cols, rows, data);
+	hw_inst->cinematic_frames[client]->upload2D(cols, rows, data);
 	hw_inst->cinematic_frames[client]->generate_mipmaps();
 }
 

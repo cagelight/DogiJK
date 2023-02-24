@@ -28,6 +28,7 @@ static std::string generate_vertex_shader() {
 	layout(location = )" << LAYOUT_BONE_WEIGHT << R"() in vec4 vertex_wgt;
 	layout(location = )" << LAYOUT_COLOR0 << R"() in vec4 color0;
 	layout(location = )" << LAYOUT_COLOR1 << R"() in vec4 color1;
+	layout(location = )" << LAYOUT_LMIDX << R"() in ivec4 lm_idx;
 	layout(location = )" << LAYOUT_LMUV01_COLOR2 << R"() in vec4 lm_color2_uv01;
 	layout(location = )" << LAYOUT_LMUV23_COLOR3 << R"() in vec4 lm_color3_uv23;
 	layout(location = )" << LAYOUT_LMSTYLES << R"() in ivec4 lm_styles;
@@ -57,6 +58,7 @@ static std::string generate_vertex_shader() {
 	out vec2 f_uv;
 	out vec4 vcolor;
 	out vec2 lm_uv[4];
+	flat out ivec4 lm_idx_frag;
 	flat out ivec4 lm_styles_frag;
 
 	void main() {
@@ -170,6 +172,7 @@ static std::string generate_vertex_shader() {
 		vcolor = vec4(1, 1, 1, 1);
 		
 		if (lm_mode != 0 && mapgen == )" << static_cast<int>(q3stage::map_gen::lightmap) << R"() {
+			lm_idx_frag = lm_idx;
 			lm_styles_frag = lm_styles;
 			switch (lm_mode) {
 				case 1: {
@@ -296,11 +299,12 @@ static std::string generate_fragment_shader() {
 	
 	// TEXTURE BINDINGS
 	layout(binding = )" << BINDING_DIFFUSE << R"() uniform sampler2D tex;
-	layout(binding = )" << BINDING_LIGHTMAP << R"() uniform sampler2D lm;
+	layout(binding = )" << BINDING_LIGHTMAP << R"() uniform sampler2DArray lm;
 	
 	in vec2 f_uv;
 	in vec4 vcolor;
 	in vec2 lm_uv[4];
+	flat in ivec4 lm_idx_frag;
 	flat in ivec4 lm_styles_frag;
 	
 	layout(location = 0) out vec4 color;
@@ -327,27 +331,27 @@ static std::string generate_fragment_shader() {
 					case 1: {
 						
 						if (lm_styles_frag.x == 0) {
-							scolor = texture(lm, lm_uv[0]);
+							scolor = texture(lm, vec3(lm_uv[0], lm_idx_frag.x));
 						} else if (lm_styles_frag.x < 0xFE) {
-							scolor = texture(lm, lm_uv[0]) * lightstyles[lm_styles_frag.x];
+							scolor = texture(lm, vec3(lm_uv[0], lm_idx_frag.x)) * lightstyles[lm_styles_frag.x];
 						} else break;
 						
 						if (lm_styles_frag.y == 0) {
-							scolor += texture(lm, lm_uv[1]);
+							scolor += texture(lm, vec3(lm_uv[1], lm_idx_frag.y));
 						} else if (lm_styles_frag.y < 0xFE) {
-							scolor += texture(lm, lm_uv[1]) * lightstyles[lm_styles_frag.y];
+							scolor += texture(lm, vec3(lm_uv[1], lm_idx_frag.y)) * lightstyles[lm_styles_frag.y];
 						} else break;
 						
 						if (lm_styles_frag.z == 0) {
-							scolor += texture(lm, lm_uv[2]);
+							scolor += texture(lm, vec3(lm_uv[2], lm_idx_frag.z));
 						} else if (lm_styles_frag.z < 0xFE) {
-							scolor += texture(lm, lm_uv[2]) * lightstyles[lm_styles_frag.z];
+							scolor += texture(lm, vec3(lm_uv[2], lm_idx_frag.z)) * lightstyles[lm_styles_frag.z];
 						} else break;
 						
 						if (lm_styles_frag.w == 0) {
-							scolor += texture(lm, lm_uv[3]);
+							scolor += texture(lm, vec3(lm_uv[3], lm_idx_frag.w));
 						} else if (lm_styles_frag.w < 0xFE) {
-							scolor += texture(lm, lm_uv[3]) * lightstyles[lm_styles_frag.w];
+							scolor += texture(lm, vec3(lm_uv[3], lm_idx_frag.w)) * lightstyles[lm_styles_frag.w];
 						} else break;
 						
 					} break;

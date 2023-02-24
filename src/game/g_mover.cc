@@ -2652,6 +2652,7 @@ void funcBBrushDie (gentity_t *self, gentity_t *inflictor, gentity_t *attacker, 
 	}
 
 	funcBBrushDieGo(self);
+	self->remove_physics();
 }
 
 void funcBBrushUse (gentity_t *self, gentity_t *other, gentity_t *activator)
@@ -2746,6 +2747,8 @@ static void InitBBrush ( gentity_t *ent )
 	VectorCopy( ent->s.origin, ent->pos1 );
 
 	trap->SetBrushModel( (sharedEntity_t *)ent, ent->model );
+	
+	ent->add_bmodel_physics();
 
 	ent->die = funcBBrushDie;
 

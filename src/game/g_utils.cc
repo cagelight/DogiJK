@@ -261,7 +261,21 @@ gentity_t *G_Find (gentity_t *from, std::function<bool(gentity_t *)> test)
 	return NULL;
 }
 
+std::vector<gentity_t *> G_FindAll (std::function<bool(gentity_t *)> test)
+{
+	gentity_t * from = g_entities;
+	std::vector<gentity_t *> ents;
 
+	for ( ; from < &g_entities[level.num_entities] ; from++)
+	{
+		if (!from->inuse)
+			continue;
+		if (test(from))
+			ents.push_back(from);
+	}
+
+	return ents;
+}
 
 /*
 ============

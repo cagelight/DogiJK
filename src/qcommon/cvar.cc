@@ -855,10 +855,16 @@ qboolean Cvar_Command( void ) {
 	}
 
 	// toggle
-	if( !strcmp( Cmd_Argv(1), "!" ) )
+	if( !strncmp( Cmd_Argv(1), "!", 1 ) )
 	{
-		// Swap the value if our command has ! in it (bind p "cg_thirdPeson !")
-		Cvar_User_SetValue( v->name, !v->value );
+		if (v->value)
+			Cvar_User_SetValue( v->name, !v->value );
+		else {
+			if (strlen(Cmd_Argv(1)) > 1)
+				Cvar_User_SetValue( v->name, std::strtof(Cmd_Argv(1) + 1, nullptr) );
+			else
+				Cvar_User_SetValue( v->name, !v->value );
+		}
 		return qtrue;
 	}
 

@@ -156,7 +156,7 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 			float p = dir_dist( axis, mins, maxs);
 			float n = dir_dist(-axis, mins, maxs);
 			// score uses total distances on the two horizontal axis, and the closest wall
-			return (p + n) + (p < n ? p : n);
+			return (p + n) + pow(p < n ? p : n, 3);
 		};
 		
 		if (!test_position()) return Q3_INFINITE;
@@ -183,59 +183,73 @@ uint EEggPathfinder::explore(qm::vec3_t start, uint divisions, std::chrono::high
 		return score;
 	};
 	
-	size_t old_count = m_data->prospects.size();
+	// ========
+	
+	constexpr size_t STUCK_MAX = 32; // TODO: CVAR
+	
+	struct explore_data {
+		qm::vec3_t origin;
+		uint32_t stuck_counter;
+	};
+	
+	auto explore_step = [&, this](explore_data & ex){
+		qm::vec3_t dest = ex.origin.move_along(qm::quat_t::random() * qm::vec3_t {0, 0, 1}, Q3_INFINITE);
+		trace_t tr {};
+		trap->Trace(&tr, ex.origin, mins, maxs, dest, -1, BASE_CLIP, qfalse, 0 ,0);
+		if (tr.startsolid || tr.allsolid || ex.stuck_counter >= STUCK_MAX) {
+			ex.stuck_counter = 0;
+			ex.origin = start;
+			return;
+		}
+		
+		dest = tr.endpos;
+		if (std::abs((dest - ex.origin).magnitude()) < 32) {
+			// not enough room to move
+			ex.stuck_counter++;
+			return;
+		}
+		
+		ex.stuck_counter = 0;
+		ex.origin = qm::lerp<qm::vec3_t>(ex.origin, tr.endpos, Q_flrand(0.4, 0.9));
+		
+		EEggProspect p;
+		auto norm = settle(ex.origin, qm::cardinal_zn, p.location);
+		
+		// reject these
+		if (norm[2] <= 0)
+			return;
+		
+		p.score = score_location(p.location + qm::vec3_t {0, 0, 0.5});
+		
+		// severely penalize by slope
+		if (norm[2] != 1)
+			p.score /= std::pow(norm[2], 3);
+		
+		
+		// reject these
+		if (p.score >= Q3_INFINITE) return;
+		
+		p.cluster = cluster_of_pos(p.location);
+		
+		// reject these
+		if (p.cluster < 0) return;
+		
+		std::lock_guard lock { m_data->prospect_mut };
+		if (m_data->prospects.size() >= (static_cast<size_t>(g_eegg_bufferMiB.integer) * 1024 * 1024) / sizeof(EEggProspect)) return; // FIXME -- breakout
+		m_data->prospects.push_back(p);
+	};
 	
 	auto explore_task = [&, this](){
-		qm::vec3_t origin = start;
-		size_t stuck_counter = 0;
-		constexpr size_t STUCK_MAX = 32; // TODO: CVAR
-		while (std::chrono::high_resolution_clock::now() < deadline) {
-			qm::vec3_t dest = origin.move_along(qm::quat_t::random() * qm::vec3_t {0, 0, 1}, Q3_INFINITE);
-			trace_t tr {};
-			trap->Trace(&tr, origin, mins, maxs, dest, -1, BASE_CLIP, qfalse, 0 ,0);
-			if (tr.startsolid || tr.allsolid || stuck_counter >= STUCK_MAX) {
-				stuck_counter = 0;
-				origin = start;
-				continue;
-			}
-			
-			dest = tr.endpos;
-			if (std::abs((dest - origin).magnitude()) < 32) {
-				// not enough room to move
-				stuck_counter++;
-				continue;
-			}
-			
-			stuck_counter = 0;
-			origin = qm::lerp<qm::vec3_t>(origin, tr.endpos, Q_flrand(0.4, 0.9));
-			
-			EEggProspect p;
-			auto norm = settle(origin, qm::cardinal_zn, p.location);
-			
-			// reject these
-			if (norm[2] <= 0)
-				continue;
-			
-			p.score = score_location(p.location + qm::vec3_t {0, 0, 0.5});
-			
-			// severely penalize by slope
-			if (norm[2] != 1)
-				p.score /= std::pow(norm[2], 3);
-			
-			
-			// reject these
-			if (p.score >= Q3_INFINITE) continue;
-			
-			p.cluster = cluster_of_pos(p.location);
-			
-			// reject these
-			if (p.cluster < 0) continue;
-			
-			std::lock_guard lock { m_data->prospect_mut };
-			if (m_data->prospects.size() >= (static_cast<size_t>(g_eegg_bufferMiB.integer) * 1024 * 1024) / sizeof(EEggProspect)) return;
-			m_data->prospects.push_back(p);
-		}
+		std::vector<explore_data> ex;
+		for (int i = 0; i < (g_eegg_branches.integer < 1 ? 1 : g_eegg_branches.integer); i++)
+			ex.emplace_back(start, 0);
+		
+		while (std::chrono::high_resolution_clock::now() < deadline) 
+			for (auto & exp : ex)
+				explore_step(exp);
 	};
+	
+	size_t old_count = m_data->prospects.size();
 	
 	trap->GetTaskCore()->enqueue_fill_wait(explore_task, divisions);
 	if (m_data->prospects.size() >= (static_cast<size_t>(g_eegg_bufferMiB.integer) * 1024 * 1024) / sizeof(EEggProspect)) {
@@ -310,6 +324,7 @@ uint EEggPathfinder::spawn_eggs(uint egg_target) {
 		if (g_eegg_sightcheck.integer) {
 			bool ok = true;
 			for (auto const & [grp, ap] : m_data->approved_prospects) {
+				if (grp != m_data->spawn_group) continue;
 				trace_t tr {};
 				trap->Trace(&tr, p.location, nullptr, nullptr, ap.location, -1, BASE_CLIP, qfalse, 0, 0);
 				if ((ap.location - (qm::vec3_t)tr.endpos).magnitude() < 0.1) {
@@ -412,10 +427,12 @@ void EEggPathfinder::cull() {
 	std::vector<EEggProspect> new_prospects;
 	new_prospects.reserve(m_data->prospects.size());
 	
+	float compval = std::pow(g_eegg_sdinter.value, 2);
+	
 	for (auto const & prosp : m_data->prospects) {
 		bool ok = true;
 		for (auto const & comp : new_prospects) {
-			if ((prosp.location - comp.location).magnitude() < g_eegg_sdinter.value) {
+			if ((prosp.location - comp.location).magnitude_squared() < compval) {
 				ok = false;
 				break;
 			}
@@ -425,14 +442,6 @@ void EEggPathfinder::cull() {
 	
 	m_data->prospects = std::move(new_prospects);
 	m_data->prospects.shrink_to_fit();
-	
-	/*
-	size_t max_eggs = (x / 100) * (g_eegg_bufferMiB.value * 1024 * 1024);
-	max_eggs /= sizeof(EEggProspect);
-	if (m_data->prospects.size() <= max_eggs)
-		return;
-	m_data->prospects.resize(max_eggs);
-	*/
 }
 
 void EEggPathfinder::shrink(double x) {

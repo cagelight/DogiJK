@@ -908,6 +908,9 @@ static void CG_ConfigStringModified( void ) {
 	else if ( num == CS_SHADERSTATE ) {
 		CG_ShaderStateChanged();
 	}
+	else if ( num == CS_SVSEED ) {
+		cgs.svseed = std::strtol(str, nullptr, 10);
+	}
 	else if ( num >= CS_LIGHT_STYLES && num < CS_LIGHT_STYLES + (MAX_LIGHT_STYLES * 3))
 	{
 		CG_SetLightstyle(num - CS_LIGHT_STYLES);

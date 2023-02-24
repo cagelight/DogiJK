@@ -2566,6 +2566,9 @@ Ghoul2 Insert End
 	cgs.levelStartTime = atoi( s );
 
 	CG_ParseServerinfo();
+	
+	s = CG_ConfigString( CS_SVSEED );
+	cgs.svseed = std::strtol(s, nullptr, 10);
 
 	// load the new map
 //	CG_LoadingString( "collision map" );

@@ -226,8 +226,6 @@ static void CMod_LoadNodes( const lump_t *l, clipMap_t &cm ) {
 			child = LittleLong (in->children[j]);
 			out->children[j] = child;
 		}
-		out->mins = in->mins;
-		out->maxs = in->maxs;
 	}
 
 }
@@ -319,9 +317,6 @@ static void CMod_LoadLeafs (const lump_t *l, clipMap_t &cm)
 		out->numLeafBrushes = LittleLong (in->numLeafBrushes);
 		out->firstLeafSurface = LittleLong (in->firstLeafSurface);
 		out->numLeafSurfaces = LittleLong (in->numLeafSurfaces);
-		
-		out->mins = in->mins;
-		out->maxs = in->maxs;
 
 		if (out->cluster >= cm.numClusters)
 			cm.numClusters = out->cluster + 1;

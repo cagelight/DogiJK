@@ -37,9 +37,10 @@ namespace howler {
 	static constexpr GLint LAYOUT_BONE_WEIGHT = 5; // VEC4
 	static constexpr GLint LAYOUT_COLOR0 = 6; // VEC4
 	static constexpr GLint LAYOUT_COLOR1 = 7; // VEC4
-	static constexpr GLint LAYOUT_LMUV01_COLOR2 = 8; // UV VEC4 (2 VEC2) OR COLOR VEC4
-	static constexpr GLint LAYOUT_LMUV23_COLOR3 = 9; // VUV VEC4 (2 VEC2) OR COLOR VEC4
-	static constexpr GLint LAYOUT_LMSTYLES = 10; // 4 STYLE IDX AS IVEC4
+	static constexpr GLint LAYOUT_LMIDX = 8; // LM IDX IVEC4
+	static constexpr GLint LAYOUT_LMUV01_COLOR2 = 9; // UV VEC4 (2 VEC2) OR COLOR VEC4
+	static constexpr GLint LAYOUT_LMUV23_COLOR3 = 10; // VUV VEC4 (2 VEC2) OR COLOR VEC4
+	static constexpr GLint LAYOUT_LMSTYLES = 11; // 4 STYLE IDX AS IVEC4
 	//================================
 	
 	static constexpr GLint BINDING_DIFFUSE = 0;
@@ -60,6 +61,8 @@ namespace howler {
 	static constexpr uint8_t LIGHTMAP_MODE_WHITEIMAGE = 3;
 	
 	using vertex_colors_t = qm::vec3_t;
+	
+	using lightmap_idx_t = std::array<uint16_t, LIGHTMAP_NUM>;
 	
 	using lightmap_uv_t = std::array<qm::vec2_t, LIGHTMAP_NUM>;
 	using lightmap_color_t = std::array<qm::vec4_t, LIGHTMAP_NUM>;
@@ -231,12 +234,13 @@ namespace howler {
 //================================================================
 	
 	struct q3texture {
-		q3texture(GLsizei width, GLsizei height, bool mipmaps = true, GLenum type = GL_RGBA8);
+		q3texture(GLsizei width, GLsizei height, GLsizei depth = 1, bool mipmaps = true, GLenum type = GL_RGBA8);
 		q3texture(q3texture const &) = delete;
 		q3texture(q3texture &&) = delete;
 		~q3texture();
 		
-		void upload(GLsizei width, GLsizei height, void const * data, GLenum format = GL_RGBA, GLenum data_type = GL_UNSIGNED_BYTE, GLint xoffs = 0, GLint yoffs = 0);
+		void upload2D(GLsizei width, GLsizei height, void const * data, GLenum format = GL_RGBA, GLenum data_type = GL_UNSIGNED_BYTE, GLint xoffs = 0, GLint yoffs = 0);
+		void upload3D(GLsizei width, GLsizei height, GLsizei depth, void const * data, GLenum format = GL_RGBA, GLenum data_type = GL_UNSIGNED_BYTE, GLint xoffs = 0, GLint yoffs = 0, GLint zoffs = 0);
 		void clear();
 		void generate_mipmaps();
 		
@@ -249,7 +253,7 @@ namespace howler {
 		constexpr bool is_transparent() const { return m_transparent; }
 	private:
 		GLuint m_handle = 0;
-		GLsizei m_width, m_height;
+		GLsizei m_width, m_height, m_depth;
 		bool m_mips;
 		bool m_transparent = false;
 	};
@@ -749,6 +753,7 @@ namespace howler {
 				qm::vec2_t uv;
 				qm::vec3_t normal;
 				qm::vec4_t color;
+				lightmap_idx_t lm_idx;
 				lightmap_uv_t lm_uv;
 				lightstylesidx_t styles;
 			};
@@ -806,7 +811,8 @@ namespace howler {
 			qm::vec3_t xyz;
 			qm::vec2_t uv;
 			qm::vec3_t normal;
-			qm::vec2_t lm_uvs[4];
+			lightmap_idx_t lm_idx;
+			lightmap_uv_t lm_uvs;
 			qm::vec4_t lm_colors[4];
 			lightstylesidx_t styles;
 		};
@@ -892,7 +898,6 @@ namespace howler {
 		std::vector<q3worldnode> m_nodes;
 		size_t m_nodes_leafs_offset;
 		
-		int32_t m_lightmap_span = -1;
 		q3texture_ptr m_lightmap = nullptr;
 		
 		/*

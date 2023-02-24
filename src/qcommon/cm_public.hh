@@ -31,14 +31,11 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 typedef struct cNode_s {
 	cplane_t	*plane;
 	int32_t		children[2];		// negative numbers are leafs
-	qm::ivec3_t	mins, maxs;
 } cNode_t;
 
 typedef struct cLeaf_s {
 	int32_t		cluster;
 	int32_t		area;
-	
-	qm::ivec3_t	mins, maxs;
 
 	ptrdiff_t	firstLeafBrush;
 	int32_t		numLeafBrushes;

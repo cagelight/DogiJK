@@ -244,14 +244,15 @@ void CM_TestInLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *l
 	if ( !cm_noCurves->integer ) {
 #endif //BSPC
 		for ( k = 0 ; k < leaf->numLeafSurfaces ; k++ ) {
-			patch = local->surfaces[ local->leafsurfaces[ leaf->firstLeafSurface + k ] ];
+			auto patchnum = local->leafsurfaces[ leaf->firstLeafSurface + k ];
+			patch = local->surfaces[patchnum];
 			if ( !patch ) {
 				continue;
 			}
-			if ( tw->checked_patches[k] ) {
+			if ( tw->checked_patches[patchnum] ) {
 				continue;	// already checked this brush in another leaf
 			}
-			tw->checked_patches[k] = true;
+			tw->checked_patches[patchnum] = true;
 
 			if ( !(patch->contents & tw->contents)) {
 				continue;
@@ -682,14 +683,15 @@ void CM_TraceThroughLeaf( traceWork_t *tw, trace_t &trace, clipMap_t *local, cLe
 	if ( !cm_noCurves->integer ) {
 #endif
 		for ( k = 0 ; k < leaf->numLeafSurfaces ; k++ ) {
-			patch = local->surfaces[ local->leafsurfaces[ leaf->firstLeafSurface + k ] ];
+			auto patchnum = local->leafsurfaces[ leaf->firstLeafSurface + k ];
+			patch = local->surfaces[patchnum];
 			if ( !patch ) {
 				continue;
 			}
-			if ( tw->checked_patches[k] ) {
+			if ( tw->checked_patches[patchnum] ) {
 				continue;	// already checked this brush in another leaf
 			}
-			tw->checked_patches[k] = true;
+			tw->checked_patches[patchnum] = true;
 
 			if ( !(patch->contents & tw->contents) ) {
 				continue;
@@ -1041,14 +1043,15 @@ void CM_TraceToLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *
 	if ( !cm_noCurves->integer ) {
 #endif
 		for ( k = 0 ; k < leaf->numLeafSurfaces ; k++ ) {
-			patch = local->surfaces[ local->leafsurfaces[ leaf->firstLeafSurface + k ] ];
+			auto patchnum = local->leafsurfaces[ leaf->firstLeafSurface + k ];
+			patch = local->surfaces[patchnum];
 			if ( !patch ) {
 				continue;
 			}
-			if ( tw->checked_patches[k] ) {
+			if ( tw->checked_patches[patchnum] ) {
 				continue;	// already checked this brush in another leaf
 			}
-			tw->checked_patches[k] = true;
+			tw->checked_patches[patchnum] = true;
 
 			if ( !(patch->contents & tw->contents) ) {
 				continue;

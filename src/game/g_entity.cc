@@ -160,6 +160,16 @@ bool gentity_t::add_bmodel_physics() {
 	return true;
 }
 
+void gentity_t::remove_physics() {
+	auto physics = get_component<GEntPhysics>();
+	if (physics) {
+		g_phys->remove_object(physics->object);
+		physics->object.reset();
+		this->s.eFlags &= ~EF_PHYSICS;
+	}
+	// FIXME -- DELETE COMPONENT
+}
+
 void gentity_t::set_origin(vec3_t const origin) {
 	VectorCopy( origin, s.pos.trBase );
 	s.pos.trType = TR_STATIONARY;

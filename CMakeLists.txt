@@ -30,7 +30,7 @@ endif()
 if( BUILD_CLIENT )
 	pkg_check_modules( JPEG REQUIRED IMPORTED_TARGET libjpeg )
 	pkg_check_modules( PNG  REQUIRED IMPORTED_TARGET libpng )
-	pkg_check_modules( JXL  REQUIRED IMPORTED_TARGET libjxl )
+	pkg_check_modules( JXL  REQUIRED IMPORTED_TARGET libjxl>=0.7 )
 	pkg_check_modules( SDL2 REQUIRED IMPORTED_TARGET sdl2 )
 endif()
 

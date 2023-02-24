@@ -307,7 +307,16 @@ static void DrawTris (shaderCommands_t *input) {
 	glColor3f (1,1,1);
 
 	GL_State( GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE );
-	glDepthRange( 0, 0 );
+	
+	switch (r_showtris->integer) {
+	default:
+	case 1:
+		glDepthRange( 0, 0 );
+		break;
+	case 2:
+		glEnable( GL_POLYGON_OFFSET_LINE );
+		glPolygonOffset( r_offsetFactor->value, r_offsetUnits->value );
+	}
 
 	glDisableClientState (GL_COLOR_ARRAY);
 	glDisableClientState (GL_TEXTURE_COORD_ARRAY);
@@ -325,7 +334,15 @@ static void DrawTris (shaderCommands_t *input) {
 		glUnlockArraysEXT();
 		GLimp_LogComment( "glUnlockArraysEXT\n" );
 	}
-	glDepthRange( 0, 1 );
+	
+	switch (r_showtris->integer) {
+	default:
+	case 1:
+		glDepthRange( 0, 1 );
+		break;
+	case 2:
+		glDisable( GL_POLYGON_OFFSET_LINE );
+	}
 }
 
 

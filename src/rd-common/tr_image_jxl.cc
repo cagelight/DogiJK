@@ -92,17 +92,17 @@ struct JXLWriter {
 		m_info.num_color_channels = 3;
 		m_info.intensity_target = 255;
 		m_info.uses_original_profile = fuzz ? JXL_FALSE : JXL_TRUE;
-		m_info.orientation = JXL_ORIENT_FLIP_VERTICAL;
+		m_info.orientation = JXL_ORIENT_IDENTITY;
 		JXLEE(JxlEncoderSetBasicInfo(m_enc, &m_info));
 
 		JxlColorEncoding color_profile;
 		JxlColorEncodingSetToSRGB(&color_profile, JXL_FALSE);
 		JXLEE(JxlEncoderSetColorEncoding(m_enc, &color_profile));
 		
-		m_opt = JxlEncoderOptionsCreate(m_enc, nullptr);
-		JXLEE(JxlEncoderOptionsSetDistance(m_opt, fuzz));
+		m_opt = JxlEncoderFrameSettingsCreate(m_enc, nullptr);
+		JXLEE(JxlEncoderSetFrameDistance(m_opt, fuzz));
 		JXLEE(JxlEncoderOptionsSetLossless(m_opt, fuzz ? JXL_FALSE : JXL_TRUE));
-		JXLEE(JxlEncoderOptionsSetEffort(m_opt, effort));
+		JXLEE(JxlEncoderFrameSettingsSetOption(m_opt, JXL_ENC_FRAME_SETTING_EFFORT, effort));
 		
 		JXLEE(JxlEncoderAddImageFrame(m_opt, &PFMT, buf.data(), buf.size()));
 		JxlEncoderCloseInput(m_enc);

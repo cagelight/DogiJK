@@ -1623,6 +1623,8 @@ typedef struct cgs_s {
 
 	int					numMiscStaticModels;
 	cg_staticmodel_t	miscStaticModels[MAX_STATIC_MODELS];
+	
+	int32_t svseed;
 
 } cgs_t;
 

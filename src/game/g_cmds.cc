@@ -3793,6 +3793,8 @@ static void Cmd_Target_InfoMaster(gentity_t * player, gentity_t * target, bool v
 	
 	tib.field((target->flags & FL_INACTIVE) ? "Active: No" : "Active: Yes");
 	tib.field("Classname", target->classname);
+	tib.field("Model", target->model, true);
+	tib.field("Model2", target->model2, true);
 	tib.flags("Spawnflags", target->spawnflags, 12);
 	tib.field("Target", target->target, true);
 	tib.field("Target2", target->target2, true);
@@ -4018,6 +4020,8 @@ static void Cmd_TraceShader_f(gentity_t * player) {
 // EASTER EGG
 // ================================================================
 
+#include <ranges>
+
 static void Cmd_EEgg_f(gentity_t * player) {
 	
 	if (trap->Argc() <= 1) {
@@ -4028,6 +4032,8 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			{ "forget", "Forget if locations have already been used, allowing eggs to be placed there again." },
 			{ "init", "Initialize the eegg system, or reset the current eegg state to default." },
 			{ "list", "List currently spawned egg locations." },
+			{ "mark", "Mark the current location as an explore starting point." },
+			{ "mark_spawns", "Mark all player spawns." },
 			{ "place", "Place eggs based on scores from the 'explore' phase. <number of eggs to place>" },
 			{ "shrink", "Shrink the eegg buffer to the specified memory usage percentage. <percent>" },
 			{ "stats", "Show stats about the current state." },
@@ -4086,18 +4092,21 @@ static void Cmd_EEgg_f(gentity_t * player) {
 	struct EEggCMDPers {
 		EEggPathfinder path;
 		std::atomic_bool working { false };
+		std::vector<qm::vec3_t> marks;
 	};
 	
 	static std::unique_ptr<EEggCMDPers> pers;
 	
 	if (cmd == "init") {
 		
+		/*
 		if (!pers) {
 			// not sure why I have to do this, sometimes the first explore is really, really, really inefficient
 			// FIXME -- figure out why
 			pers = std::make_unique<EEggCMDPers>();
 			pers->path.explore(player->r.currentOrigin, 1, std::chrono::milliseconds(50));
 		}
+		*/
 		
 		pers = std::make_unique<EEggCMDPers>();
 		
@@ -4168,15 +4177,14 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			return;
 		}
 		
-		float * cullp = new float;
-		float & cull = *cullp;
+		float cull = 1;
 		
 		if (trap->Argc() > 2) {
 			std::array<char, 8> buf;
 			trap->Argv(2, buf.data(), buf.size());
 			cull = std::strtod(buf.data(), nullptr);
 			if (cull > 100) cull = 100;
-			if (cull < 0) cull = 0;
+			if (cull < 1) cull = 1;
 		}
 		
 		trap->SendServerCommand( player - g_entities, va("print \"eegg: truncating the eegg buffer to %.2f (percent) usage.\n\"", cull) );
@@ -4200,6 +4208,20 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		return;
 	}
 	
+	if (cmd == "mark") {
+		pers->marks.push_back(player->r.currentOrigin);
+		trap->SendServerCommand( -1, va("print \"eegg: position marked. %hu positioned have been marked.\n\"", pers->marks.size()) );
+		return;
+	}
+	
+	if (cmd == "mark_spawns") {
+		auto spawns = G_FindAll([](gentity_t * ent){ return ent->classname == "info_player_deathmatch"; });
+		auto positions_view = spawns | std::ranges::views::transform([](gentity_t * e){ return qm::vec3_t(e->s.origin);});
+		std::ranges::copy(positions_view.begin(), positions_view.end(), std::back_inserter(pers->marks));
+		trap->SendServerCommand( -1, va("print \"eegg: all spawn points marked. %hu positioned have been marked.\n\"", pers->marks.size()) );
+		return;
+	}
+	
 	if (cmd == "explore") {
 		if (pers->working) {
 			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
@@ -4207,7 +4229,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		}
 		
 		std::chrono::high_resolution_clock::duration allotted_time = std::chrono::seconds(5);
-		uint16_t batches = 1;
+		uint16_t subbatches = 1;
 		
 		if (trap->Argc() > 2) {
 			std::array<char, 8> buf;
@@ -4218,7 +4240,7 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		if (trap->Argc() > 3) {
 			std::array<char, 8> buf;
 			trap->Argv(3, buf.data(), buf.size());
-			batches = std::strtol(buf.data(), nullptr, 10);
+			subbatches = std::strtol(buf.data(), nullptr, 10);
 		}
 		
 		float task_mult = g_eegg_cpusage.value;
@@ -4226,13 +4248,16 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		float tasks = trap->GetTaskCore()->system_ideal_task_count() * task_mult;
 		if (tasks < 1) tasks = 1;
 		
+		uint16_t batches = pers->marks.size();
+		
 		pers->working = true;
-		trap->GetTaskCore()->enqueue([player, allotted_time, batches, tasks](){
+		trap->GetTaskCore()->enqueue([allotted_time, batches, subbatches, tasks](){
+			uint16_t total_batches = batches * subbatches;
 			uint locs = 0;
-			for (size_t i = 0; i < batches; i++) {
-				locs += pers->path.explore(player->r.currentOrigin, std::round(tasks), allotted_time / batches);
-				GTaskType task { [i, batches](){
-					trap->SendServerCommand( -1, va("print \"eegg: explore operation batch %hu of %hu complete.\n\"", i + 1, batches) );
+			for (size_t i = 0; i < total_batches; i++) {
+				locs += pers->path.explore(pers->marks[i % batches], std::round(tasks), allotted_time / total_batches);
+				GTaskType task { [i, total_batches](){
+					trap->SendServerCommand( -1, va("print \"eegg: explore operation batch %hu of %hu complete.\n\"", i + 1, total_batches) );
 				}};
 				G_Task_Enqueue(std::move(task));
 			}

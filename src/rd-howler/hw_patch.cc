@@ -38,6 +38,7 @@ private:
 		}
 		assert(A.styles == B.styles);
 		C.styles = A.styles;
+		C.lm_idx = A.lm_idx;
 		return C;
 	}
 	
@@ -222,6 +223,7 @@ q3world::q3worldmesh_proto_variant q3world::q3patchsubdivider::generate_surface(
 				v.uv,
 				v.normal,
 				protocolor(v.lm_colors[0]),
+				v.lm_idx,
 				lightmap_uv_t {
 					protouv(v.lm_uvs[0]),
 					protouv(v.lm_uvs[1]),

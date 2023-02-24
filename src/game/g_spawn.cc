@@ -1420,6 +1420,9 @@ void SP_worldspawn( void )
 	trap->SetConfigstring(CS_LIGHT_STYLES+(LS_STYLES_START*3)+0, defaultStyles[0][0]);
 	trap->SetConfigstring(CS_LIGHT_STYLES+(LS_STYLES_START*3)+1, defaultStyles[0][1]);
 	trap->SetConfigstring(CS_LIGHT_STYLES+(LS_STYLES_START*3)+2, defaultStyles[0][2]);
+	
+	level.seed = Q_irand();
+	trap->SetConfigstring(CS_SVSEED, std::to_string(level.seed).c_str());
 
 	for(i=1;i<LS_NUM_STYLES;i++)
 	{

@@ -146,6 +146,7 @@ void instance::shader_registry::load_shader(q3shader_ptr shad) {
 			stg.blend_src = GL_DST_COLOR;
 			stg.blend_dst = GL_ZERO;
 			stg.blend = true;
+			stg.clamp = true;
 		}
 	}
 	
@@ -466,6 +467,7 @@ bool q3shader::parse_stage(q3stage & stg, char const * & sptr, bool mips) {
 			token = COM_ParseExt(&sptr, qfalse);
 			if (!Q_stricmp("$lightmap", token)) {
 				stg.gen_map = q3stage::map_gen::lightmap;
+				stg.clamp = true;
 			} else if (!Q_stricmp("$noise", token)) {
 				stg.gen_map = q3stage::map_gen::mnoise;
 			} else if (!Q_stricmp("$alphanoise", token)) {

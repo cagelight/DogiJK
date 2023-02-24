@@ -318,19 +318,15 @@ void q3world::load_shaders() {
 void q3world::load_lightmaps() {
 	
 	auto lightmaps = m_bspr.lightmaps();
-
-	m_lightmap_span = qm::next_pow2(static_cast<int32_t>(std::ceil(std::sqrt(static_cast<float>(lightmaps.size())))));
-	size_t atlas_dim = m_lightmap_span * LIGHTMAP_DIM;
 	
 	if (lightmaps.size() <= 0) return;
 	
-	m_lightmap = make_q3texture(atlas_dim, atlas_dim, true);
+	m_lightmap = make_q3texture(LIGHTMAP_DIM, LIGHTMAP_DIM, lightmaps.size(), true);
 	m_lightmap->clear();
 	m_lightmap->set_transparent(false);
 
-	for (uint32_t atlas_y = 0, lightmap_i = 0; lightmap_i < lightmaps.size(); atlas_y++)
-		for (uint32_t atlas_x = 0; atlas_x < (uint32_t)m_lightmap_span && lightmap_i < lightmaps.size(); atlas_x++, lightmap_i++)
-			m_lightmap->upload(LIGHTMAP_DIM, LIGHTMAP_DIM, lightmaps[lightmap_i].pixels, GL_RGB, GL_UNSIGNED_BYTE, atlas_x * LIGHTMAP_DIM, atlas_y * LIGHTMAP_DIM);
+	for (size_t lightmap_i = 0; lightmap_i < lightmaps.size(); lightmap_i++)
+			m_lightmap->upload3D(LIGHTMAP_DIM, LIGHTMAP_DIM, 1, lightmaps[lightmap_i].pixels, GL_RGB, GL_UNSIGNED_BYTE, 0, 0, lightmap_i);
 
 	m_lightmap->generate_mipmaps();
 }
@@ -396,11 +392,14 @@ static constexpr uint8_t conv_lm_mode(int32_t lm_idx) {
 }
 
 qm::vec2_t q3world::uv_for_lightmap(int32_t idx, qm::vec2_t uv_in) {
+	return uv_in;
+	/*
 	if (!m_lightmap_span) return {0, 0};
 	int32_t x = idx % m_lightmap_span;
 	int32_t y = idx / m_lightmap_span;
 	qm::vec2_t uv_base {static_cast<float>(x), static_cast<float>(y)};
 	return (uv_base + uv_in) / m_lightmap_span;
+	*/
 }
 
 void q3world::load_surfaces(int32_t idx) {
@@ -510,6 +509,12 @@ void q3world::load_surfaces(int32_t idx) {
 							surf_verts[i].normal[0]
 						},
 						conv_color(surf_verts[i].color[0]),
+						lightmap_idx_t {
+							static_cast<uint16_t>(surfi.lightmap[0] > 0 ? surfi.lightmap[0] : 0),
+							static_cast<uint16_t>(surfi.lightmap[1] > 0 ? surfi.lightmap[1] : 0),
+							static_cast<uint16_t>(surfi.lightmap[2] > 0 ? surfi.lightmap[2] : 0),
+							static_cast<uint16_t>(surfi.lightmap[3] > 0 ? surfi.lightmap[3] : 0),
+						},
 						lightmap_uv_t {
 							uv_for_lightmap( surfi.lightmap[0], qm::vec2_t {
 								surf_verts[i].lightmap[0][0],
@@ -572,6 +577,12 @@ void q3world::load_surfaces(int32_t idx) {
 					qm::vec3_t {surf_verts[i].pos[1], surf_verts[i].pos[2], surf_verts[i].pos[0]},
 					qm::vec2_t {surf_verts[i].uv[0], surf_verts[i].uv[1]},
 					qm::vec3_t {surf_verts[i].normal[1], surf_verts[i].normal[2], surf_verts[i].normal[0]},
+					lightmap_idx_t {
+						static_cast<uint16_t>(surfi.lightmap[0] > 0 ? surfi.lightmap[0] : 0),
+						static_cast<uint16_t>(surfi.lightmap[1] > 0 ? surfi.lightmap[1] : 0),
+						static_cast<uint16_t>(surfi.lightmap[2] > 0 ? surfi.lightmap[2] : 0),
+						static_cast<uint16_t>(surfi.lightmap[3] > 0 ? surfi.lightmap[3] : 0),
+					},
 					{
 						uv_for_lightmap(surfi.lightmap[0], surf_verts[i].lightmap[0]),
 						uv_for_lightmap(surfi.lightmap[1], surf_verts[i].lightmap[1]),

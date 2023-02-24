@@ -195,6 +195,7 @@ struct gentity_t : public sharedEntity_t {
 	
 	bool add_obj_physics( char const * model_name, qm::vec3_t const & position = {0, 0, 0}, qm::vec3_t const & angles = { 0, 0, 0 } );
 	bool add_bmodel_physics();
+	void remove_physics();
 	
 	void set_origin(vec3_t const);
 
@@ -1024,6 +1025,8 @@ typedef struct level_locals_s {
 	gametype_t	gametype;
 	char		mapname[MAX_QPATH];
 	char		rawmapname[MAX_QPATH];
+	
+	int32_t seed;
 } level_locals_t;
 
 
@@ -1101,7 +1104,10 @@ qboolean	G_PlayerHasCustomSkeleton(gentity_t *ent);
 void	G_TeamCommand( team_t team, char *cmd );
 void	G_ScaleNetHealth(gentity_t *self);
 void	G_KillBox (gentity_t *ent);
+
 gentity_t *G_Find (gentity_t *from, std::function<bool(gentity_t *)> test);
+std::vector<gentity_t *> G_FindAll (std::function<bool(gentity_t *)> test);
+
 int		G_RadiusList ( vec3_t origin, float radius,	gentity_t *ignore, qboolean takeDamage, gentity_t *ent_list[MAX_GENTITIES]);
 
 void	G_Throw( gentity_t *targ, vec3_t newDir, float push );
