@@ -101,7 +101,7 @@ struct JXLWriter {
 		
 		m_opt = JxlEncoderFrameSettingsCreate(m_enc, nullptr);
 		JXLEE(JxlEncoderSetFrameDistance(m_opt, fuzz));
-		JXLEE(JxlEncoderOptionsSetLossless(m_opt, fuzz ? JXL_FALSE : JXL_TRUE));
+		JXLEE(JxlEncoderSetFrameLossless(m_opt, fuzz ? JXL_FALSE : JXL_TRUE));
 		JXLEE(JxlEncoderFrameSettingsSetOption(m_opt, JXL_ENC_FRAME_SETTING_EFFORT, effort));
 		
 		JXLEE(JxlEncoderAddImageFrame(m_opt, &PFMT, buf.data(), buf.size()));
@@ -136,7 +136,7 @@ struct JXLWriter {
 	
 private:
 	JxlEncoder * m_enc = nullptr;
-	JxlEncoderOptions * m_opt = nullptr;
+	JxlEncoderFrameSettings * m_opt = nullptr;
 	JxlEncoderStatus m_stat;
 	JxlBasicInfo m_info {};
 };
