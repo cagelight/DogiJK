@@ -1327,6 +1327,17 @@ static void ComputeColors( shaderStage_t *pStage, int forceRGBGen )
 				baDest->i = baSource->i;
 			}
 			break;
+		case CGEN_ENTITYSEEDHUE:
+			float hval = backEnd.currentEntity->e.shaderRNG % 255;
+			float rgb[3];
+			HSVtoRGB(hval / 255.0, 1.0, 1.0, rgb);
+			for ( i = 0; i < tess.numVertexes; i++ )
+			{
+				tess.svars.colors[i][0] = rgb[0] * 255;
+				tess.svars.colors[i][1] = rgb[1] * 255;
+				tess.svars.colors[i][2] = rgb[2] * 255;
+				tess.svars.colors[i][3] = 255;
+			}
 	}
 
 	//

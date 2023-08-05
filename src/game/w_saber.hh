@@ -80,12 +80,12 @@ typedef enum
 	NUM_EVASION_TYPES
 } evasionType_t;
 
-#define SABERMINS_X -3.0f//-24.0f
-#define SABERMINS_Y -3.0f//-24.0f
-#define SABERMINS_Z -3.0f//-8.0f
-#define SABERMAXS_X 3.0f//24.0f
-#define SABERMAXS_Y 3.0f//24.0f
-#define SABERMAXS_Z 3.0f//8.0f
+#define SABERMINS_X -2.0f//-24.0f
+#define SABERMINS_Y -2.0f//-24.0f
+#define SABERMINS_Z -2.0f//-8.0f
+#define SABERMAXS_X 2.0f//24.0f
+#define SABERMAXS_Y 2.0f//24.0f
+#define SABERMAXS_Z 2.0f//8.0f
 #define	SABER_MIN_THROW_DIST	80.0f
 
 extern int forcePowerNeeded[NUM_FORCE_POWER_LEVELS][NUM_FORCE_POWERS];

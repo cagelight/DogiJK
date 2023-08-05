@@ -259,6 +259,7 @@ typedef enum {
 	CGEN_FOG,				// standard fog
 	CGEN_CONST,				// fixed color
 	CGEN_LIGHTMAPSTYLE,
+	CGEN_ENTITYSEEDHUE,
 } colorGen_t;
 
 typedef enum {

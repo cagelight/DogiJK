@@ -59,3 +59,25 @@ models/dogijk/pbox_rimlight
 		blendFunc GL_DST_COLOR GL_ZERO
 	}
 }
+
+textures/dogijk/propcolor
+{
+	qer_editorimage	textures/editor/m_red
+	q3map_nolightmap
+	
+	{
+		map $whiteimage
+		rgbGen entitySeededHue
+	}
+	{
+		map $whiteimage
+		rgbGen lightingDiffuse
+		blendFunc GL_DST_COLOR GL_ZERO
+	}
+	{
+		map $whiteimage
+		rgbGen lightingDiffuse
+		alphaGen lightingSpecular
+		blendFunc GL_SRC_ALPHA GL_ONE
+	}
+}

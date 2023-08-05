@@ -103,6 +103,9 @@ objModel_t * Model_LoadObj(char const * name) {
 	bool all_good = true;
 	bool seekline = false;
 	long obj_buf_i = 0;
+	double scale = 1.0;
+	
+	objModel_t * mod = new objModel_t {};
 	
 	while (obj_buf_i < len && all_good) {
 		
@@ -172,7 +175,7 @@ objModel_t * Model_LoadObj(char const * name) {
 					break;
 				}
 				obj_buf_i += vi + 1;
-				float val = strtod(float_buf, nullptr) * size_mult;
+				float val = strtod(float_buf, nullptr) * size_mult * scale;
 				verts.push_back(val);
 				memset(float_buf, FLOAT_BUF_LEN, sizeof(char));
 			}
@@ -308,6 +311,77 @@ objModel_t * Model_LoadObj(char const * name) {
 			obj_buf_i -= 2;
 			seekline = true;
 			continue;
+		} else if (!strcmp(cmd_buf, "scale")) {
+			
+			std::array<char, 64> SCALE_BUF {};
+			
+			int ci = 0;
+			while (true) {
+				switch(obj_buf[obj_buf_i]) {
+				case '\r':
+				case '\n':
+				case ' ':
+					SCALE_BUF[ci++] = '\0';
+					obj_buf_i++;
+					break;
+				default:
+					SCALE_BUF[ci++] = obj_buf[obj_buf_i];
+					obj_buf_i++;
+					continue;
+				}
+				break;
+			}
+
+			scale = std::strtod(SCALE_BUF.data(), nullptr);
+
+			obj_buf_i -= 2;
+			seekline = true;
+			continue;
+		} else if (!strcmp(cmd_buf, "physics")) {
+			
+			std::string buffer;
+			buffer.reserve(64);
+			
+			while (true) {
+				switch(obj_buf[obj_buf_i]) {
+				case '\r':
+				case '\n':
+				case ' ':
+					obj_buf_i++;
+					break;
+				default:
+					buffer.push_back(obj_buf[obj_buf_i]);
+					obj_buf_i++;
+					continue;
+				}
+				break;
+			}
+			
+			if (buffer == "sphere") {
+				mod->physics = objModel_t::PhysicsType::SPHERE;
+				buffer.clear();
+				
+				while (true) {
+					switch(obj_buf[obj_buf_i]) {
+					case '\r':
+					case '\n':
+					case ' ':
+						obj_buf_i++;
+						break;
+					default:
+						buffer.push_back(obj_buf[obj_buf_i]);
+						obj_buf_i++;
+						continue;
+					}
+					break;
+				}
+				
+				mod->physics_sphere.radius = std::strtod(buffer.data(), nullptr) * size_mult * scale;
+			}
+			
+			obj_buf_i -= 2;
+			seekline = true;
+			continue;
 		} else {
 			seekline = true;
 			continue;
@@ -319,8 +393,6 @@ objModel_t * Model_LoadObj(char const * name) {
 		Com_Printf("Obj Load Failed.\n");
 		return nullptr;
 	}
-	
-	objModel_t * mod = new objModel_t;
 	
 	VectorSet(mod->mins, verts[0], verts[1], verts[2]);
 	VectorSet(mod->maxs, verts[0], verts[1], verts[2]);

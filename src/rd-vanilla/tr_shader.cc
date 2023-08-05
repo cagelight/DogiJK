@@ -1429,6 +1429,10 @@ static qboolean ParseStage( shaderStage_t *stage, const char **text )
 			{
 				stage->rgbGen = CGEN_ONE_MINUS_ENTITY;
 			}
+			else if ( !Q_stricmp( token, "entitySeededHue" ) )
+			{
+				stage->rgbGen = CGEN_ENTITYSEEDHUE;
+			}
 			else if ( !Q_stricmp( token, "vertex" ) )
 			{
 				stage->rgbGen = CGEN_VERTEX;

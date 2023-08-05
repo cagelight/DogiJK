@@ -612,6 +612,49 @@ void	G_TouchTriggers( gentity_t *ent ) {
 	}
 }
 
+void	G_TouchTriggersPhysics( gentity_t *ent ) {
+	int			i, num;
+	int			touch[MAX_GENTITIES];
+	gentity_t	*hit;
+	trace_t		trace;
+	vec3_t		mins, maxs;
+	static vec3_t	range = { 64, 64, 64 };
+
+	VectorSubtract( ent->s.origin, range, mins );
+	VectorAdd( ent->s.origin, range, maxs );
+
+	num = trap->EntitiesInBox( mins, maxs, touch, MAX_GENTITIES );
+
+	// can't use ent->r.absmin, because that has a one unit pad
+	VectorAdd( ent->s.origin, ent->r.mins, mins );
+	VectorAdd( ent->s.origin, ent->r.maxs, maxs );
+
+	for ( i=0 ; i<num ; i++ ) {
+		hit = &g_entities[touch[i]];
+
+		if ( !hit->touch && !ent->touch ) {
+			continue;
+		}
+		if ( !( hit->r.contents & CONTENTS_TRIGGER ) ) {
+			continue;
+		}
+		
+		if ( !trap->EntityContact( mins, maxs, (sharedEntity_t *)hit, qfalse ) ) {
+			continue;
+		}
+
+		memset( &trace, 0, sizeof(trace) );
+
+		if ( hit->touch ) {
+			hit->touch (hit, ent, &trace);
+		}
+
+		if ( ( ent->r.svFlags & SVF_BOT ) && ( ent->touch ) ) {
+			ent->touch( ent, hit, &trace );
+		}
+	}
+}
+
 
 /*
 ============

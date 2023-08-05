@@ -6119,7 +6119,7 @@ static QINLINE void saberCheckRadiusDamage(gentity_t *saberent, int returning)
 	}
 }
 
-#define THROWN_SABER_COMP
+//#define THROWN_SABER_COMP
 
 static QINLINE void saberMoveBack( gentity_t *ent, qboolean goingBack )
 {
@@ -8642,7 +8642,7 @@ nextStep:
 
 				saberent->s.apos.trType = TR_LINEAR;
 				saberent->s.apos.trDelta[0] = 0;
-				saberent->s.apos.trDelta[1] = 800;
+				saberent->s.apos.trDelta[1] = 1600;
 				saberent->s.apos.trDelta[2] = 0;
 
 				saberent->s.pos.trType = TR_LINEAR;

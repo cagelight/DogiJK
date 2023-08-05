@@ -40,6 +40,8 @@ static cvar_t *in_joystickThreshold = NULL;
 static cvar_t *in_joystickNo        = NULL;
 static cvar_t *in_joystickUseAnalog = NULL;
 
+static cvar_t *in_numlockKeypad     = NULL;
+
 static SDL_Window *SDL_window = NULL;
 
 #define CTRL(a) ((a)-'a'+1)
@@ -191,7 +193,7 @@ static bool IN_NumLockEnabled( void )
 
 static void IN_TranslateNumpad( SDL_Keysym *keysym, fakeAscii_t *key )
 {
-	if ( IN_NumLockEnabled() )
+	if ( IN_NumLockEnabled() && in_numlockKeypad->integer )
 	{
 		switch ( keysym->sym )
 		{
@@ -611,6 +613,8 @@ void IN_Init( void *windowData )
 	// mouse variables
 	in_mouse = Cvar_Get( "in_mouse", "1", CVAR_ARCHIVE );
 	in_nograb = Cvar_Get( "in_nograb", "0", CVAR_ARCHIVE_ND );
+	
+	in_numlockKeypad  = Cvar_Get( "in_numlockKeypad", "0", CVAR_ARCHIVE_ND );
 
 	SDL_StartTextInput( );
 

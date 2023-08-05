@@ -3126,6 +3126,7 @@ void G_RunFrame( int levelTime ) {
 		}
 		
 		if ( ent->s.eType == ET_PROP ) {
+			G_TouchTriggersPhysics( ent );
 			G_RunPhysicsProp( ent );
 			continue;
 		}

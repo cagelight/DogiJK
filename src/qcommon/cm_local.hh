@@ -88,7 +88,7 @@ typedef struct traceWork_s { //rwwRMG - modified
 	bool			getout;
 	
 	std::vector<bool> checked_patches;
-	std::vector<bool> checked_brushes;
+	std::vector<bool> checked_leafs;
 
 } traceWork_t;
 

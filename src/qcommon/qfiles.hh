@@ -188,25 +188,42 @@ typedef struct objElement_s {
 typedef objElement_t objFace_t[3];
 
 typedef struct objSurface_s {
-	int32_t					ident;
+	int32_t				ident;
 	char				shader[MAX_QPATH];
-	int32_t					shaderIndex;
-	int32_t					numFaces;
+	int32_t				shaderIndex;
+	int32_t				numFaces;
 	objFace_t *			faces;
 } objSurface_t;
 
-typedef struct objModel_s {
+struct objModel_t {
+	
+	enum struct PhysicsType {
+		CONVEX_HULL,
+		SPHERE,
+		CAPSULE
+	};
+	
 	char				name[MAX_QPATH];
-	int32_t					numVerts;
-	int32_t					numUVs;
-	int32_t					numNormals;
-	int32_t 				numSurfaces;
+	int32_t				numVerts;
+	int32_t				numUVs;
+	int32_t				numNormals;
+	int32_t 			numSurfaces;
 	float *				verts;
 	float *				UVs;
 	float *				normals;
 	objSurface_t * 		surfaces;
 	vec3_t 				mins, maxs;
-} objModel_t;
+	PhysicsType			physics;
+	union {
+		struct {
+			float 		radius;
+		} physics_sphere;
+		struct {
+			float		height;
+			float		radius;
+		} physics_capsule;
+	};
+};
 
 
 /*

@@ -172,7 +172,7 @@ static state_object<bool, polygon_offset_enabled_func> polygon_offset_enabled {f
 
 using polygon_offset_pair = std::pair<float, float>;
 inline static void polygon_offset_func(polygon_offset_pair const & v) { glPolygonOffset(v.first, v.second); }
-static state_object<polygon_offset_pair, polygon_offset_func> polygonoffset {{-1, -2}};
+static state_object<polygon_offset_pair, polygon_offset_func> polygonoffset {{-1, -5}};
 
 void gl::polygon_mode(GLenum face, GLenum mode) {
 	polygonmode.set({face, mode});

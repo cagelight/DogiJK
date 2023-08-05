@@ -1,3 +1,7 @@
+# non-standard extra data only understood by DogiJK
+scale 1.0
+
+# normal OBJ data
 o Cube
 v -2.000000 2.000000 2.000000
 v -2.000000 -2.000000 -2.000000

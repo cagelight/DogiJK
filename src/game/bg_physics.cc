@@ -331,7 +331,7 @@ struct bullet_world_t : public physics_world_t {
 		}
 		
 		void set_velocity( qm::vec3_t const & ) override {
-			
+			std::terminate();
 		}
 		
 		void impulse( qm::vec3_t const & ) override {
@@ -394,44 +394,49 @@ struct bullet_world_t : public physics_world_t {
 		
 		std::shared_ptr<bullet_object_t> object = std::make_shared<bullet_object_t>(world_data);
 		
-		if (model->numSurfaces == 1) {
-			
-			btConvexHullShape * hull = new btConvexHullShape;
-			object->shape = hull;
-			for (int i = 0; i < model->surfaces[0].numFaces; i++)
-			for (int j = 0; j < 3; j++) {
-				
-				hull->addPoint({
-					model->surfaces[0].faces[i][j].vertex[0],
-					model->surfaces[0].faces[i][j].vertex[1],
-					model->surfaces[0].faces[i][j].vertex[2],
-				}, false);
-			}
-			hull->recalcLocalAabb();
-			
-		} else {
-			
-			btCompoundShape * compound = new btCompoundShape;
-			object->shape = compound;
-			
-			for (int si = 0; si < model->numSurfaces; si++) {
+		if (model->physics == objModel_t::PhysicsType::CONVEX_HULL) {
+			if (model->numSurfaces == 1) {
 				
 				btConvexHullShape * hull = new btConvexHullShape;
-				
-				for (int i = 0; i < model->surfaces[si].numFaces; i++)
+				object->shape = hull;
+				for (int i = 0; i < model->surfaces[0].numFaces; i++)
 				for (int j = 0; j < 3; j++) {
 					
 					hull->addPoint({
-						model->surfaces[si].faces[i][j].vertex[0],
-						model->surfaces[si].faces[i][j].vertex[1],
-						model->surfaces[si].faces[i][j].vertex[2],
+						model->surfaces[0].faces[i][j].vertex[0],
+						model->surfaces[0].faces[i][j].vertex[1],
+						model->surfaces[0].faces[i][j].vertex[2],
 					}, false);
 				}
 				hull->recalcLocalAabb();
-				compound->addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, hull );
+				
+			} else {
+				
+				btCompoundShape * compound = new btCompoundShape;
+				object->shape = compound;
+				
+				for (int si = 0; si < model->numSurfaces; si++) {
+					
+					btConvexHullShape * hull = new btConvexHullShape;
+					
+					for (int i = 0; i < model->surfaces[si].numFaces; i++)
+					for (int j = 0; j < 3; j++) {
+						
+						hull->addPoint({
+							model->surfaces[si].faces[i][j].vertex[0],
+							model->surfaces[si].faces[i][j].vertex[1],
+							model->surfaces[si].faces[i][j].vertex[2],
+						}, false);
+					}
+					hull->recalcLocalAabb();
+					compound->addChildShape( btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} }, hull );
+				}
+				
+				compound->recalculateLocalAabb();
 			}
-			
-			compound->recalculateLocalAabb();
+		} else if (model->physics == objModel_t::PhysicsType::SPHERE) {
+			btSphereShape * sphere = new btSphereShape( model->physics_sphere.radius );
+			object->shape = sphere;
 		}
 		
 		btVector3 inertia;

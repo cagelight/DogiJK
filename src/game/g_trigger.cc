@@ -940,6 +940,36 @@ void trigger_push_touch (gentity_t *self, gentity_t *other, trace_t *trace ) {
 	{//set by target_deactivate
 		return;
 	}
+	
+	if (other->s.eFlags & EF_PHYSICS) {
+		vec3_t velocity;
+		
+		if ( self->spawnflags & PUSH_LINEAR ) {
+			
+			VectorScale( self->s.origin2, self->speed * g_physics_pushmult.value, velocity );
+			
+		} else if ( self->spawnflags & PUSH_RELATIVE ) {
+			
+			vec3_t dir;
+			VectorSubtract( self->s.origin2, other->r.currentOrigin, dir );
+			if ( self->speed )
+			{
+				VectorNormalize( dir );
+				VectorScale( dir, self->speed, dir );
+			}
+			VectorScale( dir, g_physics_pushmult.value, dir );
+			VectorCopy( dir, velocity );
+			
+		} else {
+			VectorCopy( self->s.origin2, velocity );
+			VectorScale( velocity, g_physics_pushmult.value, velocity );
+		}
+		
+		
+		GEntPhysics * phys = other->get_component<GEntPhysics>();
+		phys->object->set_velocity(velocity);
+		return;
+	}
 
 	if ( !(self->spawnflags&PUSH_LINEAR) )
 	{//normal throw
@@ -1173,6 +1203,16 @@ void SP_trigger_push( gentity_t *self ) {
 }
 
 void Use_target_push( gentity_t *self, gentity_t *other, gentity_t *activator ) {
+	
+	if (activator->s.eFlags & EF_PHYSICS) {
+		GEntPhysics * physics = activator->get_component<GEntPhysics>();
+		if (!physics) return;
+		
+		vec3_t tmp;
+		VectorScale(self->s.origin2, g_physics_pushmult.value, tmp);
+		physics->object->set_velocity(tmp);
+	}
+	
 	if ( !activator->client ) {
 		return;
 	}

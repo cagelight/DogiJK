@@ -220,10 +220,7 @@ void CM_TestInLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *l
 	for (k=0 ; k<leaf->numLeafBrushes ; k++) {
 		brushnum = local->leafbrushes[leaf->firstLeafBrush+k];
 		
-		if ( tw->checked_brushes[brushnum] ) {
-			continue;	// already checked this brush in another leaf
-		}
-		tw->checked_brushes[brushnum] = true;
+		// FIXME -- CHECK
 		
 		b = &local->brushes[brushnum];
 
@@ -658,10 +655,7 @@ void CM_TraceThroughLeaf( traceWork_t *tw, trace_t &trace, clipMap_t *local, cLe
 	for ( k = 0 ; k < leaf->numLeafBrushes ; k++ ) {
 		brushnum = local->leafbrushes[leaf->firstLeafBrush+k];
 		
-		if ( tw->checked_brushes[brushnum] ) {
-			continue;	// already checked this brush in another leaf
-		}
-		tw->checked_brushes[brushnum] = true;
+		// FIXME -- CHECK
 
 		b = &local->brushes[brushnum];
 
@@ -1001,71 +995,6 @@ void CM_TraceBoundingBoxThroughCapsule( traceWork_t *tw, trace_t &trace, clipHan
 //=========================================================================================
 
 /*
-================
-CM_TraceToLeaf
-================
-*/
-void CM_TraceToLeaf( traceWork_t *tw, trace_t &trace, cLeaf_t *leaf, clipMap_t *local )
-{
-	int			k;
-	int			brushnum;
-	cbrush_t	*b;
-	cPatch_t	*patch;
-
-	// trace line against all brushes in the leaf
-	for ( k = 0 ; k < leaf->numLeafBrushes ; k++ )
-	{
-		brushnum = local->leafbrushes[leaf->firstLeafBrush + k];
-		
-		if ( tw->checked_brushes[brushnum] ) {
-			continue;	// already checked this brush in another leaf
-		}
-		tw->checked_brushes[brushnum] = true;
-
-		b = &local->brushes[brushnum];
-
-		if ( !(b->contents & tw->contents) )
-		{
-			continue;
-		}
-
-		CM_TraceThroughBrush( tw, trace, b, false);
-		if ( !trace.fraction )
-		{
-			return;
-		}
-	}
-
-	// trace line against all patches in the leaf
-#ifdef BSPC
-	if (1) {
-#else
-	if ( !cm_noCurves->integer ) {
-#endif
-		for ( k = 0 ; k < leaf->numLeafSurfaces ; k++ ) {
-			auto patchnum = local->leafsurfaces[ leaf->firstLeafSurface + k ];
-			patch = local->surfaces[patchnum];
-			if ( !patch ) {
-				continue;
-			}
-			if ( tw->checked_patches[patchnum] ) {
-				continue;	// already checked this brush in another leaf
-			}
-			tw->checked_patches[patchnum] = true;
-
-			if ( !(patch->contents & tw->contents) ) {
-				continue;
-			}
-
-			CM_TraceThroughPatch( tw, trace, patch );
-			if ( !trace.fraction ) {
-				return;
-			}
-		}
-	}
-}
-
-/*
 ==================
 CM_TraceThroughTree
 
@@ -1091,6 +1020,10 @@ void CM_TraceThroughTree( traceWork_t *tw, trace_t &trace, clipMap_t *local, int
 
 	// if < 0, we are in a leaf node
 	if (num < 0) {
+		if ( tw->checked_leafs[-1-num] ) {
+			return;	// already checked this leaf
+		}
+		tw->checked_leafs[-1-num] = true;
 		CM_TraceThroughLeaf( tw, trace, local, &local->leafs[-1-num] );
 		return;
 	}
@@ -1230,7 +1163,7 @@ void CM_Trace( trace_t *trace, const vec3_t start, const vec3_t end,
 
 	c_traces++;				// for statistics, may be zeroed
 	
-	tw.checked_brushes.resize(local->numLeafBrushes, 0);
+	tw.checked_leafs.resize(local->numLeafs, 0);
 	tw.checked_patches.resize(local->numLeafSurfaces, 0);
 
 	// fill in a default trace
