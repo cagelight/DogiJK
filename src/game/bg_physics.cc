@@ -293,6 +293,11 @@ struct bullet_world_t : public physics_world_t {
 			} else {
 				solid.body->setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);
 			}
+			solid.body->setFriction(1.0);
+			solid.body->setRollingFriction(2.0);
+			solid.body->setSpinningFriction(1.0);
+			solid.body->setAnisotropicFriction(solid.shape->getAnisotropicRollingFrictionDirection(), btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
+			solid.body->setRestitution(1.0);
 			solid.body->activate(true);
 			
 			shape_slick->recalculateLocalAabb();
@@ -305,7 +310,11 @@ struct bullet_world_t : public physics_world_t {
 			} else {
 				slick.body->setCollisionFlags(btCollisionObject::CF_STATIC_OBJECT);
 			}
-			slick.body->setFriction(0);
+			slick.body->setFriction(0.0);
+			slick.body->setRollingFriction(0.0);
+			slick.body->setSpinningFriction(0.0);
+			//slick.body->setAnisotropicFriction(solid.shape->getAnisotropicRollingFrictionDirection(), btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
+			slick.body->setRestitution(0.0);
 			slick.body->activate(true);
 			
 			parent->world->addRigidBody(solid.body);
@@ -394,7 +403,7 @@ struct bullet_world_t : public physics_world_t {
 		
 		std::shared_ptr<bullet_object_t> object = std::make_shared<bullet_object_t>(world_data);
 		
-		if (model->physics == objModel_t::PhysicsType::CONVEX_HULL) {
+		if (model->physics.type == objModel_t::PhysicsType::CONVEX_HULL) {
 			if (model->numSurfaces == 1) {
 				
 				btConvexHullShape * hull = new btConvexHullShape;
@@ -434,8 +443,8 @@ struct bullet_world_t : public physics_world_t {
 				
 				compound->recalculateLocalAabb();
 			}
-		} else if (model->physics == objModel_t::PhysicsType::SPHERE) {
-			btSphereShape * sphere = new btSphereShape( model->physics_sphere.radius );
+		} else if (model->physics.type == objModel_t::PhysicsType::SPHERE) {
+			btSphereShape * sphere = new btSphereShape( model->physics.type_sphere.radius );
 			object->shape = sphere;
 		}
 		
@@ -445,6 +454,14 @@ struct bullet_world_t : public physics_world_t {
 		object->shape->calculateLocalInertia( mass, inertia );
 		object->motion = new btDefaultMotionState { btTransform { btQuaternion {0, 0, 0, 1}, btVector3 {0, 0, 0} } };
 		object->body = new btRigidBody {{ mass, object->motion, object->shape, inertia }};
+		
+		object->body->setFriction(1.0);
+		object->body->setRollingFriction(2.0);
+		object->body->setSpinningFriction(1.0);
+		object->body->setAnisotropicFriction(object->shape->getAnisotropicRollingFrictionDirection(), btCollisionObject::CF_ANISOTROPIC_ROLLING_FRICTION);
+		
+		object->body->setRestitution(model->physics.restitution);
+		
 		world_data->world->addRigidBody(object->body);
 		
 		objects.insert(object);

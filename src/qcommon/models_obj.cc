@@ -358,7 +358,7 @@ objModel_t * Model_LoadObj(char const * name) {
 			}
 			
 			if (buffer == "sphere") {
-				mod->physics = objModel_t::PhysicsType::SPHERE;
+				mod->physics.type = objModel_t::PhysicsType::SPHERE;
 				buffer.clear();
 				
 				while (true) {
@@ -376,7 +376,28 @@ objModel_t * Model_LoadObj(char const * name) {
 					break;
 				}
 				
-				mod->physics_sphere.radius = std::strtod(buffer.data(), nullptr) * size_mult * scale;
+				mod->physics.type_sphere.radius = std::strtod(buffer.data(), nullptr) * size_mult * scale;
+			}
+			
+			if (buffer == "bounce") {
+				buffer.clear();
+				
+				while (true) {
+					switch(obj_buf[obj_buf_i]) {
+					case '\r':
+					case '\n':
+					case ' ':
+						obj_buf_i++;
+						break;
+					default:
+						buffer.push_back(obj_buf[obj_buf_i]);
+						obj_buf_i++;
+						continue;
+					}
+					break;
+				}
+				
+				mod->physics.restitution = std::strtod(buffer.data(), nullptr);
 			}
 			
 			obj_buf_i -= 2;

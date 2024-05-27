@@ -1,6 +1,7 @@
 # non-standard extra data only understood by DogiJK
-scale 1.0
+scale 2.0
 physics sphere 1.0
+physics bounce 0.8
 
 # normal OBJ data
 o Icosphere

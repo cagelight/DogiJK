@@ -1024,7 +1024,7 @@ typedef struct level_locals_s {
 
 	gametype_t	gametype;
 	char		mapname[MAX_QPATH];
-	char		rawmapname[MAX_QPATH];
+	char		mappath[MAX_QPATH];
 	
 	int32_t seed;
 } level_locals_t;
@@ -1589,6 +1589,11 @@ struct EEggPathfinder {
 	
 	EEggConcept m_concept {};
 	
+	float score_location_cursory(qm::vec3_t pos);
+	float score_location_thorough(qm::vec3_t pos);
+	bool settle_location(qm::vec3_t pos, qm::vec3_t * out, qm::vec3_t * norm);
+	void rescore_all();
+	
 	uint explore(qm::vec3_t start, uint divisions /*and threads*/, std::chrono::high_resolution_clock::duration time_alloted);
 	uint spawn_eggs(uint max_eggs = 1);
 	void forget(); // keep all location data, but pretend like no eggs have ever been placed
@@ -1600,6 +1605,9 @@ struct EEggPathfinder {
 	uint locations_scored() const;
 	uint locations_valid() const;
 	uint locations_used() const;
+	
+	bool save();
+	bool load();
 	
 private:
 	struct PrivateData;

@@ -184,16 +184,19 @@ XCVAR_DEF( g_physics_resolution,		"120",			NULL,				CVAR_ARCHIVE,									qtrue 
 XCVAR_DEF( g_physics_pushmult,			"2.0",			NULL,				CVAR_ARCHIVE,									qtrue )
 
 // EEGG
-XCVAR_DEF( g_eegg_sdintra,				"1024",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_sdintra,				"512",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_sdinter,				"256",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_cullthresh,			"128",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_bufferMiB,			"200",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_intercardinal,		"0",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_scale,				"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_photobox,				"0",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_vischeck,				"0",			NULL,				CVAR_ARCHIVE,									qtrue )
-XCVAR_DEF( g_eegg_sightcheck,			"0",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_sightcheck,			"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 XCVAR_DEF( g_eegg_cpusage,				"1",			NULL,				CVAR_ARCHIVE,									qtrue )
-XCVAR_DEF( g_eegg_branches,				"4",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_branches,				"32",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_dropout,				"0.0",			NULL,				CVAR_ARCHIVE,									qtrue )
+XCVAR_DEF( g_eegg_patchtest,			"1",			NULL,				CVAR_ARCHIVE,									qtrue )
 
 // WEAP
 XCVAR_DEF( weap_all_lifemult,			"1",			NULL,				CVAR_ARCHIVE,									qtrue )

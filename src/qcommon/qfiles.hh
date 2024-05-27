@@ -213,16 +213,21 @@ struct objModel_t {
 	float *				normals;
 	objSurface_t * 		surfaces;
 	vec3_t 				mins, maxs;
-	PhysicsType			physics;
-	union {
-		struct {
-			float 		radius;
-		} physics_sphere;
-		struct {
-			float		height;
-			float		radius;
-		} physics_capsule;
-	};
+	struct {
+		
+		float restitution;
+		
+		PhysicsType	type;
+		union {
+			struct {
+				float 		radius;
+			} type_sphere;
+			struct {
+				float		height;
+				float		radius;
+			} type_capsule;
+		};
+	} physics;
 };
 
 

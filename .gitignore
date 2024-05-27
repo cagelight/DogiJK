@@ -184,6 +184,7 @@ pip-log.txt
 #############
 _OLD
 install
+*.blend1
 
 #############
 ## KDevelop

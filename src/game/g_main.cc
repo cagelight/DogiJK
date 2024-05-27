@@ -157,8 +157,8 @@ void G_CacheGametype( void )
 
 void G_CacheMapname( const vmCvar_t *mapname )
 {
-	Com_sprintf( level.mapname, sizeof( level.mapname ), "maps/%s.bsp", mapname->string );
-	Com_sprintf( level.rawmapname, sizeof( level.rawmapname ), "maps/%s", mapname->string );
+	Com_sprintf( level.mapname, sizeof( level.mapname ), "%s", mapname->string );
+	Com_sprintf( level.mappath, sizeof( level.mapname ), "maps/%s.bsp", mapname->string );
 }
 
 /*

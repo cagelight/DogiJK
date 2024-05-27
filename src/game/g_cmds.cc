@@ -27,6 +27,8 @@ along with this program; if not, see <http://www.gnu.org/licenses/>.
 
 #include "ui/menudef.hh"			// for the voice chats
 
+#include <meadow/time.hh>
+
 //rww - for getting bot commands...
 int AcceptBotCommand(char *cmd, gentity_t *pl);
 //end rww
@@ -3981,14 +3983,21 @@ static void Cmd_Prop_f( gentity_t * player ) {
 	}
 	else if (!Q_stricmp(subcmd, "spawn")) {
 		
+		constexpr float variance = 6;
+		
 		qm::vec3_t angles { 0, player->playerState->viewangles[YAW], 0 };
+		qm::vec3_t origin = player->r.currentOrigin;
+		
+		origin[0] += Q_flrand(-variance, variance);
+		origin[1] += Q_flrand(-variance, variance);
+		origin[2] += Q_flrand(-variance, variance);
 		
 		if (trap->Argc() < 3) {
-			Prop_Spawn( player, player->r.currentOrigin, angles, test_boxes[ Q_irand(0, test_boxes.size() - 1) ] );
+			Prop_Spawn( player, origin, angles, test_boxes[ Q_irand(0, test_boxes.size() - 1) ] );
 		} else {
 			char model[MAX_QPATH];
 			trap->Argv(2, model, MAX_QPATH);
-			Prop_Spawn( player, player->r.currentOrigin, angles, model );
+			Prop_Spawn( player, origin, angles, model );
 		}
 	}
 }
@@ -4032,9 +4041,13 @@ static void Cmd_EEgg_f(gentity_t * player) {
 			{ "forget", "Forget if locations have already been used, allowing eggs to be placed there again." },
 			{ "init", "Initialize the eegg system, or reset the current eegg state to default." },
 			{ "list", "List currently spawned egg locations." },
+			{ "load", "Load eegg data from a file." },
 			{ "mark", "Mark the current location as an explore starting point." },
+			{ "mark_clear", "Clear all marks." },
 			{ "mark_spawns", "Mark all player spawns." },
 			{ "place", "Place eggs based on scores from the 'explore' phase. <number of eggs to place>" },
+			{ "rescore", "Rescore all prospects." },
+			{ "save", "Save the current eegg state to file." },
 			{ "shrink", "Shrink the eegg buffer to the specified memory usage percentage. <percent>" },
 			{ "stats", "Show stats about the current state." },
 			{ "tele", "Teleport to an egg (for debugging, etc.) <egg index>" },
@@ -4214,6 +4227,11 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		return;
 	}
 	
+	if (cmd == "mark_clear") {
+		pers->marks.clear();
+		return;
+	}
+	
 	if (cmd == "mark_spawns") {
 		auto spawns = G_FindAll([](gentity_t * ent){ return ent->classname == "info_player_deathmatch"; });
 		auto positions_view = spawns | std::ranges::views::transform([](gentity_t * e){ return qm::vec3_t(e->s.origin);});
@@ -4252,18 +4270,26 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		
 		pers->working = true;
 		trap->GetTaskCore()->enqueue([allotted_time, batches, subbatches, tasks](){
+			auto t1 = std::chrono::high_resolution_clock::now();
 			uint16_t total_batches = batches * subbatches;
-			uint locs = 0;
 			for (size_t i = 0; i < total_batches; i++) {
-				locs += pers->path.explore(pers->marks[i % batches], std::round(tasks), allotted_time / total_batches);
+				pers->path.explore(pers->marks[i % batches], std::round(tasks), allotted_time / total_batches);
 				GTaskType task { [i, total_batches](){
 					trap->SendServerCommand( -1, va("print \"eegg: explore operation batch %hu of %hu complete.\n\"", i + 1, total_batches) );
 				}};
 				G_Task_Enqueue(std::move(task));
 			}
+			
+			auto t2 = std::chrono::high_resolution_clock::now();
+			pers->path.cull();
+			pers->path.rescore_all();
 			pers->working = false;
-			GTaskType task { [locs](){
-				trap->SendServerCommand( -1, va("print \"eegg: explore operation complete -- %u locations scored.\n\"", locs) );
+			auto t3 = std::chrono::high_resolution_clock::now();
+			
+			GTaskType task { [t1, t2, t3](){
+				double etime = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+				double ptime = std::chrono::duration_cast<std::chrono::duration<double>>(t3 - t2).count();
+				trap->SendServerCommand( -1, va("print \"eegg: explore operation complete. \n    explore time: %.3fs\n    cull time: %.3fs\n    active locs: %u \n\"", etime, ptime, pers->path.locations_valid()) );
 			}};
 			G_Task_Enqueue(std::move(task));
 		});
@@ -4297,6 +4323,31 @@ static void Cmd_EEgg_f(gentity_t * player) {
 		});
 		
 		trap->SendServerCommand( -1, va("print \"eegg: placement operation started -- placing a maximum of %u eggs.\n\"", num_eggs) );
+		return;
+	}
+	
+	if (cmd == "rescore") {
+		pers->path.rescore_all();
+		return;
+	}
+	
+	if (cmd == "save") {
+		if (pers->working) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
+			return;
+		}
+		
+		pers->path.save();
+		return;
+	}
+	
+	if (cmd == "load") {
+		if (pers->working) {
+			trap->SendServerCommand( player - g_entities, va("print \"eegg: the current operation must finish before a new one can be started.\n\"") );
+			return;
+		}
+		
+		pers->path.load();
 		return;
 	}
 	
